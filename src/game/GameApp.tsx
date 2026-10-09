@@ -20,7 +20,8 @@ import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dices, Grip, ListOrd
 import { Button } from "@/components/ui/button";
 import { artProgress, ensureDecorationArt, ensureTerrainArt, ensureSpriteArt, loadGameArt, portraitFor, releaseSpriteArt, subscribeArtProgress, TILE_VARIANT_COUNT, tileVariantName, tileVariantSrc } from "./assets";
 import { getAudioVolumes, installAudioUnlock, pauseMusic, playFile, playMenuMusic, playTheme, resumeAudio, resumeMusic, setCutsceneVolume, setMusicVolume, setMuted, setSfxVolume, sfxPlay, stopMusic, unlockAudio } from "./audio";
-import { BattleCanvas } from "./BattleCanvas";
+import { Battle3D as BattleCanvas } from "./Battle3D";
+import { MapEditorScreen as MapEditorScreen3D } from "../editor/ember/MapEditorScreen";
 import { ELEMENT_LABELS, PLACEABLE_ELEMENT_KINDS, type PlaceableElementKind } from "./gfx/params";
 import { ELEMENT_FX_REGISTRY, pixelDefaults, pixelPresetsFor, type PixelElement, type PixelElementSettings } from "./gfx/three/ProceduralElementEmitter";
 import { THREE_D_DOOR_VARIANTS } from "./data";
@@ -1432,7 +1433,8 @@ export function GameApp() {
       void Promise.all([
         ensureSpriteArt(art, [...battleSpriteIds(battle), ...(partyHasConjurer ? FAMILIAR_SPRITES : [])], (loaded, total) => report("sprites", loaded, total)),
         ensureDecorationArt(art, battle.decorations.map(p => p.id), (loaded, total) => report("decorations", loaded, total)),
-        ensureTerrainArt(art, battle.tiles, battle.tileVariants, (loaded, total) => report("terrain", loaded, total)),
+        // Engine2: the old 2D tile art is gone; the 3D battlefield draws its own ground.
+        Promise.resolve(),
       ]).then(() => {
         if (load !== battleLoadRef.current) return;
         awardedRef.current = null;
@@ -2198,7 +2200,7 @@ export function GameApp() {
       )}
 
       {screen === "mapEditor" && art && (
-        <MapEditorScreen
+        <MapEditorScreen3D
           art={art}
           // The editor unmounts while a playtest runs, so the map being worked on is held
           // out here and handed back on return — otherwise testing a map threw it away.

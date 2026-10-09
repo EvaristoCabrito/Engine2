@@ -245,6 +245,33 @@ export class DioramaView {
     }
   }
 
+  private readonly ringSets = new Map<string, { group: THREE.Group; mat: THREE.MeshBasicMaterial; key: string }>();
+
+  /** A named set of coloured hex rings (battle: movement range, targets, selection). */
+  setRings(name: string, cells: { x: number; y: number }[], color: THREE.ColorRepresentation): void {
+    let set = this.ringSets.get(name);
+    if (!set) {
+      const mat = new THREE.MeshBasicMaterial({ side: THREE.DoubleSide, transparent: true, depthWrite: false });
+      const group = new THREE.Group(); group.renderOrder = 6;
+      this.stage.scene.add(group);
+      set = { group, mat, key: '' };
+      this.ringSets.set(name, set);
+    }
+    set.mat.color.set(color);
+    const key = cells.map(c => `${c.x},${c.y}`).join(';');
+    if (key === set.key || !this.board) return;
+    set.key = key;
+    set.group.clear();
+    const L = this.board.layout;
+    for (const { x, y } of cells) {
+      if (x < 0 || y < 0 || x >= L.cols || y >= L.rows) continue;
+      const c = this.board.cell(x, y);
+      const ring = new THREE.Mesh(this.ringGeo, set.mat);
+      ring.position.set(c.x, (c.water ? c.waterY : this.groundAt(c.x, c.z)) + 0.05, c.z);
+      set.group.add(ring);
+    }
+  }
+
   /** Zoom as a share of the framed distance (Ember's preview percentage). */
   setZoom(zoom: number): void {
     this.rig.dist = THREE.MathUtils.clamp(this.baseDist / zoom, this.rig.minDist, this.rig.maxDist);

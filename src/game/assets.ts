@@ -775,23 +775,8 @@ export async function ensureDecorationArt(art: GameArt, ids: Iterable<string>, o
 }
 
 export async function loadGameArt(): Promise<GameArt> {
-  const tiles = {} as Record<TerrainId, HTMLImageElement[]>;
-  await Promise.all(
-    TILES.map(async (id) => {
-      const n = TILE_VARIANT_COUNT[id];
-      const variants: HTMLImageElement[] = [];
-      variants[0] = await loadImage(tileVariantSrc(id, 0));
-      for (let i = 1; i < n; i++) {
-        Object.defineProperty(variants, i, { configurable: true, enumerable: true, get() {
-          const image = new Image();
-          image.src = tileVariantSrc(id, i);
-          Object.defineProperty(variants, i, { configurable: true, enumerable: true, writable: true, value: image });
-          return image;
-        } });
-      }
-      tiles[id] = variants;
-    }),
-  );
+  // Engine2: the old 2D tile art is gone (the 3D map draws the ground), so no tile image loads.
+  const tiles = Object.fromEntries(TILES.map((id) => [id, [] as HTMLImageElement[]])) as Record<TerrainId, HTMLImageElement[]>;
   const decorations = {} as Record<string, HTMLImageElement>;
   // Decorations load for the current map through ensureDecorationArt.
   // Unit sprites are NOT loaded here: every sprite pool starts empty and each battle loads
