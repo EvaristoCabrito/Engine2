@@ -71,7 +71,7 @@ export const SPELL_CLASSIFICATION: Record<SpellKind, SpellClassification> = {
   summonZombieDog: "utility",
   lifeDrain: "darkness",
   webOfDreams: "arcane",
-  warp: "utility",
+  warp: "arcane",
   multiShot: "physical",
   secondWind: "utility",
   auraOfProtection: "utility",

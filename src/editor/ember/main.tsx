@@ -18,7 +18,7 @@ createRoot(document.getElementById('root')!).render(
     initialDraft={editorDraft}
     onDraftChange={(d) => { editorDraft = d; }}
     // Ember's back button returns to the Test mode menu.
-    onBack={() => { clearEditorResume(); location.href = '/?screen=test'; }}
+    onBack={() => { clearEditorResume(); location.href = '/game.html?start=test'; }}
     onPlaytest={() => {
       window.alert('Testar: a batalha ainda não está conectada ao Engine2. O mapa continua aberto no editor.');
     }}

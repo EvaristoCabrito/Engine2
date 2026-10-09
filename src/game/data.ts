@@ -6478,7 +6478,7 @@ export const WORLD_LOCATIONS: WorldLocation[] = [
   // x/y is the RPG hex map's own hex(9,4) center, same treatment as vertente above.
   { id: "ruins", name: "Ruins", x: 77.94, y: 30, missionIds: ["muralha", "fortaleza", "templo", "cripta"] },
   // x/y is the RPG hex map's own hex(6,8) center, same treatment as vertente above.
-  { id: "estalagem", name: "Inn", x: 51.96, y: 60, missionIds: ["estalagem"] },
+  { id: "estalagem", name: "Inn", x: 51.96, y: 60, missionIds: ["estalagem"], warpCity: true },
   // Inn hex(6,8) → E → E → NE: entrance at hex(8,7).
   { id: "ashen-forest", name: "Ashen Forest Crossing", x: 73.61215932167728, y: 52.5, missionIds: ["ashen-forest-crossing"], openAccess: true },
   // x/y is the RPG hex map's own hex(1,11) center, same treatment as vertente above.

@@ -18,7 +18,7 @@ import { LEADER_FRAME_BOUNDS } from "./leaderFrameBounds";
 import { key } from "./pathfinding";
 import { QUESTS, questProgress, questStatus } from "./quests";
 import { MapLoadingOverlay, useMapLoading } from "./MapLoadingOverlay";
-import { campaignHour, campaignTimeOfDay, usesTravelClock } from "./campaignTime";
+import { campaignHour, campaignTimeOfDay } from "./campaignTime";
 import { AFFINITY_HEROES, affinityBonus, affinityGrade, affinityScore, canUseAffinityDuo, canUseAffinityUltimate, type AffinityHero } from "./affinity";
 import { uiText } from "./gamePreferences";
 
@@ -206,8 +206,18 @@ export function OverworldMapScreen({
 }) {
   const [open, setOpen] = useState<WorldLocation | null>(null);
   const travelCost = (col: number, row: number) => travelTimeLabel(travelHoursForHex(col, row, locations));
-  const timeOfDay = usesTravelClock(save) ? campaignTimeOfDay(campaignHour(save)) : "day";
-  const skyTint = timeOfDay === "darkNight" ? "rgba(8,15,45,0.55)" : timeOfDay === "brightNight" ? "rgba(20,35,75,0.35)" : timeOfDay === "dawn" || timeOfDay === "dusk" ? "rgba(190,90,40,0.18)" : "rgba(0,0,0,0)";
+  const timeOfDay = campaignTimeOfDay(campaignHour(save));
+  const skyTint = timeOfDay === "darkNight"
+    ? "rgba(5,12,43,0.68)"
+    : timeOfDay === "brightNight"
+      ? "rgba(34,62,132,0.48)"
+      : timeOfDay === "dusk"
+        ? "rgba(166,67,39,0.32)"
+        : timeOfDay === "dawn"
+          ? "rgba(230,137,112,0.25)"
+          : timeOfDay === "noon"
+            ? "rgba(255,197,108,0.12)"
+            : "rgba(0,0,0,0)";
   const [questLogOpen, setQuestLogOpen] = useState(false);
   const [affinityOpen, setAffinityOpen] = useState(false);
   const [partyTab, setPartyTab] = useState<"group" | "skills">("group");
@@ -381,7 +391,6 @@ export function OverworldMapScreen({
 
   const warpMenuLevel = warpMenuHero ? save.levels[warpMenuHero] ?? 1 : 1;
   const warpMenuCities = locations.filter((location) => {
-    if (!location.warpCity) return false;
     const hex = worldToHex(location.x, location.y);
     return (hex.x !== overworldPos.col || hex.y !== overworldPos.row) &&
       ((save.exploredHexes ?? []).includes(key(hex.x, hex.y)) || location.missionIds.some((id) => save.completed.includes(id)));
@@ -485,7 +494,7 @@ export function OverworldMapScreen({
           >
             <div className="absolute left-1/2 top-1/2 z-10 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#dfbf8e]/50 bg-[#241b15] p-2 text-center shadow-lg">
               <div>
-                <img src={spellIcon("warp")} alt="" className="mx-auto mb-1 size-9 rounded object-cover" />
+                <img src={spellIcon("warp")} alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/game/icons/warp.jpg"; }} className="mx-auto mb-1 size-9 rounded object-cover mix-blend-screen drop-shadow-[0_0_5px_rgba(74,150,255,0.7)]" />
                 <p className="text-xs text-[#dfbf8e]">Warp</p>
                 <p className="max-w-20 truncate text-[10px] text-muted">{warpMenuHero}</p>
               </div>
@@ -522,7 +531,7 @@ export function OverworldMapScreen({
         </div>
       )}
       {warpVisual && <div aria-hidden className="pointer-events-none fixed inset-0 z-[70] grid place-items-center bg-black/35">
-        <img src={spellIcon("warp")} alt="" draggable={false} className="h-[58dvh] max-h-[620px] w-auto select-none object-contain mix-blend-screen drop-shadow-[0_0_30px_rgba(74,150,255,0.8)]" style={{ opacity: warpVisual === "closing" ? 0 : warpVisual === "forming" ? 0.15 : 1, transform: warpVisual === "forming" ? "scale(0.42,0.5)" : warpVisual === "closing" ? "scale(1.08,1.12)" : "scale(1,1)", transition: "opacity 550ms ease-out, transform 950ms cubic-bezier(.18,.7,.26,1)" }} />
+        <img src={spellIcon("warp")} alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/game/icons/warp.jpg"; }} draggable={false} className="h-[58dvh] max-h-[620px] w-auto select-none object-contain mix-blend-screen drop-shadow-[0_0_30px_rgba(74,150,255,0.8)]" style={{ opacity: warpVisual === "closing" ? 0 : warpVisual === "forming" ? 0.15 : 1, transform: warpVisual === "forming" ? "scale(0.42,0.5)" : warpVisual === "closing" ? "scale(1.08,1.12)" : "scale(1,1)", transition: "opacity 550ms ease-out, transform 950ms cubic-bezier(.18,.7,.26,1)" }} />
       </div>}
 
       <header className="relative z-20 flex items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 flex-wrap">
@@ -613,7 +622,6 @@ export function OverworldMapScreen({
                     return rulesClass(classId) === "mage" && (save.levels[name] ?? 1) >= WARP.unlockLevel;
                   });
                   const cities = locations.filter((location) => {
-                    if (!location.warpCity) return false;
                     const hex = worldToHex(location.x, location.y);
                     if (hex.x === overworldPos.col && hex.y === overworldPos.row) return false;
                     return (save.exploredHexes ?? []).includes(key(hex.x, hex.y)) || location.missionIds.some((id) => save.completed.includes(id));
@@ -662,13 +670,13 @@ export function OverworldMapScreen({
                           setWarpMenuHero(name);
                         }}
                       >
-                        <img src={spellIcon("warp")} alt="" className="size-7 rounded object-cover" />
+                        <img src={spellIcon("warp")} alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/game/icons/warp.jpg"; }} className="size-9 rounded object-cover mix-blend-screen drop-shadow-[0_0_5px_rgba(74,150,255,0.7)]" />
                         <span className="text-fg">{uiText("Warp", { en: "Warp" })}</span>
                         <span className="ml-auto text-xs text-muted">{name} · Lv {level} · {remaining}x</span>
                       </button>
                     </div>;
                   })}
-                  {onCastWarp && mages.length > 0 && cities.length === 0 && <p className="text-xs text-subtle">{uiText("Nenhuma cidade visitada.", { en: "No visited cities." })}</p>}
+                  {onCastWarp && mages.length > 0 && cities.length === 0 && <p className="text-xs text-subtle">{uiText("Nenhum outro local visitado.", { en: "No other visited locations." })}</p>}
                   {healers.length === 0 && mages.length === 0 && <p className="text-sm text-subtle">{uiText("Nenhum feitiço de campo disponível.", { en: "No field spells available." })}</p>}
                   </>;
                 })()}
@@ -819,7 +827,7 @@ export function OverworldMapScreen({
               <rect x="0" y="0" width="100" height="100" fill="rgba(8,6,4,0.78)" mask="url(#ow-fog-mask)" />
             </svg>
           )}
-          {artOk && usesTravelClock(save) && <div aria-hidden className="pointer-events-none absolute inset-0 transition-colors duration-[1500ms]" style={{ backgroundColor: skyTint }} />}
+          {artOk && <div aria-hidden className="pointer-events-none absolute inset-0 transition-colors duration-[1500ms]" style={{ backgroundColor: skyTint }} />}
           <div className="absolute inset-0">
             {locations.filter(isExplored).map((loc) => {
               const st = status(loc);

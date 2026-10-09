@@ -1727,13 +1727,27 @@ export function GameApp() {
     setScreen("briefing");
   };
 
+  const markInnVisited = (record: SaveData): SaveData => {
+    const inn = campaignLocations.find((location) => location.id === "estalagem");
+    if (!inn) return record;
+    const hex = worldToHex(inn.x, inn.y);
+    const visitedHex = hexKey(hex.x, hex.y);
+    return {
+      ...record,
+      exploredHexes: (record.exploredHexes ?? []).includes(visitedHex)
+        ? record.exploredHexes
+        : [...(record.exploredHexes ?? []), visitedHex],
+    };
+  };
+
   const finishInnArrivalIntro = () => {
     const current = readMapSave();
     const completed = current.completed.includes("estalagem") ? current.completed : [...current.completed, "estalagem"];
+    const visited = markInnVisited({ ...current, completed });
     if (testMode) {
-      writeMapSave({ ...current, completed, seenInnArrivalIntro: true, pendingMission: null, battle: null });
+      writeMapSave({ ...visited, seenInnArrivalIntro: true, pendingMission: null, battle: null });
     } else {
-      persistCurrent({ ...save, completed, seenInnArrivalIntro: true, pendingMission: null, battle: null });
+      persistCurrent({ ...markInnVisited({ ...save, completed }), seenInnArrivalIntro: true, pendingMission: null, battle: null });
     }
     // After the arrival scene the party walks into the Inn map, as on every later visit;
     // the tavern/smith menus open from talking to Brue and Vargan there.
@@ -1772,8 +1786,11 @@ export function GameApp() {
       // The walkable Inn; Brue's tavern and Vargan's smith open from talking to them. Its
       // visit is recorded on the way out (see onQuit): startBattle saves its own copy of the
       // record right here, which would drop a completion written just before it.
-      const completed = save.completed.includes(missionId) ? save.completed : [...save.completed, missionId];
-      if (!testMode) persistCurrent({ ...save, completed, pendingMission: null, battle: null });
+      const current = readMapSave();
+      const completed = current.completed.includes(missionId) ? current.completed : [...current.completed, missionId];
+      const visited = markInnVisited({ ...current, completed, pendingMission: null, battle: null });
+      if (testMode) writeMapSave(visited);
+      else persistCurrent(visited);
       setScreen("inn");
       return;
     }
@@ -1858,13 +1875,22 @@ export function GameApp() {
     else stopMusic();
   }, [screen, muted, missionId, innEntry, save.seenSmithIntro, slotReturnScreen]);
 
-  // Campaign maps reuse the mode stored in that save. Debug always opens the chooser so
-  // each test run can select the kind of map independently of the last Debug session.
+  // Leaving the Inn returns to the map already selected for this run.
+  const returnToCurrentMap = useCallback(() => {
+    const mode = mapMode ?? save.mapMode ?? "classic";
+    setMapMode(mode);
+    setScreen(mode === "classic" ? "worldMap" : "overworldMap");
+  }, [mapMode, save.mapMode]);
+
+  // Campaign maps reuse the mode stored in that save. Debug asks for a map style once
+  // when the test run begins, then returns to that map for the rest of the run.
   const goToMap = useCallback(() => {
-    // Test mode asks how to travel once per test-mode start (leaveBoot), then keeps that choice;
-    // the campaign never asks — it uses the save's own choice below.
+    // Test mode asks once at entry, then preserves the chosen map until leaving the run.
     if (testMode) {
-      if (!mapMode) { setScreen("mapChoice"); return; }
+      if (!mapMode) {
+        setScreen("mapChoice");
+        return;
+      }
       setScreen(mapMode === "classic" ? "worldMap" : "overworldMap");
       return;
     }
@@ -1875,6 +1901,21 @@ export function GameApp() {
     if (!save.mapMode) persistCurrent({ ...save, mapMode: mode });
     setScreen(mode === "classic" ? "worldMap" : "overworldMap");
   }, [save, mapMode, testMode, persistCurrent]);
+
+  // /game.html?start=test enters the original Test Mode menu, matching the title button.
+  const testStartHandled = useRef(false);
+  useEffect(() => {
+    if (startMode !== "test" || testStartHandled.current) return;
+    testStartHandled.current = true;
+    setTestMode(true);
+    setTestEmber(TEST_EMBER);
+    setTestOverworld(null);
+    setLastGrowth(null);
+    setLastLoot([]);
+    setMissionId(null);
+    setMapMode(null);
+    setScreen("testMenu");
+  }, [startMode]);
 
   const continueStartHandled = useRef(false);
   useEffect(() => {
@@ -2025,11 +2066,11 @@ export function GameApp() {
     const classId = rec.promotions[hero] ?? MAP_STATUS_CLASS[hero];
     const level = rec.levels[hero] ?? 1;
     if (!classId || rulesClass(classId) !== "mage" || level < WARP.unlockLevel) return false;
-    const city = campaignLocations.find((location) => location.id === cityId && location.warpCity);
-    if (!city) return false;
-    const hex = worldToHex(city.x, city.y);
+    const destination = campaignLocations.find((location) => location.id === cityId);
+    if (!destination) return false;
+    const hex = worldToHex(destination.x, destination.y);
     const cityHex = `${hex.x},${hex.y}`;
-    const visited = (rec.exploredHexes ?? []).includes(cityHex) || city.missionIds.some((id) => rec.completed.includes(id));
+    const visited = (rec.exploredHexes ?? []).includes(cityHex) || destination.missionIds.some((id) => rec.completed.includes(id));
     if (!visited || (hex.x === rec.overworldPos.col && hex.y === rec.overworldPos.row)) return false;
     const spent = rec.spellUses[hero]?.tier3 ?? 0;
     if (tierUses(classId, WARP.tier, level) - spent <= 0) return false;
@@ -2112,7 +2153,7 @@ export function GameApp() {
   // The overworld simulation still receives campaignLocations so hidden sites retain their
   // authored hex encounter biome before the marker is discovered.
   const mapVisibleLocations = campaignLocations.filter((location) =>
-    testMode || location.missionIds.length === 0 || location.missionIds.some((id) => missionAccessFor(id) !== "hidden"),
+    testMode || location.missionIds.some((id) => missionAccessFor(id) !== "hidden"),
   );
 
   return (
@@ -2156,6 +2197,7 @@ export function GameApp() {
           onTest={() => {
             bootAudio();
             setTestMode(true);
+            setMapMode(null);
             setTestEmber(TEST_EMBER);
             setTestOverworld(null);
             setLastGrowth(null);
@@ -2217,7 +2259,7 @@ export function GameApp() {
           onDraftChange={(d) => {
             editorDraft.current = d;
           }}
-          onBack={() => { clearEditorResume(); setScreen("testMenu"); }}
+          onBack={() => { clearEditorResume(); setScreen(testMode ? "testMenu" : "title"); }}
           onPlaytest={(m, playerLevels, enemyLevels, neutralLevels) => {
             setCustomMission(m);
             startBattle(m.id, {}, m, playerLevels, enemyLevels, neutralLevels);
@@ -2233,7 +2275,7 @@ export function GameApp() {
           completed={save.completed}
           test={testMode}
           ember={testMode ? testEmber : (save.ember ?? 0)}
-          onBack={() => (testMode ? setScreen("testMenu") : setScreen("worldMap"))}
+          onBack={() => setScreen("worldMap")}
           onPick={openMission}
         />
       )}
@@ -2522,7 +2564,7 @@ export function GameApp() {
                   const spawns = base.playerSpawns.map((s, i) => (i === 0 && leader ? { ...s, x: leader.x, y: leader.y } : s));
                   startBattle(missionId, undefined, { ...base, playerSpawns: spawns }, undefined, undefined, undefined, undefined, !!FARMLANDS_SERVICES[missionId]);
                 }
-              : goToMap
+              : returnToCurrentMap
           }
           onBuyWeapon={(hero: string, weaponId: string) => {
             const rec = readMapSave();
@@ -2908,7 +2950,8 @@ export function GameApp() {
               }
               setMissionId(null);
               setEngine(null);
-              goToMap();
+              if (engine.mission.id === "estalagem") returnToCurrentMap();
+              else goToMap();
               return;
             }
             setEngine(null);
@@ -2974,6 +3017,10 @@ export function GameApp() {
             if (customMission) {
               setCustomMission(null);
               setScreen("mapEditor");
+              return;
+            }
+            if (mission.id === "estalagem") {
+              returnToCurrentMap();
               return;
             }
             // Recomputed rather than read off save.completed directly — testMode never
@@ -3300,7 +3347,7 @@ function TitleScreen({
           button stays where it was, bottom-left. */}
       <div className="relative z-10 flex flex-1 flex-col justify-end px-5 pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] max-w-xl mx-auto w-full">
         <p className="text-sm tracking-[0.12em] text-[#dfbf8e] mb-3">{uiText("Táticas em cinzas")}</p>
-        <h1 className="font-display text-[#dfbf8e] text-3xl sm:text-4xl font-medium tracking-tight leading-none mb-4">Ember</h1>
+        <h1 className="font-display text-[#dfbf8e] text-2xl sm:text-3xl font-medium tracking-tight leading-none mb-4">Ember</h1>
         <p className="text-[11px] tracking-[0.18em] text-[#dfbf8e] -mt-3 mb-4">Version {DISPLAY_VERSION}</p>
         <p className="text-[#dfbf8e] text-base leading-relaxed mb-8 max-w-md">
           {uiText("Seis sobreviventes. Um tabuleiro de guerra. Cada casa conta.")}

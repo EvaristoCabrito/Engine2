@@ -8,7 +8,7 @@ import { getGamePreferences, setGamePreferences } from '../game/gamePreferences'
 import type { SaveBank } from '../ember/types';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-const titleScreen = $('title-screen'), testMenu = $('test-menu'), devControls = $('dev-controls');
+const titleScreen = $('title-screen'), devControls = $('dev-controls');
 const saveSlotsScreen = $('save-slots-screen');
 const titleLoader = $('title-loader'), loaderFill = $('loader-fill'), loaderPercent = $('loader-percent'), loaderStatus = $('loader-status');
 const menuMusic = $<HTMLAudioElement>('menu-music');
@@ -83,21 +83,31 @@ function applyLanguage(next: 'pt' | 'en'): void {
   loaderStatus.textContent = status;
 }
 
+// Ember's TitleLoader embers: x %, delay s, duration s. They ride the fill, never ahead of it.
+const LOADER_EMBERS = [
+  { x: 8, d: 0, t: 3.4 }, { x: 19, d: 1.1, t: 4.1 }, { x: 31, d: 2.2, t: 3.7 }, { x: 44, d: 0.5, t: 4.4 },
+  { x: 57, d: 1.7, t: 3.5 }, { x: 68, d: 2.9, t: 4.0 }, { x: 79, d: 0.9, t: 3.8 }, { x: 90, d: 2.4, t: 4.3 },
+];
+const loaderEmbers = Array.from(titleLoader.querySelectorAll<HTMLElement>('.loader-embers i'));
+loaderEmbers.forEach((ember, i) => {
+  ember.style.animationDelay = `${LOADER_EMBERS[i].d}s`;
+  ember.style.animationDuration = `${LOADER_EMBERS[i].t}s`;
+});
+
 function setProgress(value: number): void {
   const pct = Math.max(0, Math.min(100, Math.round(value)));
   loaderFill.style.width = `${pct}%`;
+  loaderEmbers.forEach((ember, i) => { ember.style.left = `${Math.min(LOADER_EMBERS[i].x, Math.max(2, pct))}%`; });
   loaderPercent.textContent = `${pct}%`;
   titleLoader.setAttribute('aria-valuenow', String(pct));
 }
 
-function setScreen(screen: 'title' | 'save-slots' | 'test' | 'dev'): void {
+function setScreen(screen: 'title' | 'save-slots' | 'dev'): void {
   titleScreen.hidden = screen !== 'title';
   saveSlotsScreen.hidden = screen !== 'save-slots';
-  testMenu.hidden = screen !== 'test';
   devControls.hidden = screen !== 'dev';
   if (screen === 'title' || screen === 'save-slots') startMenuMusic();
   else stopMenuMusic();
-  if (screen === 'test') $('test-title').focus?.();
   if (screen === 'dev') $('dev-title').focus?.();
   if (screen === 'title') $('game-title').focus?.();
   if (screen === 'save-slots') $('save-slots-title').focus?.();
@@ -276,13 +286,11 @@ function updateGraphicsControls(): void {
   customLabel.textContent = language === 'pt' ? `Personalizada · ${gfx.shadowResolution}` : `Custom · ${gfx.shadowResolution}`;
 }
 
-$('test-mode-open').addEventListener('click', () => setScreen('test'));
+$('test-mode-open').addEventListener('click', () => { window.location.href = '/game.html?start=test'; });
 document.querySelectorAll<HTMLButtonElement>('[data-back-title]').forEach((button) => button.addEventListener('click', () => setScreen('title')));
-document.querySelectorAll<HTMLButtonElement>('[data-back-test]').forEach((button) => button.addEventListener('click', () => setScreen('test')));
-$('dev-controls-open').addEventListener('click', () => setScreen('dev'));
 $('new-campaign').addEventListener('click', () => openSaveSlots('new'));
 $('continue-campaign').addEventListener('click', () => openSaveSlots('load'));
-$('dialog-test-link').addEventListener('click', () => { $<HTMLDialogElement>('notice-dialog').close(); setScreen('test'); });
+$('dialog-test-link').addEventListener('click', () => { $<HTMLDialogElement>('notice-dialog').close(); window.location.href = '/game.html?start=test'; });
 document.querySelectorAll<HTMLButtonElement>('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => $<HTMLDialogElement>('notice-dialog').close()));
 $('notice-dialog').addEventListener('click', (event) => { if (event.target === $('notice-dialog')) $<HTMLDialogElement>('notice-dialog').close(); });
 
@@ -399,5 +407,5 @@ updateContinueButton();
 updateSoundToggle();
 startMenuMusic();
 void loadTitleResources();
-// Ember's map editor "‹" returns to the Test mode menu (/?screen=test), as in Ember.
-if (new URLSearchParams(location.search).get('screen') === 'test') setScreen('test');
+// Migrate old links to the removed Test Menu straight to the debug map flow.
+if (new URLSearchParams(location.search).get('screen') === 'test') window.location.replace('/game.html?start=test');
