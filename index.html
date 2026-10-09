@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <title>Ember</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100d0b">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/src/title/title.css">
+</head>
+<body>
+  <main id="app">
+    <section id="title-screen" class="screen title-screen" aria-labelledby="game-title">
+      <div class="title-hero" aria-hidden="true"></div>
+      <div class="title-veil" aria-hidden="true"></div>
+      <div class="title-topline"><span class="title-mark">EMBER ASHES</span><button id="sound-toggle" class="sound-toggle" type="button" data-sound-toggle aria-label="Desativar som" aria-pressed="false"></button></div>
+
+      <div class="title-content" id="title-content">
+        <p class="eyebrow" data-pt="Táticas em cinzas" data-en="Tactics in ashes">Táticas em cinzas</p>
+        <h1 id="game-title">Ember</h1>
+        <p class="version">ENGINE 2 · TEST BUILD Version 0.034</p>
+        <p class="tagline" data-pt="Seis sobreviventes. Um tabuleiro de guerra. Cada casa conta." data-en="Six survivors. A battlefield. Every square counts.">Seis sobreviventes. Um tabuleiro de guerra. Cada casa conta.</p>
+        <nav class="title-menu" aria-label="Menu principal">
+          <button id="new-campaign" class="menu-button primary" type="button" disabled data-pt="Nova campanha" data-en="New campaign">Nova campanha</button>
+          <button id="continue-campaign" class="menu-button secondary" type="button" hidden data-pt="Continuar" data-en="Continue">Continuar</button>
+          <button id="help-open" class="menu-button secondary" type="button" data-pt="Como jogar" data-en="How to play">Como jogar</button>
+          <button id="options-open" class="menu-button secondary" type="button" data-pt="Opções" data-en="Options">Opções</button>
+        </nav>
+      </div>
+
+      <button id="test-mode-open" class="test-entry" type="button" data-pt="Modo teste" data-en="Test mode">Modo teste</button>
+      <div id="title-loader" class="title-loader" role="progressbar" aria-label="Carregando Ember" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="loader-label"><span id="loader-status">Despertando as cinzas</span><span id="loader-percent">0%</span></div>
+        <div class="loader-frame"><div class="loader-track"><div id="loader-fill" class="loader-fill"><i class="loader-spark"></i></div></div><i class="loader-cap left"></i><i class="loader-cap right"></i><div class="loader-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      </div>
+    </section>
+
+    <section id="save-slots-screen" class="screen utility-screen save-slots-screen" aria-labelledby="save-slots-title" hidden>
+      <img class="save-slots-background" src="/game/ui/old-ember-save-board.png" alt="" aria-hidden="true">
+      <div class="save-slots-wash" aria-hidden="true"></div>
+      <header class="save-slots-header">
+        <button class="save-slots-back ember-plate" type="button" data-back-title data-label-pt="Voltar" data-label-en="Back" aria-label="Voltar"><span aria-hidden="true">‹</span><span data-pt="Voltar" data-en="Back">Voltar</span></button>
+        <div class="save-slots-heading"><p class="save-slots-kicker" data-pt="Arquivos" data-en="Archives">Arquivos</p><h2 id="save-slots-title">Nova campanha</h2><p id="save-slots-intro" class="save-slots-intro"></p></div>
+      </header>
+      <main class="save-slots-content"><div id="save-slots-list" class="save-slots-list" role="list"></div><p id="save-slots-status" class="save-slots-status" role="status" aria-live="polite"></p></main>
+    </section>
+
+    <section id="test-menu" class="screen utility-screen" aria-labelledby="test-title" hidden>
+      <header class="utility-header"><button class="back-button" type="button" data-back-title aria-label="Voltar">‹</button><div><p class="eyebrow" data-pt="Modo teste" data-en="Test mode">Modo teste</p><h2 id="test-title" data-pt="O que abrir?" data-en="Choose a screen">O que abrir?</h2></div></header>
+      <div class="card-list">
+        <a class="screen-card" href="/editor.html"><span class="card-kicker">ENGINE 2</span><strong>Map Editor</strong><span data-pt="Editor 3D de mapas com terreno, elenco e fundos." data-en="3D map editor with terrain, roster and backgrounds.">Editor 3D de mapas com terreno, elenco e fundos.</span></a>
+        <button id="dev-controls-open" class="screen-card" type="button"><span class="card-kicker">ENGINE 2</span><strong>Dev Controls</strong><span data-pt="Atalhos para as ferramentas e ajustes de teste." data-en="Shortcuts to test tools and controls.">Atalhos para as ferramentas e ajustes de teste.</span></button>
+      </div>
+    </section>
+
+    <section id="dev-controls" class="screen utility-screen" aria-labelledby="dev-title" hidden>
+      <header class="utility-header"><button class="back-button" type="button" data-back-test aria-label="Voltar">‹</button><div><p class="eyebrow">MODO TESTE</p><h2 id="dev-title">Dev Controls</h2></div></header>
+      <div class="dev-content">
+        <p class="dev-intro" data-pt="Abra as prévias de terreno, efeitos visuais e decorações do Engine2." data-en="Open Engine2 previews for terrain, visual effects, and decorations.">Abra as prévias de terreno, efeitos visuais e decorações do Engine2.</p>
+        <div class="dev-grid">
+          <a class="dev-link" href="/diorama.html"><strong data-pt="Diorama 3D" data-en="3D diorama">Diorama 3D</strong><span data-pt="Abre o protótipo original do Engine2." data-en="Opens the original Engine2 prototype.">Abre o protótipo original do Engine2.</span></a>
+          <a class="dev-link" href="/vfx.html"><strong>VFX Preview</strong><span data-pt="Prévia dos efeitos importados." data-en="Preview imported effects.">Prévia dos efeitos importados.</span></a>
+          <a class="dev-link" href="/props.html"><strong>Props Catalog</strong><span data-pt="Catálogo de decorações disponíveis." data-en="Browse available decorations.">Catálogo de decorações disponíveis.</span></a>
+        </div>
+      </div>
+    </section>
+
+    <dialog id="notice-dialog" class="menu-dialog">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar">×</button>
+      <p class="eyebrow" id="dialog-eyebrow">EMBER</p><h2 id="dialog-title"></h2><p id="dialog-message"></p>
+      <button id="dialog-test-link" class="menu-button primary" type="button" hidden data-pt="Abrir modo teste" data-en="Open test mode">Abrir modo teste</button>
+    </dialog>
+
+    <dialog id="options-dialog" class="menu-dialog title-options-dialog" aria-labelledby="options-title">
+      <header class="title-options-header">
+        <h2 id="options-title" data-pt="Opções" data-en="Options">Opções</h2>
+        <button class="options-close" type="button" data-close-options data-pt="Fechar" data-en="Close">Fechar</button>
+      </header>
+      <div class="title-options-grid">
+        <section class="title-options-section">
+          <h3 class="title-options-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8m-4-4v4"/></svg><span data-pt="Gráficos" data-en="Graphics">Gráficos</span></h3>
+          <fieldset class="options-quality"><legend data-pt="Qualidade gráfica" data-en="Graphics quality">Qualidade gráfica</legend>
+            <div class="options-quality-buttons"><button type="button" data-graphics-quality="low" data-pt="Baixa" data-en="Low">Baixa</button><button type="button" data-graphics-quality="medium" data-pt="Média" data-en="Medium">Média</button><button type="button" data-graphics-quality="high" data-pt="Alta" data-en="High">Alta</button></div>
+            <p class="options-help" data-pt="Baixa: sem sombras ou FX atmosféricos. Média: sombras 2048 sem contato. Alta: sombras 4096 com contato. Ajusta resolução, sombras e iluminação; modelos e regras permanecem iguais." data-en="Low: no shadows or atmospheric FX. Medium: 2048 shadows without contact shadows. High: 4096 shadows with contact shadows. Adjusts resolution, shadows, and lighting; models and gameplay rules stay the same.">Baixa: sem sombras ou FX atmosféricos. Média: sombras 2048 sem contato. Alta: sombras 4096 com contato. Ajusta resolução, sombras e iluminação; modelos e regras permanecem iguais.</p>
+            <p id="graphics-custom" class="options-help" hidden></p>
+          </fieldset>
+          <p class="options-manual-note" data-pt="Ajustes manuais personalizam o preset selecionado." data-en="Manual adjustments customize the selected preset.">Ajustes manuais personalizam o preset selecionado.</p>
+          <label class="options-toggle" data-gfx-control="realShadows"><span data-pt="Sombras" data-en="Shadows">Sombras</span><input type="checkbox" id="gfx-real-shadows"></label>
+          <label class="options-toggle" data-gfx-control="softShadows"><span data-pt="Sombras mais leves" data-en="Lighter shadows">Sombras mais leves</span><input type="checkbox" id="gfx-soft-shadows"></label>
+          <label class="options-toggle" data-gfx-control="localLights"><span data-pt="Luzes locais" data-en="Local lights">Luzes locais</span><input type="checkbox" id="gfx-local-lights"></label>
+          <label class="options-toggle" data-gfx-control="atmosphericFx"><span data-pt="FX atmosféricos" data-en="Atmospheric FX">FX atmosféricos</span><input type="checkbox" id="gfx-atmospheric-fx"></label>
+          <label class="options-toggle" data-gfx-control="contactShadows"><span data-pt="Sombras de contato" data-en="Contact shadows">Sombras de contato</span><input type="checkbox" id="gfx-contact-shadows"></label>
+          <button id="fullscreen-toggle" type="button" class="options-action" data-pt="Tela cheia" data-en="Fullscreen">Tela cheia</button>
+          <p id="fullscreen-error" class="options-status" role="status" hidden></p>
+        </section>
+        <section class="title-options-section">
+          <h3 class="title-options-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6l-5 4H4Z"/><path d="M16 9a5 5 0 0 1 0 6m2-9a9 9 0 0 1 0 12"/></svg><span data-pt="Áudio" data-en="Audio">Áudio</span></h3>
+          <label class="options-toggle"><span data-pt="Silenciar" data-en="Mute">Silenciar</span><input id="mute-sound" type="checkbox"></label>
+          <label class="options-volume"><span><span data-pt="Música" data-en="Music">Música</span><output id="music-volume-value">100%</output></span><input id="music-volume" type="range" min="0" max="1" step="0.01"></label>
+          <label class="options-volume"><span><span data-pt="Efeitos sonoros" data-en="Sound effects">Efeitos sonoros</span><output id="sfx-volume-value">100%</output></span><input id="sfx-volume" type="range" min="0" max="1" step="0.01"></label>
+          <label class="options-volume"><span><span data-pt="Vídeos" data-en="Videos">Vídeos</span><output id="cutscene-volume-value">100%</output></span><input id="cutscene-volume" type="range" min="0" max="1" step="0.01"></label>
+        </section>
+        <section class="title-options-section">
+          <h3 class="title-options-heading"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 8 3-3 3 3m-3-3v11m8 3-3-3 3-3m-3 3V5M4 19h5m6-14h5"/></svg><span data-pt="Idiomas" data-en="Languages">Idiomas</span></h3>
+          <label class="options-language"><span data-pt="Interface e nomes" data-en="Interface and names">Interface e nomes</span><select id="language-select"><option value="pt">Português</option><option value="en">English</option></select></label>
+          <label class="options-language"><span data-pt="Diálogos" data-en="Dialogue">Diálogos</span><select id="dialogue-language"><option value="pt">Português</option><option value="en">English</option></select></label>
+          <label class="options-language"><span data-pt="Idioma das legendas" data-en="Subtitle language">Idioma das legendas</span><select id="subtitle-language"><option value="pt">Português (Brasil)</option><option value="en">English</option></select></label>
+        </section>
+        <section class="title-options-section">
+          <h3 class="title-options-heading"><span data-pt="Acessibilidade" data-en="Accessibility">Acessibilidade</span></h3>
+          <label class="options-toggle"><span data-pt="Exibir legendas" data-en="Show subtitles">Exibir legendas</span><input id="show-subtitles" type="checkbox" checked></label>
+          <label class="options-language"><span data-pt="Tamanho do diálogo" data-en="Dialogue text size">Tamanho do diálogo</span><select id="dialogue-size"><option value="1" data-pt="Normal" data-en="Normal">Normal</option><option value="1.15" data-pt="Grande" data-en="Large">Grande</option><option value="1.3" data-pt="Muito grande" data-en="Extra large">Muito grande</option></select></label>
+        </section>
+      </div>
+      <p class="title-options-footer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg><span data-pt="Alterações salvas automaticamente." data-en="Changes are saved automatically.">Alterações salvas automaticamente.</span></p>
+    </dialog>
+
+    <dialog id="help-dialog" class="menu-dialog help-dialog">
+      <button class="dialog-close" type="button" data-close-help aria-label="Fechar" data-label-pt="Fechar" data-label-en="Close">×</button>
+      <p class="eyebrow" data-pt="GUIA RÁPIDO" data-en="QUICK GUIDE">GUIA RÁPIDO</p><h2 data-pt="Como jogar" data-en="How to play">Como jogar</h2>
+      <nav class="help-tabs" id="help-tabs" aria-label="Seções do guia" data-label-pt="Seções do guia" data-label-en="Guide sections"></nav>
+      <div id="help-content" class="help-content" tabindex="0"></div>
+      <button class="menu-button primary" type="button" data-close-help data-pt="Entendi" data-en="Got it">Entendi</button>
+    </dialog>
+  </main>
+  <audio id="menu-music" data-engine2-music-base="1" preload="auto" loop aria-hidden="true">
+    <source src="/game/MUSIC/LANDR-AsheraIntrol-Balanced-High.mp3" type="audio/mpeg">
+  </audio>
+  <script type="module" src="/src/title/main.ts"></script>
+</body>
+</html>

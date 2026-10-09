@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Ember models review</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/game/ui/cursor.css">
+<script src="/game/ui/cursor.js" defer></script>
+<style>html,body{margin:0;height:100%;background:#111;overflow:hidden;color:#ddd;font:13px Georgia,serif}#label{position:fixed;left:12px;top:10px}</style>
+</head>
+<body>
+<div id="label"></div>
+<script type="module">
+// Review page for Ember's old 3D models: lined up next to a 2.65-unit human reference pole,
+// under overcast day or moonlit night (?light=day|night), camera ?view=wide|trees|props.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { loadModel, MODELS } from '/src/world/models.ts';
+
+const q = new URLSearchParams(location.search), night = q.get('light') === 'night', view = q.get('view') || 'wide';
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(1); renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.NeutralToneMapping;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(night ? '#0d1424' : '#8d959c');
+scene.fog = new THREE.Fog(scene.background, 40, 90);
+const camera = new THREE.PerspectiveCamera(32, innerWidth / innerHeight, 0.1, 300);
+const hemi = new THREE.HemisphereLight(night ? '#33466e' : '#c9d2da', night ? '#121216' : '#4a4640', night ? 0.45 : 1.1);
+const sun = new THREE.DirectionalLight(night ? '#a8bdff' : '#e9ecef', night ? 1.1 : 2.2);
+sun.position.set(-14, 22, 12); sun.castShadow = true; sun.shadow.mapSize.set(4096, 4096);
+Object.assign(sun.shadow.camera, { left: -30, right: 30, top: 30, bottom: -30, near: 1, far: 80 }); sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.03;
+scene.add(hemi, sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 60), new THREE.MeshStandardMaterial({ color: night ? '#2a2d28' : '#4d4e45', roughness: 1 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+const ITEMS = [
+  ['trees/dead-oak.glb', 'dead oak'], ['trees/dead-snag.glb', 'dead snag'], ['trees/twisted-stump.glb', 'twisted stump'],
+  ['trees/snowy-pine.glb', 'snowy pine'], ['trees/broadleaf.glb', 'broadleaf'], ['rocks/grey-outcrop.glb', 'grey outcrop'],
+  ['props/tavern-barrel.glb', 'barrel'], ['props/tavern-table.glb', 'table'], ['props/tavern-chair.glb', 'chair'],
+  ['props/tavern-candlestick.glb', 'candlestick'], ['props/tavern-mug.glb', 'mug'],
+];
+const loader = new GLTFLoader();
+const placed = [];
+let x = -24;
+const pole = (px) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.65, 12).translate(0, 1.325, 0), new THREE.MeshStandardMaterial({ color: '#d03030' })); m.position.set(px, 0, 1.6); m.castShadow = true; scene.add(m); };
+const info = [];
+// props registered in src/world/models.ts load at their real size; the rest load raw
+const REGISTERED = Object.fromEntries(Object.entries(MODELS).map(([k, d]) => [d.file, k]));
+for (const [file, name] of ITEMS) {
+  const obj = REGISTERED[file] ? await loadModel(REGISTERED[file]) : (await loader.loadAsync(`/game/models/${file}`)).scene;
+  obj.traverse(o => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+  const box = new THREE.Box3().setFromObject(obj), size = box.getSize(new THREE.Vector3());
+  obj.position.set(x - box.min.x, -box.min.y, -((box.min.z + box.max.z) / 2));
+  scene.add(obj);
+  placed.push({ name, x, w: size.x });
+  info.push(`${name}: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}`);
+  pole(x - 0.5);
+  x += size.x + 2.2;
+}
+document.getElementById('label').textContent = (night ? 'moonlit night' : 'overcast day') + ' — red pole = 2.65 human height';
+const frame = (a, b, h) => { const cx = (a + b) / 2, span = b - a; camera.position.set(cx, h * 0.55 + span * 0.18, span * 0.95 + 6); camera.lookAt(cx, h * 0.38, 0); };
+const trees = placed.filter(p => ['dead oak', 'dead snag', 'twisted stump', 'snowy pine', 'broadleaf'].includes(p.name));
+const props = placed.filter(p => !trees.includes(p));
+if (view === 'tavern') {
+  // a small tavern set: table with mug and candlestick on top, chair beside it, barrel behind, human pole
+  const set = new THREE.Group(); set.position.set(70, 0, 0); scene.add(set);
+  sun.position.set(70 - 14, 22, 12); sun.target.position.set(70, 0, 0); scene.add(sun.target);
+  const put = async (n, x, y, z, ry = 0) => { const m = await loadModel(n); m.position.set(x, y, z); m.rotation.y = ry; set.add(m); return m; };
+  await put('tavern-table', 0, 0, 0);
+  await put('tavern-mug', -0.25, MODELS['tavern-table'].height, 0.1, 0.6);
+  await put('tavern-candlestick', 0.3, MODELS['tavern-table'].height, -0.15);
+  await put('tavern-chair', 1.25, 0, 0.1, -Math.PI / 2);
+  await put('tavern-barrel', -1.6, 0, -1.1);
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.65, 12).translate(0, 1.325, 0), new THREE.MeshStandardMaterial({ color: '#d03030' }));
+  p.position.set(2.4, 0, 0.6); p.castShadow = true; set.add(p);
+  camera.position.set(70.4, 2.6, 6.2); camera.lookAt(70.4, 0.9, -0.2);
+} else if (view === 'trees') frame(trees[0].x - 1, trees.at(-1).x + trees.at(-1).w + 1, 8);
+else if (view === 'props') frame(props[0].x - 1, props.at(-1).x + props.at(-1).w + 1, 3);
+else frame(-25, x, 10);
+const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 }));
+composer.addPass(new RenderPass(scene, camera)); composer.addPass(new OutputPass());
+renderer.setAnimationLoop(() => composer.render());
+window.__models = { ready: true, sizes: info };
+</script>
+</body>
+</html>

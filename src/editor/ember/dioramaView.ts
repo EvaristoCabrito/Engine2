@@ -1,0 +1,269 @@
+// The 3D map inside Ember's map editor: Engine2's terrain, decorations and units, drawn from the
+// editor's current mission. It only draws and answers "what is under this pointer"; every edit is
+// made by Ember's editor through MapPreview3D's callbacks, exactly as with Ember's own preview.
+
+import * as THREE from 'three';
+import { Stage, TIME_PRESETS, type TimeOfDay } from '../../render/stage';
+import { CameraRig, START_PITCH, START_YAW } from '../../render/cameraRig';
+import { groundTextures } from '../../render/textures';
+import { makeTerrainMaterial } from '../../render/terrainMaterial';
+import { buildSmoothGround, buildWater, groundHeightAt } from '../../render/terrainMesh';
+import { Board } from '../../map/board';
+import type { EmberMapDraft } from '../../map/emberMap';
+import { corner, hexAt, SQ3 } from '../../core/hex';
+import { DecorLayer } from '../../world/decor';
+import { UnitActor } from '../../units/actor';
+import { unitForSpawn, type Footprint, type UnitDef } from '../../units/catalog';
+import { initFrames, pumpUploads } from '../../units/frames';
+import { mapBackgroundUrl, resolvedMapBackground } from '../mapBackgrounds';
+import { TILE_CHAR, placedFootprint } from '../../ember/data';
+import type { Mission, TerrainId } from '../../ember/types';
+
+export type SpawnSide = 'playerSpawns' | 'enemySpawns' | 'neutralSpawns';
+export interface PlacedUnit { side: SpawnSide; index: number; name: string; actor: UnitActor }
+
+const TERRAIN_BY_CHAR = Object.fromEntries(Object.entries(TILE_CHAR).map(([id, ch]) => [ch, id])) as Record<string, TerrainId>;
+const EDGES = 'smooth' as const;
+
+/** Ember's Mission keeps terrain as layout rows of characters; Engine2's board reads a tile array. */
+function draftFromMission(m: Mission): EmberMapDraft {
+  const tiles: TerrainId[] = [];
+  for (let r = 0; r < m.rows; r++) for (let c = 0; c < m.cols; c++) tiles.push(TERRAIN_BY_CHAR[m.layout[r]?.[c] ?? ''] ?? 'plains');
+  return { ...(m as unknown as EmberMapDraft), tiles };
+}
+
+/** Ember's footprint(): offsets authored for an even anchor row; odd-dy rows shift with the anchor's parity. */
+function footprintCells(f: Footprint | undefined, c: number, r: number): [number, number][] {
+  if (!f) return [[c, r]];
+  const shift = r & 1;
+  return f.map(o => [c + o.dx + (o.dy & 1 ? shift : 0), r + o.dy] as [number, number]);
+}
+
+function hexRing(rIn: number, rOut: number): THREE.BufferGeometry {
+  const pos: number[] = [], idx: number[] = [];
+  for (let k = 0; k < 6; k++) { const [ox, oz] = corner(0, 0, k, rOut), [ix, iz] = corner(0, 0, k, rIn); pos.push(ox, 0, oz, ix, 0, iz); }
+  for (let k = 0; k < 6; k++) { const a = k * 2, b = ((k + 1) % 6) * 2; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  return g;
+}
+
+export class DioramaView {
+  readonly stage: Stage;
+  readonly rig: CameraRig;
+  board: Board | null = null;
+  units: PlacedUnit[] = [];
+  private readonly groundMat: THREE.MeshStandardMaterial;
+  private readonly waterMat: THREE.MeshStandardMaterial;
+  private ground: THREE.Mesh | null = null;
+  private water: THREE.Mesh | null = null;
+  private readonly decor: DecorLayer;
+  private readonly unitGroup = new THREE.Group();
+  private readonly hover: THREE.Mesh;
+  private readonly marks = new THREE.Group();
+  private readonly ringGeo = hexRing(0.8, 0.97);
+  private readonly markMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.9, 1.9, 2.8), side: THREE.DoubleSide, transparent: true, depthWrite: false });
+  private readonly ray = new THREE.Raycaster();
+  private readonly ndc = new THREE.Vector2();
+  private mapKey = '';
+  private baseDist = 50;
+  private backdrop: THREE.Texture | null = null;
+  private backdropId: string | null = null;
+  private gen = 0;
+
+  constructor(host: HTMLElement) {
+    this.stage = new Stage(host);
+    this.rig = new CameraRig(this.stage.camera, this.stage.renderer.domElement);
+    this.rig.mode = 'free'; // the editor spins freely to test angles; the campaign stays locked
+    const tex = groundTextures(this.stage.renderer);
+    this.groundMat = makeTerrainMaterial(tex);
+    this.waterMat = new THREE.MeshStandardMaterial({
+      color: '#2f86a8', roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.74,
+      normalMap: tex.ripple, normalScale: new THREE.Vector2(0.6, 0.6), depthWrite: false,
+    });
+    this.stage.onFrame((_dt, t) => tex.ripple.offset.set(t * 0.02, t * 0.013));
+    this.decor = new DecorLayer(this.stage.renderer, this.stage.scene);
+    this.hover = new THREE.Mesh(this.ringGeo, new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 2.0, 1.0), side: THREE.DoubleSide, transparent: true, depthWrite: false }));
+    this.hover.visible = false;
+    this.hover.renderOrder = 5;
+    this.marks.renderOrder = 6;
+    this.stage.scene.add(this.hover, this.marks, this.unitGroup);
+    initFrames(this.stage.renderer);
+    this.stage.onFrame(dt => {
+      pumpUploads();
+      const yaw = this.rig.facingYaw;
+      this.decor.face(yaw);
+      for (const u of this.units) u.actor.update(dt, yaw, this.groundAt);
+    });
+  }
+
+  readonly groundAt = (x: number, z: number): number => (this.board ? groundHeightAt(this.board, EDGES, x, z) : 0);
+
+  /** Draw the editor's current mission. The camera is kept while the same map is being edited. */
+  async setMission(m: Mission): Promise<void> {
+    const gen = ++this.gen;
+    const board = new Board(draftFromMission(m));
+    this.board = board;
+    const key = `${m.id}|${m.cols}x${m.rows}`;
+    const b = board.bounds(), w = b.x1 - b.x0 + 2.4, depth = b.z1 - b.z0 + 2.4;
+    const tod = (['day', 'noon', 'dawn', 'dusk', 'brightNight', 'darkNight'] as TimeOfDay[]).includes(m.timeOfDay as TimeOfDay) ? m.timeOfDay as TimeOfDay : 'day';
+    if (key !== this.mapKey || tod !== this.stage.timeOfDay) {
+      this.stage.timeOfDay = tod;
+      this.stage.scene.background = new THREE.Color(TIME_PRESETS[tod].background);
+      this.stage.fitToBoard(w, depth);
+      if (m.environment === 'indoor') { this.stage.sun.intensity *= 0.4; this.stage.hemi.intensity *= 1.4; }
+    }
+    this.buildGround();
+    if (key !== this.mapKey) {
+      const avgY = board.cells.reduce((s, c) => s + c.groundY, 0) / board.cells.length;
+      this.rig.frame(b, avgY);
+      this.baseDist = this.rig.dist;
+      this.mapKey = key;
+    }
+    void this.applyBackdrop(board.draft);
+    this.placeUnits(m);
+    await this.decor.populate(board, this.groundAt);
+    if (gen !== this.gen) return;
+  }
+
+  private buildGround(): void {
+    const board = this.board!;
+    for (const m of [this.ground, this.water]) if (m) { this.stage.scene.remove(m); m.geometry.dispose(); }
+    this.ground = new THREE.Mesh(buildSmoothGround(board), this.groundMat);
+    this.ground.castShadow = this.ground.receiveShadow = true;
+    this.stage.scene.add(this.ground);
+    const wg = buildWater(board, EDGES);
+    this.water = wg ? new THREE.Mesh(wg, this.waterMat) : null;
+    if (this.water) { this.water.receiveShadow = true; this.water.renderOrder = 2; this.stage.scene.add(this.water); }
+  }
+
+  private async applyBackdrop(draft: EmberMapDraft): Promise<void> {
+    const item = resolvedMapBackground(draft);
+    const scene = this.stage.scene;
+    if (!item) { this.backdrop?.dispose(); this.backdrop = null; this.backdropId = null; scene.background = new THREE.Color(TIME_PRESETS[this.stage.timeOfDay].background); return; }
+    if (this.backdrop && this.backdropId === item.id) { scene.background = this.backdrop; return; }
+    try {
+      const texture = await new THREE.TextureLoader().loadAsync(mapBackgroundUrl(item));
+      texture.colorSpace = THREE.SRGBColorSpace;
+      this.backdrop?.dispose();
+      this.backdrop = texture; this.backdropId = item.id;
+      scene.background = texture;
+    } catch (error) { console.warn(`[engine2] could not load map background ${item.id}`, error); }
+  }
+
+  /** Ember's own spawns, each standing as its unit (heroes by name, everyone else by class). */
+  private placeUnits(m: Mission): void {
+    const board = this.board!;
+    const old = new Map(this.units.map(u => [`${u.side}|${u.index}|${u.actor.def.key}`, u]));
+    const next: PlacedUnit[] = [];
+    const sides: [SpawnSide, 'player' | 'enemy' | 'neutral'][] = [['playerSpawns', 'player'], ['enemySpawns', 'enemy'], ['neutralSpawns', 'neutral']];
+    for (const [side, kind] of sides) {
+      (m[side] ?? []).forEach((s, index) => {
+        if (s.x < 0 || s.y < 0 || s.x >= m.cols || s.y >= m.rows) return;
+        const def = unitForSpawn(s, kind);
+        if (!def) return;
+        const k = `${side}|${index}|${def.key}`;
+        let placed = old.get(k);
+        if (placed) old.delete(k);
+        else {
+          const actor = new UnitActor(def);
+          actor.facing = kind === 'enemy' ? -1 : 1;
+          this.unitGroup.add(actor.mesh);
+          void actor.ready().catch(e => console.warn('[engine2] sprite', def.key, e));
+          placed = { side, index, name: s.name, actor };
+        }
+        placed.name = s.name;
+        const a = this.anchor(def, s.x, s.y);
+        placed.actor.x = a.x; placed.actor.z = a.z;
+        next.push(placed);
+      });
+    }
+    for (const gone of old.values()) { this.unitGroup.remove(gone.actor.mesh); gone.actor.dispose(); }
+    this.units = next;
+  }
+
+  /** Front-row centroid of a footprint (Ember's footprintCentroid): where the feet stand. */
+  private anchor(def: UnitDef, c: number, r: number): { x: number; z: number } {
+    const b = this.board!;
+    const front = def.footprint ? footprintCells(def.footprint, c, r).filter((_, i) => def.footprint![i].dy === 0) : [[c, r] as [number, number]];
+    let x = 0, z = 0, n = 0;
+    for (const [fc, fr] of front) { if (fc < 0 || fc >= b.layout.cols) continue; const cell = b.cell(fc, fr); x += cell.x; z += cell.z; n++; }
+    return n ? { x: x / n, z: z / n } : { x: b.cell(c, r).x, z: b.cell(c, r).z };
+  }
+
+  private aim(clientX: number, clientY: number): void {
+    const r = this.stage.renderer.domElement.getBoundingClientRect();
+    this.ndc.set(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(this.ndc, this.stage.camera);
+  }
+
+  /** The hex under a screen point, plus that point in Ember's flat map units (its click `point`). */
+  cellAt(clientX: number, clientY: number): { x: number; y: number; point: { x: number; y: number } } | null {
+    if (!this.board || !this.ground) return null;
+    this.aim(clientX, clientY);
+    const hit = this.ray.intersectObjects(this.water ? [this.ground, this.water] : [this.ground], false)[0];
+    if (!hit) return null;
+    const L = this.board.layout;
+    const [x, y] = hexAt(L, hit.point.x, hit.point.z);
+    // Ember's flat preview measures in hex radii from its board corner: centre of (x, y) is
+    // (√3·(x + ½(y&1) + ½), 1.5·y + 3.4) — the same numbers the water brush offsets from.
+    return { x, y, point: { x: hit.point.x + L.ox + SQ3 / 2, y: hit.point.z + L.oz + 3.4 } };
+  }
+
+  /** The unit whose drawn sprite is under a screen point (tall sprites reach well past their hex). */
+  unitAt(clientX: number, clientY: number): PlacedUnit | null {
+    this.aim(clientX, clientY);
+    let best: PlacedUnit | null = null, bestD = Infinity;
+    for (const u of this.units) {
+      const hit = this.ray.intersectObject(u.actor.mesh, true)[0];
+      if (hit && hit.distance < bestD) { best = u; bestD = hit.distance; }
+    }
+    return best;
+  }
+
+  /** Light up the hex under the pointer, or hide the ring. */
+  setHover(cell: { x: number; y: number } | null): void {
+    if (!cell || !this.board) { this.hover.visible = false; return; }
+    const c = this.board.cell(cell.x, cell.y);
+    this.hover.position.set(c.x, (c.water ? c.waterY : this.groundAt(c.x, c.z)) + 0.04, c.z);
+    this.hover.visible = true;
+  }
+
+  /** Ring every hex of the selected placed decoration (Ember highlights it the same way). */
+  setSelection(sel: { id: string; x: number; y: number; rot?: number } | null | undefined): void {
+    this.marks.clear();
+    if (!sel || !this.board) return;
+    const L = this.board.layout;
+    for (const f of placedFootprint(sel)) {
+      const cx = sel.x + f.dx, cy = sel.y + f.dy;
+      if (cx < 0 || cy < 0 || cx >= L.cols || cy >= L.rows) continue;
+      const c = this.board.cell(cx, cy);
+      const ring = new THREE.Mesh(this.ringGeo, this.markMat);
+      ring.position.set(c.x, (c.water ? c.waterY : this.groundAt(c.x, c.z)) + 0.05, c.z);
+      this.marks.add(ring);
+    }
+  }
+
+  /** Zoom as a share of the framed distance (Ember's preview percentage). */
+  setZoom(zoom: number): void {
+    this.rig.dist = THREE.MathUtils.clamp(this.baseDist / zoom, this.rig.minDist, this.rig.maxDist);
+    this.rig.apply();
+  }
+
+  turn(degrees: number): void { this.rig.yaw += THREE.MathUtils.degToRad(degrees); this.rig.apply(); }
+  tilt(degrees: number): void { this.rig.pitch += THREE.MathUtils.degToRad(degrees); this.rig.apply(); }
+  /** Back to the normal view (turned 30°, tilted 20°). */
+  resetAngle(): void { this.rig.yaw = START_YAW; this.rig.pitch = START_PITCH; this.rig.apply(); }
+
+  dispose(): void {
+    this.gen++;
+    this.decor.clear();
+    for (const u of this.units) u.actor.dispose();
+    this.units = [];
+    for (const m of [this.ground, this.water]) m?.geometry.dispose();
+    this.groundMat.dispose(); this.waterMat.dispose(); this.backdrop?.dispose();
+    this.rig.dispose();
+    this.stage.dispose();
+  }
+}

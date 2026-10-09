@@ -1,0 +1,4 @@
+{
+  "_note": "Units whose edges carry leftover video background (Veo cuts) get edge-colour decontamination. Hydra art is clean: leave it off this list.",
+  "decontaminate": ["carnivorous-plant-001"]
+}
