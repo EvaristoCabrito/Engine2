@@ -5,6 +5,10 @@
 // burst of red rays on impact. Here the same art and wake fly in 3D: from bow height to the
 // target's chest on a slight arc, the arrow pointing along its path and turned to face the
 // camera from any angle.
+//
+// The mage's normal attack (emitMissileFx "arcaneBolt") rides the same flights: Ember drew it as
+// two thin purple pressure-wave rings behind a small pink core on a gently weaving path, and a
+// burst of eight pink rays at the target.
 
 import * as THREE from "three";
 import type { BattleEngine } from "./engine";
@@ -22,7 +26,8 @@ const RELEASE_Y = 0.95, IMPACT_Y = 0.8;
 const ARC = 0.08;
 /** Ember drew the arrow image 1.35 hexes square (25% larger than first, to read over the grid). */
 const ARROW_SIZE = 1.35;
-const SPARKS = 5, RAYS = 7;
+/** Neera's impact has 7 rays, the mage bolt's 8. */
+const SPARKS = 5, RAYS = 8;
 
 /** A soft ellipse ring (Ember's wake) or a round mote, drawn once. */
 function ringTexture(): THREE.CanvasTexture {
@@ -56,7 +61,7 @@ export class ArrowFx3D {
   private readonly ringTex = ringTexture();
   private readonly moteTex = moteTexture();
   private arrowTex: THREE.CanvasTexture | null = null;
-  private readonly tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), dir: new THREE.Vector3(), view: new THREE.Vector3(), up: new THREE.Vector3(), m: new THREE.Matrix4() };
+  private readonly tmp = { a: new THREE.Vector3(), b: new THREE.Vector3(), dir: new THREE.Vector3(), view: new THREE.Vector3(), up: new THREE.Vector3(), side: new THREE.Vector3(), m: new THREE.Matrix4() };
 
   constructor(private readonly view: DioramaView, private readonly engine: BattleEngine) {
     // the source art points north-east (45°); turn the quad so the arrow lies along +x
@@ -93,11 +98,16 @@ export class ArrowFx3D {
     return out.set(c.x, this.view.groundAt(c.x, c.z) + height, c.z);
   }
 
-  /** The arrow's point `k` (0..1) along its arc, and its direction there. */
-  private along(from: THREE.Vector3, to: THREE.Vector3, k: number, pos: THREE.Vector3, dir?: THREE.Vector3): void {
+  /** The arrow's point `k` (0..1) along its arc, and its direction there. `weave` (the shot's
+   * seed) adds Ember's sideways weave of the mage bolt: sin(k·2.4π + seed)·0.16·(1 − 0.6k) hexes. */
+  private along(from: THREE.Vector3, to: THREE.Vector3, k: number, pos: THREE.Vector3, dir?: THREE.Vector3, weave?: number): void {
     const dist = from.distanceTo(to);
     pos.lerpVectors(from, to, k);
     pos.y += Math.sin(Math.PI * k) * ARC * dist;
+    if (weave !== undefined) {
+      const side = this.tmp.side.set(-(to.z - from.z), 0, to.x - from.x).normalize();
+      pos.addScaledVector(side, Math.sin(k * Math.PI * 2.4 + weave) * 0.16 * (1 - k * 0.6));
+    }
     if (dir) {
       dir.subVectors(to, from);
       dir.y += Math.cos(Math.PI * k) * Math.PI * ARC * dist;
@@ -123,7 +133,8 @@ export class ArrowFx3D {
     const { a: from, b: to, dir } = this.tmp;
     const pos = new THREE.Vector3(), back = new THREE.Vector3(), backDir = new THREE.Vector3();
     list.forEach((m, i) => {
-      const live = m.live && m.kind === "longShot";
+      const live = m.live && (m.kind === "longShot" || m.kind === "arcaneBolt");
+      const arcane = m.kind === "arcaneBolt", weave = arcane ? m.seed : undefined;
       if (!live && !this.flights[i]) return;
       const f = this.flight(i);
       const show = (on: boolean) => { f.arrow.visible = on; for (const o of [...f.wake, ...f.sparks, ...f.rays]) o.visible = on; };
@@ -134,26 +145,37 @@ export class ArrowFx3D {
       const afterglow = Math.max(0, (m.t - m.travel) / AFTERGLOW);
       const fade = 1 - afterglow;
 
-      this.along(from, to, kHead, pos, dir);
+      this.along(from, to, kHead, pos, dir, weave);
       this.orient(f.arrow, pos, dir);
-      f.arrow.visible = fade > 0;
+      f.arrow.visible = !arcane && fade > 0;
       (f.arrow.material as THREE.MeshBasicMaterial).opacity = fade;
 
-      // the wake: two rings behind the head, red for Neera, pale for every other archer
+      // the wake: two rings behind the head, red for Neera, pale for every other archer, purple
+      // pressure waves behind the mage's bolt
       f.wake.forEach((ring, r) => {
         const bk = Math.max(0, kHead - (r + 1) * 0.1);
-        this.along(from, to, bk, back, backDir);
+        this.along(from, to, bk, back, backDir, weave);
         this.orient(ring, back, backDir);
         ring.scale.set(0.2 + (r + 1) * 0.07, 1 + r * 0.4, 1);
         const mat = ring.material as THREE.MeshBasicMaterial;
-        mat.color.set(m.neeraArrow ? 0xdc2636 : 0xd7dee2);
-        mat.opacity = fade * (m.neeraArrow ? 0.42 : 0.24);
+        mat.color.set(arcane ? 0xca5cff : m.neeraArrow ? 0xdc2636 : 0xd7dee2);
+        mat.opacity = fade * (arcane ? 0.72 : m.neeraArrow ? 0.42 : 0.24);
         ring.visible = fade > 0;
       });
 
       // Neera: ember-red motes follow the arrow, and red rays flare out where it lands
       const time = (this.engine as unknown as Any).time as number ?? 0;
       f.sparks.forEach((s, k) => {
+        if (arcane) {
+          // the bolt's small pink core
+          s.visible = k === 0 && fade > 0;
+          if (!s.visible) return;
+          s.position.copy(pos);
+          s.scale.set(0.2, 0.2, 1);
+          (s.material as THREE.SpriteMaterial).color.setRGB(244 / 255, 150 / 255, 1);
+          (s.material as THREE.SpriteMaterial).opacity = fade * 0.92;
+          return;
+        }
         s.visible = m.neeraArrow && fade > 0;
         if (!s.visible) return;
         const sk = Math.max(0, kHead - k * 0.055);
@@ -166,20 +188,22 @@ export class ArrowFx3D {
         (s.material as THREE.SpriteMaterial).opacity = fade * (0.85 - k * 0.11);
       });
       f.rays.forEach((ray, k) => {
-        ray.visible = m.neeraArrow && kHead >= 1 && fade > 0;
+        const count = arcane ? 8 : 7;
+        ray.visible = (arcane || m.neeraArrow) && k < count && kHead >= 1 && fade > 0;
         if (!ray.visible) return;
-        const a = m.seed + k * (Math.PI * 2 / RAYS);
+        const a = m.seed + k * (Math.PI * 2 / count);
         // rays fan out in the plane facing the camera
         const { view, up } = this.tmp;
         view.subVectors(this.view.stage.camera.position, pos).normalize();
         up.set(0, 1, 0).addScaledVector(view, -view.y).normalize();
         const right = new THREE.Vector3().crossVectors(up, view).normalize();
         const rayDir = right.multiplyScalar(Math.cos(a)).addScaledVector(up, Math.sin(a)).normalize();
-        this.orient(ray, pos.clone().addScaledVector(rayDir, 0.035), rayDir);
-        ray.scale.set(0.12 + afterglow * 0.12, 1, 1);
+        const inner = arcane ? 0.05 : 0.035, outer = arcane ? 0.12 + 0.09 * afterglow : 0.12 + afterglow * 0.12;
+        this.orient(ray, pos.clone().addScaledVector(rayDir, inner), rayDir);
+        ray.scale.set(arcane ? outer - inner : outer, 1, 1);
         const mat = ray.material as THREE.MeshBasicMaterial;
-        mat.color.setRGB(1, 75 / 255, 62 / 255);
-        mat.opacity = fade * 0.8;
+        if (arcane) mat.color.setRGB(1, 110 / 255, 220 / 255); else mat.color.setRGB(1, 75 / 255, 62 / 255);
+        mat.opacity = fade * (arcane ? 0.88 : 0.8);
       });
     });
   }

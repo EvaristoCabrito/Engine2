@@ -1,23 +1,24 @@
 import { DECORATIONS, decorationImage, decorationImageWebp, decorationSideFile } from "./data";
 import type { GameArt, SpriteId, TerrainId } from "./types";
 import { ENCOUNTER_NPC_IDS } from "./encounter-npcs";
+import { ENGINE2_V3_GROUND_VARIANTS } from "../ember/tileVariants";
 
 // Number of art variants available per terrain, e.g. plains001.png / plains002.png.
 // Index 0 (the "001" file) is what every mission renders with unless it names a
 // different variant in Mission.tileVariants — keep it as the tile that's safe
 // for existing maps.
 export const TILE_VARIANT_COUNT: Record<TerrainId, number> = {
-  plains: 48,
-  woods: 12,
-  ruins: 8,
-  water: 24,
-  ember: 6,
-  hill: 5,
-  flame: 4,
-  column: 3,
-  nave: 19,
+  plains: 52,
+  woods: 14,
+  ruins: 10,
+  water: 28,
+  ember: 8,
+  hill: 7,
+  flame: 6,
+  column: 5,
+  nave: 21,
   barricade: 1,
-  door: 1,
+  door: 3,
   void: 1,
   // The Icelands section keeps legacy snow variants first, then the 12 supplied
   // cold-ground tiles (snow004–snow015) so saved maps retain their old indices.
@@ -42,6 +43,8 @@ export const HEX_GROUND_001: Partial<Record<TerrainId, { variant: number; file: 
  * Two variants of the same terrain differ only in art, so this is the only way to tell
  * from a painted map which of them a cell is actually using. */
 export function tileVariantName(id: TerrainId, variant: number): string {
+  const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === id && entry.variant === variant);
+  if (engine2V3) return `engine2-v3-${engine2V3.folder}`;
   if (id === "plains" && variant === 46) return "hex-ground-013-farm-soil";
   if (id === "plains" && variant === 47) return "hex-ground-006-cave-earth";
   if (id === "nave" && variant === 18) return "hex-ground-013-farm-planks";
@@ -104,6 +107,8 @@ export function isHexGroundVariant(id: TerrainId, variant: number): boolean {
 }
 
 export function tileVariantSrc(id: TerrainId, variant: number): string {
+  const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === id && entry.variant === variant);
+  if (engine2V3) return `/game/ground-engine2-v3/${engine2V3.folder}/color.png`;
   return `/game/tiles/${tileVariantName(id, variant)}.png?v=66`;
 }
 /** Framed portrait art for the sprites that have one; every other sprite falls back to its

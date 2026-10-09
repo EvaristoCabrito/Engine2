@@ -22,6 +22,8 @@ import { artProgress, ensureDecorationArt, ensureTerrainArt, ensureSpriteArt, lo
 import { getAudioVolumes, installAudioUnlock, pauseMusic, playFile, playMenuMusic, playTheme, resumeAudio, resumeMusic, setCutsceneVolume, setMusicVolume, setMuted, setSfxVolume, sfxPlay, stopMusic, unlockAudio } from "./audio";
 import { Battle3D as BattleCanvas } from "./Battle3D";
 import { MapEditorScreen as MapEditorScreen3D } from "../editor/ember/MapEditorScreen";
+import { GroundSetPicker } from "../render/GroundSetPicker";
+import { ENGINE2_V3_CITY_VARIANT } from "../ember/tileVariants";
 import { ELEMENT_LABELS, PLACEABLE_ELEMENT_KINDS, type PlaceableElementKind } from "./gfx/params";
 import { ELEMENT_FX_REGISTRY, pixelDefaults, pixelPresetsFor, type PixelElement, type PixelElementSettings } from "./gfx/three/ProceduralElementEmitter";
 import { THREE_D_DOOR_VARIANTS } from "./data";
@@ -50,9 +52,9 @@ import { BattleEngine, heroSpriteFor } from "./engine";
 import { MapPreviewCanvas, type PreviewDecorationSelection, type PreviewUnitSelection } from "./MapPreviewCanvas";
 import { WorldMapScreen } from "./WorldMapScreen";
 import { campaignHour, campaignTimeOfDay, usesTravelClock } from "./campaignTime";
+import { moonPhaseOf } from "./moonPhase";
 import { OverworldMapScreen } from "./OverworldMapScreen";
 import { LoadingCurtain, useLoadingCurtain } from "./MapLoadingOverlay";
-import { moonPhaseOf } from "./moonPhase";
 import { HungerBar } from "./HungerBar";
 import { buyInnMeal, fullness, useRation } from "./hunger";
 import { POISON_TIERS, poisonDice, poisonTierOf } from "./poison";
@@ -1320,10 +1322,10 @@ export function GameApp() {
             return { ...resolved, environment: resolved.environment ?? "outdoor", timeOfDay, sunIntensity: light.key, ambientIntensity: light.ambient };
           })()
         : resolved;
-      // Companions sit in the walkable Inn as NPCs, but only once they've actually joined.
-      const freedAldric =
       // tonight's moon: night battles are lit by the phase of the campaign's current day
       timed = { ...timed, moonPhase: moonPhaseOf(save.gameClock) };
+      // Companions sit in the walkable Inn as NPCs, but only once they've actually joined.
+      const freedAldric =
         !testMode && timed.id === "watchtower-prison" && heroRecruited("Aldric", save.completed, save.flags) && timed.neutralSpawns
           ? { ...timed, neutralSpawns: timed.neutralSpawns.filter((spawn) => spawn.name !== "Aldric") }
           : timed;
@@ -6928,6 +6930,7 @@ export function MapEditorScreen({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-muted flex-1 min-w-[12rem]">Escolha um terreno ou grupo de tiles para pintar o mapa.</p>
+              <GroundSetPicker />
               <Button
                 size="sm"
                 variant={turning ? "primary" : "ghost"}
@@ -6962,10 +6965,10 @@ export function MapEditorScreen({
                         setBrush(terrain);
                         if (key === "city") {
                           setCityMode(true);
-                          setVariant((v) => (v >= 21 && v <= 38 && v !== 22 ? v : 21));
+                          setVariant((v) => ((v >= 21 && v <= 38 && v !== 22) || v === ENGINE2_V3_CITY_VARIANT ? v : 21));
                         } else {
                           setCityMode(false);
-                          setVariant((v) => (terrain === "plains" && v >= 21 && v <= 38 ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
+                          setVariant((v) => (terrain === "plains" && ((v >= 21 && v <= 38) || v === ENGINE2_V3_CITY_VARIANT) ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
                         }
                       }}
                       className={`text-xs px-1.5 py-1 rounded-md border flex items-center gap-1.5 ${selected ? "border-accent" : "border-border"}`}
@@ -7029,7 +7032,7 @@ export function MapEditorScreen({
                         original variant index i (art file, saved-map value), so re-sorting
                         this list can never relabel or repaint an existing tile. */}
                     {Array.from({ length: TILE_VARIANT_COUNT[brush] ?? 1 }, (_, i) => i)
-                      .filter((i) => cityMode && brush === "plains" ? i >= 21 && i <= 38 && i !== 22 : !HIDDEN_VARIANTS[brush]?.includes(i))
+                      .filter((i) => cityMode && brush === "plains" ? (i >= 21 && i <= 38 && i !== 22) || i === ENGINE2_V3_CITY_VARIANT : !HIDDEN_VARIANTS[brush]?.includes(i))
                       .sort((a, b) => byName(VARIANT_LABEL[brush]?.[a] ?? String(a + 1).padStart(3, "0"), VARIANT_LABEL[brush]?.[b] ?? String(b + 1).padStart(3, "0")))
                       .map((i) => (
                   <button

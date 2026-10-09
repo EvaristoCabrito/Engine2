@@ -42,8 +42,9 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
 .menu-button.secondary { border: 1px solid rgba(190,150,95,.52); background: linear-gradient(180deg,#2a231c 0%,#0c0a08 55%,#211a14 100%); box-shadow: 0 0 0 1px #000,inset 0 0 0 1px rgba(255,220,160,.07),inset 0 0 10px #000,0 8px 22px rgba(0,0,0,.7); color: #e2c294; text-shadow: 0 1px 2px #000; }
 .test-entry { position: absolute; z-index: 3; bottom: max(.55rem, env(safe-area-inset-bottom)); left: max(.55rem, env(safe-area-inset-left)); padding: .3rem .45rem; border: 0; background: transparent; color: rgba(220,203,177,.46); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
 .test-entry:hover { color: #efd4a5; }
-.title-loader { position: absolute; z-index: 10; bottom: max(1.75rem, calc(env(safe-area-inset-bottom) + 1.25rem)); left: 50%; width: min(26rem, calc(100% - 3rem)); transform: translateX(-50%); transition: opacity .9s ease, transform .9s ease; }
-.title-loader.is-leaving { opacity: 0; transform: translate(-50%, 10px); }
+.title-loader { position: absolute; z-index: 10; bottom: max(1.75rem, calc(env(safe-area-inset-bottom) + 1.25rem)); left: calc((100% - min(32rem, 100% - 2.5rem)) / 2); width: min(25rem, calc(100% - 2.5rem)); transition: opacity .9s ease, transform .9s ease; }
+/* Sits under the menu column (same left edge and width as .title-menu), not the page centre. */
+.title-loader.is-leaving { opacity: 0; transform: translateY(10px); }
 .loader-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: .55rem; color: #b89a70; font-family: var(--font-display); font-size: .78rem; letter-spacing: .32em; text-transform: uppercase; text-shadow: 0 0 10px rgba(255,110,40,.22),0 1px 2px #000; transition: color .5s ease; }
 .loader-percent { color: #dfbf8e; letter-spacing: .14em; font-variant-numeric: tabular-nums; }
 .title-loader.is-ready .loader-label { color: #e8c79a; }
@@ -171,6 +172,7 @@ button:focus-visible, a:focus-visible, select:focus-visible { outline: 2px solid
   .title-content h1 { font-size: clamp(3.2rem,14.25vw,4.5rem); }
   .tagline { max-width: 23rem; font-size: .9rem; }
   .title-menu { width: 100%; }
+  .title-loader { width: min(32rem, calc(100% - 2.5rem)); }
   .save-slots-header { gap: .55rem; padding-inline: .7rem; }
   .save-slots-back { height: 2.15rem; padding-inline: .55rem; }
   .save-slots-intro { font-size: .7rem; }

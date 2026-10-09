@@ -61,7 +61,7 @@ stage.scene.add(markers);
 const groundAt = (x: number, z: number) => (board ? groundHeightAt(board, edges, x, z) : 0);
 const cast = new CastShowcase(stage, rig, groundAt);
 const decor = new DecorLayer(stage.renderer, stage.scene);
-stage.onFrame(() => decor.face(rig.facingYaw));
+stage.onFrame((_, time) => { decor.face(rig.facingYaw); decor.updateLights(time); });
 
 // ---- camera angle readout + back to the normal view
 const camAngle = $('cam-angle');

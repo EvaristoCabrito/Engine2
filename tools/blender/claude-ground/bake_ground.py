@@ -450,6 +450,63 @@ def scene_plains(mats, seed=0, dry=0.0, rocks=0.0, dark=0.0):
     st.build('stones', sm.m)
 
 
+def scene_meadow(mats, seed=300):
+    """Planície v2: a living meadow - lush greens over most of the tile, sun-bleached straw,
+    clusters of small wildflowers, only a few bare patches; light cavity so it stays bright."""
+    gm = mats('ground', detail_scale=40, detail_bump=0.006, cavity=0.45)
+    bm = mats('grass', detail_scale=120, detail_bump=0.0015, color_var=0.28, cavity=0.4, ao_dist=0.12)
+    fm = mats('flowers', detail_scale=150, detail_bump=0.001, color_var=0.12, cavity=0.25, ao_dist=0.08)
+    sm = mats('stones', detail_scale=60, detail_bump=0.01, cavity=0.5)
+    hfield = lambda x, y: fourier(x, y, seed + 1, kmax=6) * 0.6 + fourier(x, y, seed + 2, kmax=14, power=1.0) * 0.4
+    patch = lambda x, y: fourier(x, y, seed + 3, kmax=3)
+    soil = [(0.0, rgb('#4a3826')), (0.5, rgb('#6b5236')), (1.0, rgb('#8a6d4a'))]
+    ground('ground', hfield, lambda x, y: ramp(fourier(x, y, seed + 4, kmax=12, power=1.0), soil),
+           lambda x, y: np.full(len(x), 0.92), gm.m, 0.05)
+    rng = np.random.default_rng(seed + 5)
+    blades = Batch()
+    pts = jittered(72000, seed + 6, jitter=1.0)
+    dens = sample(patch, pts)
+    tone = sample(lambda x, y: fourier(x, y, seed + 7, kmax=7, power=1.1), pts)
+    greens = [(0.0, rgb('#2f5a1c')), (0.3, rgb('#467a25')), (0.6, rgb('#669c30')), (0.82, rgb('#8ab943')), (1.0, rgb('#b6cb63'))]
+    straw = [(0.0, rgb('#a8954f')), (1.0, rgb('#d8c47c'))]
+    for (x, y), d, t in zip(pts, dens, tone):
+        if rng.random() > 0.12 + 0.88 * smooth(0.1, 0.32, d):
+            continue
+        z = hfield(np.array([x]), np.array([y]))[0] * 0.05
+        h = rng.uniform(0.08, 0.17) * (0.8 + 0.4 * d)
+        vv, ff = blade(rng, x, y, z, h, rng.uniform(0.011, 0.02), rng.uniform(0.3, 0.9))
+        if rng.random() < 0.07:
+            c = ramp(np.array([rng.random()]), straw)[0]
+        else:
+            c = ramp(np.array([np.clip(t + rng.normal() * 0.12, 0, 1)]), greens)[0] * rng.uniform(0.9, 1.12)
+        blades.add_wrapped(vv, ff, c, rng.uniform(0.55, 0.75), 0.25)
+    blades.build('blades', bm.m)
+    # wildflowers: small clusters, one colour per cluster, sitting on top of the grass
+    petals = Batch()
+    colours = [rgb('#efd23e'), rgb('#f3efe0'), rgb('#a079cf'), rgb('#e9a43a')]
+    for (cx, cy) in jittered(70, seed + 11):
+        if rng.random() < 0.35:
+            continue
+        col = colours[rng.integers(len(colours))]
+        for _ in range(int(rng.integers(5, 16))):
+            x, y = cx + rng.normal() * 0.09, cy + rng.normal() * 0.09
+            z = hfield(np.array([x]), np.array([y]))[0] * 0.05 + rng.uniform(0.1, 0.17)
+            r = rng.uniform(0.011, 0.02)
+            vv, ff = disc(rng, x, y, z, r, r * rng.uniform(0.8, 1.0), 0.002, sides=6)
+            petals.add_wrapped(vv, ff, col * rng.uniform(0.92, 1.05), 0.6, 0.05)
+    petals.build('flowers', fm.m)
+    st = Batch()
+    for (x, y) in jittered(90, seed + 8):
+        if rng.random() > 0.3:
+            continue
+        s = rng.uniform(0.02, 0.05)
+        z = hfield(np.array([x]), np.array([y]))[0] * 0.05
+        vv, ff = stone(rng, x, y, z, s, rng.uniform(0.35, 0.7), 0.25)
+        c = ramp(np.array([rng.random()]), [(0, rgb('#6d6a62')), (1, rgb('#a19c90'))])[0]
+        st.add_wrapped(vv, ff, c, rng.uniform(0.7, 0.85), s * 1.4)
+    st.build('stones', sm.m)
+
+
 def scene_woods(mats, seed=40):
     gm = mats('ground', detail_scale=40, detail_bump=0.006)
     lm = mats('leaves', detail_scale=150, detail_bump=0.0015, color_var=0.35, cavity=0.85, grime=0.3)
@@ -691,6 +748,8 @@ def scene_snow(mats, seed=130):
 def build(name, mats):
     if name == 'plains':
         scene_plains(mats, 0)
+    elif name == 'plains-v2':
+        scene_meadow(mats)
     elif name == 'hill':
         scene_plains(mats, 20, dry=1.0, rocks=1.0)
     elif name == 'woods':

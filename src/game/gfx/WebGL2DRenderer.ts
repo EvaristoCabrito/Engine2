@@ -506,6 +506,16 @@ export class WebGL2DRenderer {
     this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.STENCIL_BUFFER_BIT);
   }
 
+  /** Engine2 projects OG Ember's authored canvas coordinates through its real 3D camera. */
+  setProjection(matrix: ArrayLike<number>): void {
+    this.matrix.set(Array.from(matrix));
+  }
+
+  dispose(): void {
+    // This renderer owns an independent overlay context, including its cached art textures.
+    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
+  }
+
   setSize(w: number, h: number) {
     this.width = w;
     this.height = h;

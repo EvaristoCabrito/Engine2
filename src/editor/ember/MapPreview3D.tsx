@@ -11,7 +11,6 @@ import { DECORATIONS, TERRAIN, placedFootprint } from '../../ember/data';
 import type { GameArt, Mission } from '../../ember/types';
 import { tileVariantName } from '../../ember/tileVariants';
 import { DioramaView } from './dioramaView';
-
 export type PreviewUnitSelection = {
   side: 'playerSpawns' | 'enemySpawns' | 'neutralSpawns';
   index: number;

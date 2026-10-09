@@ -2,8 +2,8 @@
 // BattleEngine still runs every rule, turn and AI decision; this only draws its state on the 3D
 // map (Engine2 terrain, decorations, full-resolution sprites) and feeds clicks back as hexes.
 // Units snap/walk between hexes with idle, walk, attack and death poses; the grid (reach,
-// targets, route, turn marker, cursor) is Ember's own, hidden on city hubs. Spell/hit effects
-// and the HUD's finer overlays come later.
+// targets, route, turn marker, cursor) is Ember's own, hidden on city hubs. Spell effects use
+// OG Ember's systems, canvas art and event callbacks through Engine2 coordinate adapters.
 
 import { useEffect, useRef } from "react";
 import type { BattleEngine } from "./engine";
@@ -24,14 +24,27 @@ function fadedFill(fill: string, fade: number): string {
   return `rgba(${m[1]},${m[2]},${m[3]},${(Math.round(a * 50) / 50).toFixed(2)})`;
 }
 import { UnitActor } from "../units/actor";
-import { unitForSpawn } from "../units/catalog";
+import { unitForSpawn, type Pose } from "../units/catalog";
 import type { Mission } from "../ember/types";
 import { BattleAtmosphere3D } from "./battleAtmosphere3d";
 import { BattleVignettes } from "./BattleVignettes";
 import { moonlightFor } from "./moonPhase";
 import { ArrowFx3D } from "./battleProjectiles3d";
+import { BattleHud3D } from "./battleHud3d";
+import { BattleSpells3D } from "./battleSpells3d";
+import { BattleSpellOverlay3D } from "./battleSpellOverlay3d";
 
 type Any = Record<string, any>; // the engine's private helpers (hexCenter, active) are read as-is
+
+/** Ember's art pools → Engine2's poses (same source sheets). Earlier entries win when two pools
+ * share an image (a sprite's `sprites` pool is its idle). */
+const ART_POSES: [string, Pose][] = [
+  ["idles", "idle"], ["sprites", "idle"], ["idles2", "idle2"],
+  ["walks", "walk"], ["walksLeft", "walkLeft"], ["walks2", "walk"], ["walksLeft2", "walkLeft"], ["walksUp", "walkUp"], ["walksDown", "walkDown"],
+  ["attacks", "attack"], ["attacksLeft", "attackLeft"], ["attacks2", "attack2"], ["attacks2Left", "attack2Left"], ["attacksShort", "attackShort"],
+  ["casts", "cast"], ["castsLeft", "castLeft"], ["counters", "counter"], ["countersLeft", "counter"],
+  ["deaths", "death"], ["deaths2", "death2"], ["hits", "hit"], ["hits2", "hit2"],
+];
 
 export function Battle3D({
   engine,
@@ -47,6 +60,9 @@ export function Battle3D({
   onTileReadout?: (showing: boolean) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const hudRef = useRef<HTMLCanvasElement>(null);
+  const spellArtRef = useRef<HTMLCanvasElement>(null);
+  const spellFxRef = useRef<HTMLCanvasElement>(null);
   const pausedRef = useRef(paused);
   pausedRef.current = paused;
   const onHudRef = useRef(onHud);
@@ -67,7 +83,26 @@ export function Battle3D({
         requestAnimationFrame(() => window.dispatchEvent(new Event("ember:battle-ready")));
       });
 
-    const actors = new Map<string, { actor: UnitActor; dead: boolean; lastAction: unknown }>();
+    const actors = new Map<string, { actor: UnitActor; dead: boolean; lastAction: unknown; px?: number; pz?: number; facing?: number }>();
+    // Ember's engine decides each unit's frame (unitVisual), timed to its own wind-ups, arrow
+    // releases, hits, counters and deaths: find which pose and point of the sheet that image is,
+    // and show the same on the 3D card.
+    const frameIndex = new Map<string, Map<unknown, { pose: Pose; k: number }>>();
+    const poseOf = (sprite: string, img: unknown) => {
+      let index = frameIndex.get(sprite);
+      if (!index) {
+        index = new Map();
+        const art = e.art as Any;
+        for (const [pool, pose] of ART_POSES) {
+          const frames = art[pool]?.[sprite] as unknown[] | undefined;
+          frames?.forEach((f, i) => { if (!index!.has(f)) index!.set(f, { pose, k: (i + 0.5) / frames.length }); });
+        }
+        const dirs = art.walkDirs?.[sprite] as { front: unknown; back: unknown; side: unknown } | undefined;
+        if (dirs) { index.set(dirs.front, { pose: "walkFront", k: 0.5 }); index.set(dirs.back, { pose: "walkBack", k: 0.5 }); index.set(dirs.side, { pose: "walkSide", k: 0.5 }); }
+        frameIndex.set(sprite, index);
+      }
+      return index.get(img);
+    };
     const toWorld = (wx: number, wy: number) => {
       const a0 = e.effectAnchor(0, 0) as { worldX: number; worldY: number; tile: number };
       const L = view.board!.layout;
@@ -92,11 +127,37 @@ export function Battle3D({
         const { actor } = entry;
         const anchor = e.unitAnchor(u) as { worldX: number; worldY: number };
         const p = toWorld(anchor.worldX, anchor.worldY);
+        // Facing on the 3D camera's screen, not Ember's fixed 2D one (with the camera turned, or
+        // on a diagonal step, Ember's left/right is not the screen's: units moonwalked). Moving:
+        // the way the unit actually goes on screen. Otherwise: where the engine has it looking
+        // (faceDx/faceDy, toward its last move or target), turned to the camera.
+        const yaw = view.rig.facingYaw;
+        const onScreen = (dx: number, dz: number) => dx * Math.cos(yaw) - dz * Math.sin(yaw);
+        const stepX = entry.px === undefined ? 0 : onScreen(p.x - entry.px, p.z - (entry.pz ?? p.z));
+        const lookX = u.faceDx != null && u.faceDy != null ? onScreen(u.faceDx, u.faceDy) : (u.facing ?? 1);
+        const facing = Math.abs(stepX) > 1e-4 ? Math.sign(stepX) : Math.abs(lookX) > 1e-6 ? Math.sign(lookX) : (entry.facing ?? 1);
+        entry.px = p.x; entry.pz = p.z; entry.facing = facing;
         actor.x = p.x; actor.z = p.z;
-        actor.facing = (u.facing ?? 1) >= 0 ? 1 : -1;
+        actor.facing = facing < 0 ? -1 : 1;
         // fog of war: an enemy out of the party's sight is not drawn (Ember's unitHidden)
         actor.mesh.visible = (u.fade ?? 1) > 0 && !engine.unitHidden(u);
         actor.lightFade = u.alive && !engine.unitHidden(u) ? (u.fade ?? 1) : 0;
+        const shown = poseOf(u.sprite, (e.unitVisual(u, (e.effectAnchor(0, 0) as { tile: number }).tile) as { img: unknown }).img);
+        if (shown && actor.has(shown.pose)) {
+          // Ember chose a left or right cut for its own screen; take the one that matches this
+          // camera, keeping any sprite whose cuts read the other way round (the Lancer) as Ember had it
+          let cut = shown.pose;
+          const base = cut.replace(/Left$/, "") as Pose, left = `${base}Left` as Pose;
+          if (base !== cut || actor.has(left)) {
+            const swapped = cut.endsWith("Left") !== ((u.facing ?? 1) < 0);
+            const wantLeft = (facing < 0) !== swapped;
+            cut = wantLeft && actor.has(left) ? left : base;
+          }
+          actor.drive(cut, shown.k);
+          entry.dead = !u.alive;
+          continue;
+        }
+        actor.drive("idle", null); // no matching cut: fall back to playing poses on our own clock
         const active = e.active as Any | null;
         if (!u.alive) {
           if (!entry.dead) { entry.dead = true; void actor.play("death"); }
@@ -194,6 +255,9 @@ export function Battle3D({
 
     const atmosphere = new BattleAtmosphere3D(view, engine);
     const arrows = new ArrowFx3D(view, engine);
+    const spells = new BattleSpells3D(view, engine);
+    const spellOverlay = new BattleSpellOverlay3D(spellArtRef.current!, spellFxRef.current!, view, engine);
+    const unitHud = new BattleHud3D(hudRef.current!, view, engine);
     // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
     const w = window as Window & { __emberEngine?: BattleEngine };
     w.__emberEngine = engine;
@@ -209,19 +273,28 @@ export function Battle3D({
       view.stage.setMoon(phase ? moonlightFor(phase) : { strength: 1 });
     };
 
-    let hudClock = 0;
+    let hudClock = 0, lastTick = 0;
     view.stage.onFrame((dt) => {
       followMoon();
       followCameraButtons();
       // keeps the engine's sight/fog current exactly as its own renderer does every frame
       e.updateCameraLayout(1280, 800);
-      if (!pausedRef.current) engine.tick(dt);
+      // The engine's clock follows real time (Ember's 0.05 s per-step cap kept, in sub-steps):
+      // sounds are scheduled on the real clock (Neera's bow snap lands 3 s after her draw), so a
+      // frame rate below 20 fps must not slow the engine down and put them out of sync.
+      const now = performance.now();
+      let real = Math.min(0.25, (now - (lastTick || now)) / 1000);
+      lastTick = now;
+      if (!pausedRef.current) while (real > 1e-4) { const step = Math.min(0.05, real); engine.tick(step); real -= step; }
       syncUnits();
       const yaw = view.rig.facingYaw;
       for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt, view.flatTop);
       view.setGrid(gridMarks());
       atmosphere.sync(dt);
       arrows.sync();
+      spells.sync(pausedRef.current ? 0 : dt);
+      spellOverlay.sync(pausedRef.current ? 0 : dt);
+      unitHud.render(actors);
       hudClock += dt;
       if (hudClock > 0.1) { hudClock = 0; onHudRef.current(engine.getHud()); }
     });
@@ -276,6 +349,8 @@ export function Battle3D({
       for (const { actor } of actors.values()) actor.dispose();
       atmosphere.dispose();
       arrows.dispose();
+      spells.dispose();
+      spellOverlay.dispose();
       if (w.__emberEngine === engine) delete w.__emberEngine;
       view.dispose();
     };
@@ -284,6 +359,10 @@ export function Battle3D({
   return (
     <div className="absolute inset-0">
       <div ref={hostRef} className="absolute inset-0 bg-black" onContextMenu={(ev) => ev.preventDefault()} />
+      <canvas ref={spellFxRef} className="pointer-events-none absolute inset-0 block h-full w-full" />
+      <canvas ref={spellArtRef} className="pointer-events-none absolute inset-0 block h-full w-full" />
+      {/* Ember's unit HUD: HP bars, HP numbers, damage/miss/heal/level-up text (battleHud3d.ts) */}
+      <canvas ref={hudRef} className="pointer-events-none absolute inset-0 block h-full w-full" />
       <BattleVignettes engine={engine} />
     </div>
   );

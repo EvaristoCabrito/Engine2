@@ -12,7 +12,9 @@ import { THREE_D_DOOR_VARIANTS, decorationPlacementArt, SOLID_CART_DECOR_IDS, BA
 import { ENCOUNTER_NPC_IDS, encounterNpcSpawn, type EncounterNpcId } from "../../ember/encounter-npcs";
 import { DEFAULT_AMBIENT_INTENSITY, DEFAULT_BLOOM_INTENSITY, DEFAULT_SUN_INTENSITY, TIME_OF_DAY_LIGHT } from "../../ember/battleLight";
 import { LIGHT_DEFS } from "../../ember/lighting";
-import { TILE_VARIANT_COUNT, tileVariantName } from "../../ember/tileVariants";
+import { CLAUDE_VARIANT, TILE_VARIANT_COUNT, tileVariantName } from "../../ember/tileVariants";
+import { ENGINE2_V3_GROUND_VARIANTS, ENGINE2_V3_CITY_VARIANT } from "../../ember/tileVariants";
+import { GroundSetPicker } from "../../render/GroundSetPicker";
 import { DialogEditor } from "./DialogEditor";
 import { MapPreviewCanvas, type PreviewDecorationSelection, type PreviewUnitSelection } from "./MapPreview3D";
 import {
@@ -24,6 +26,18 @@ import {
 } from "../../campaign/mapstore";
 import type { ClassId, DecorationPlacement, DialogTree, ElementalFxPlacement, GameArt, MapTimeOfDay, Mission, Spawn, SpriteId, TerrainId, WinCondition, WorldLocation } from "../../ember/types";
 import { footprint, hexNeighbors } from "../../campaign/pathfinding";
+
+/** Baked ground variants appear beside the original surface and keep their own saved indices. */
+function groundVersions(terrain: TerrainId): { label: string; variant: number; thumb: string }[] {
+  const list = [{ variant: 0, thumb: "" }];
+  if (terrain === "plains") list.push({ variant: 48, thumb: "/game/ground-claude/049-plains/color.png" });
+  const claude = CLAUDE_VARIANT[terrain];
+  if (claude !== undefined) list.push({ variant: claude, thumb: `/game/ground-claude/${terrain === "plains" ? "plains-v2" : terrain}/color.png` });
+  for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city")) {
+    list.push({ variant: entry.variant, thumb: `/game/ground-engine2-v3/${entry.folder}/color.png` });
+  }
+  return list.map((v, i) => ({ ...v, label: String(i + 1).padStart(2, "0") }));
+}
 
 /** The real latest saved draft for a scenario, asked from the dev server directly rather than
  * trusted from latestSavedDraft's static snapshot — see the "Carregar mapa..."/"Abrir mapa
@@ -456,6 +470,7 @@ const VARIANT_LABEL: Partial<Record<TerrainId, string[]>> = {
     "Grama alta · Solo contínuo 001",
     "Planície escura · Solo contínuo 001",
     "Planície · Fotográfica 009", "Prado · Fotográfico 009", "Pradaria · Fotográfica 009", "Farmlands · Terra cultivada", "Farmlands · Trilha de cascalho",
+    "Planície 02",
   ],
   woods: ["Solo de bosque", "Bosque sombrio", "Bosque", "Sebes", "Pinhal", "Bosque 04", "Terra", "Bosque 12", "Bosque 13", "Bosque · Solo contínuo 001", "Bosque · Solo escuro fotográfico 011", "Bosque · Agulhas fotográficas 011"],
   ruins: ["Ruínas sombrias", "Ruínas originais", "Pedra 02", "Pedra 03", "Pedra 04", "Pátio mosaico", "Lajes partidas", "Ruínas · Solo contínuo 001"],
@@ -2668,6 +2683,7 @@ export function MapEditorScreen({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-muted flex-1 min-w-[12rem]">Escolha um terreno ou grupo de tiles para pintar o mapa.</p>
+              <GroundSetPicker />
               <Button
                 size="sm"
                 variant={turning ? "primary" : "ghost"}
@@ -2702,10 +2718,10 @@ export function MapEditorScreen({
                         setBrush(terrain);
                         if (key === "city") {
                           setCityMode(true);
-                          setVariant((v) => (v >= 21 && v <= 38 && v !== 22 ? v : 21));
+                          setVariant((v) => ((v >= 21 && v <= 38 && v !== 22) || v === ENGINE2_V3_CITY_VARIANT ? v : 21));
                         } else {
                           setCityMode(false);
-                          setVariant((v) => (terrain === "plains" && v >= 21 && v <= 38 ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
+                          setVariant((v) => (terrain === "plains" && ((v >= 21 && v <= 38) || v === ENGINE2_V3_CITY_VARIANT) ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
                         }
                       }}
                       className={`text-xs px-1.5 py-1 rounded-md border flex items-center gap-1.5 ${selected ? "border-accent" : "border-border"}`}
@@ -2716,6 +2732,40 @@ export function MapEditorScreen({
                   );
                 })}
             </div>
+            {/* Ember's "Versões" strip, for Engine2's numbered Planície tiles: 01 is the base,
+                02 is the 049 PBR tile (saved as variant index 48, so existing maps keep it). */}
+            {!cityMode && brush !== "void" && (
+              <div className="flex items-start gap-1.5 text-xs">
+                <span className="mt-1 text-muted uppercase tracking-wide">Versões</span>
+                <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-bg/40 p-1.5">
+                  {groundVersions(brush).map(({ label, variant: v, thumb }) => (
+                    <button
+                      key={v}
+                      type="button"
+                      title={`${TERRAIN[brush].name} ${label}${CLAUDE_VARIANT[brush] === v ? " · Claude" : ENGINE2_V3_GROUND_VARIANTS.some((entry) => entry.terrain === brush && entry.variant === v) ? " · Engine2 V3" : ""}`}
+                      aria-pressed={variant === v}
+                      onClick={() => setVariant(v)}
+                      className={`flex items-center gap-1 rounded-md border overflow-hidden pr-1.5 ${variant === v ? "border-accent" : "border-border"}`}
+                    >
+                      {thumb ? <img src={thumb} alt="" className="size-8 object-cover" /> : <span aria-hidden="true" className="size-8" style={{ background: brush === "plains" ? "linear-gradient(135deg,#6d9b2e,#4f7d22)" : TERRAIN_SWATCH[brush] }} />}
+                      <span>{label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {cityMode && (
+              <button
+                type="button"
+                title="City · Engine2 V3"
+                aria-pressed={variant === ENGINE2_V3_CITY_VARIANT}
+                onClick={() => setVariant(ENGINE2_V3_CITY_VARIANT)}
+                className={`flex w-fit items-center gap-1 rounded-md border overflow-hidden pr-1.5 text-xs ${variant === ENGINE2_V3_CITY_VARIANT ? "border-accent" : "border-border"}`}
+              >
+                <img src="/game/ground-engine2-v3/city/color.png" alt="" className="size-8 object-cover" />
+                <span>Engine2 V3</span>
+              </button>
+            )}
             {brush === "hill" && (
               <p className="text-xs text-muted">Colina cria relevo. Use Elevação para esculpir vários níveis e ver o resultado na prévia 3D.</p>
             )}

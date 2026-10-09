@@ -3,10 +3,16 @@
 
 import { type HexLayout, makeLayout, hexX, hexZ, indexOf, STEP } from '../core/hex';
 import type { EmberMapDraft, TerrainId } from './emberMap';
+import { CLAUDE_VARIANT, ENGINE2_V3_GROUND_VARIANTS, ENGINE2_V3_CITY_VARIANT } from '../ember/tileVariants';
 
 /** Ground surfaces the terrain material knows how to paint. */
-export const SURFACE = { grass: 0, forest: 1, pavers: 2, snow: 3, rock: 4, gravel: 5, ash: 6 } as const;
+export const SURFACE = { grass: 0, forest: 1, pavers: 2, snow: 3, rock: 4, gravel: 5, ash: 6, plains049: 7 } as const;
 export type Surface = keyof typeof SURFACE | 'void';
+
+/** The 12 baked ground tiles (Claude's and GPT's sets): one layer per basic Ember terrain. */
+export const GROUND_LAYERS: TerrainId[] = ['plains', 'woods', 'ruins', 'water', 'ember', 'hill', 'flame', 'column', 'nave', 'barricade', 'door', 'snow'];
+/** V3 adds City plus two water variants: shallows and a rocky ford bed. */
+export const GROUND_LAYER_COUNT = GROUND_LAYERS.length + 3;
 
 export interface TerrainInfo {
   name: string;
@@ -55,6 +61,8 @@ export interface Cell {
   level: number;
   /** Surface index for the terrain material, or -1 for void. */
   surface: number;
+  /** Baked layer index: base terrain layers followed by V3 City and water variants; -1 uses prototype. */
+  ground: number;
   /** World height of the top of the ground. */
   groundY: number;
   water: boolean;
@@ -88,13 +96,25 @@ export class Board {
           if (level >= MOUNTAIN_SNOW) surf = 'snow';
           else if (level >= MOUNTAIN_ROCK && (surf === 'grass' || surf === 'forest' || surf === 'ash')) surf = 'rock';
         }
-        const surface = surf === 'void' ? -1 : SURFACE[surf];
+        const plains049 = type === 'plains' && surf === 'grass' && draft.tileVariants?.[i] === 48;
+        const surface = surf === 'void' ? -1 : plains049 ? SURFACE.plains049 : SURFACE[surf];
+        // Baked PBR materials are activated only by their saved tile version. City uses its
+        // own layer, while V3 terrain versions reuse their terrain's layer in the selected set.
+        const variant = draft.tileVariants?.[i] ?? 0;
+        const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === type && entry.variant === variant);
+        const cityTile = type === 'plains' && (variant === ENGINE2_V3_CITY_VARIANT || (variant >= 21 && variant <= 38 && variant !== 22));
+        const claudeTile = CLAUDE_VARIANT[type] !== undefined && variant === CLAUDE_VARIANT[type];
+        const v3Layer = engine2V3?.key === 'city' ? GROUND_LAYERS.length
+          : engine2V3?.key === 'shallow-water' ? GROUND_LAYERS.length + 1
+            : engine2V3?.key === 'river-rocks' ? GROUND_LAYERS.length + 2
+              : engine2V3 ? GROUND_LAYERS.indexOf(type) : -1;
+        const ground = surf !== 'void' && cityTile ? GROUND_LAYERS.length : surf !== 'void' && engine2V3 ? v3Layer : surf !== 'void' && claudeTile ? GROUND_LAYERS.indexOf(type) : -1;
         let groundY: number;
         if (info.surface === 'void') groundY = 0;
         else if (water) groundY = (BASE_LEVELS - 1 + level) * STEP;
         else groundY = (BASE_LEVELS + level + (info.raise ?? 0)) * STEP;
         this.cells.push({
-          c, r, i, type, level, surface, groundY, water,
+          c, r, i, type, level, surface, ground, groundY, water,
           x: hexX(this.layout, c, r), z: hexZ(this.layout, r),
           waterY: water ? (BASE_LEVELS - 0.35 + level) * STEP : 0,
         });

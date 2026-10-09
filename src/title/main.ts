@@ -5,7 +5,12 @@ import { getAudioVolumes, setCutsceneVolume as setGameCutsceneVolume, setMusicVo
 import { getDevGfx, setDevGfx } from '../game/gfx/three/devGfx';
 import { getGraphicsQuality, graphicsQualityIsCustom, setGraphicsQuality, type GraphicsQuality } from '../game/graphicsQuality';
 import { getGamePreferences, setGamePreferences } from '../game/gamePreferences';
+import { artProgress, loadGameArt, subscribeArtProgress } from '../game/assets';
 import type { SaveBank } from '../ember/types';
+
+/** The game's loading screen art and its permanent cache (game.html and MapLoadingOverlay read the same). */
+const LOADING_ART_URL = '/game/ui/LoadingSCreen.jpg?v=2';
+const LOADING_ART_CACHE = 'ember-loading-art-v1';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const titleScreen = $('title-screen'), devControls = $('dev-controls');
@@ -30,7 +35,6 @@ const languageOptions: LanguageOptions = {
 };
 
 const translations: Record<string, [string, string]> = {
-  'ready': ['Pronto', 'Ready'],
   'loading': ['Despertando as cinzas', 'Awakening the ashes'],
 };
 
@@ -79,8 +83,7 @@ function applyLanguage(next: 'pt' | 'en'): void {
   updateSoundToggle();
   try { localStorage.setItem('engine2:title-language', next); } catch { /* The menu still works for this page. */ }
   setGamePreferences({ uiLanguage: next });
-  const status = titleLoader.classList.contains('is-ready') ? translations.ready[next === 'pt' ? 0 : 1] : translations.loading[next === 'pt' ? 0 : 1];
-  loaderStatus.textContent = status;
+  loaderStatus.textContent = translations.loading[next === 'pt' ? 0 : 1];
 }
 
 // Ember's TitleLoader embers: x %, delay s, duration s. They ride the fill, never ahead of it.
@@ -381,22 +384,37 @@ $<HTMLButtonElement>('fullscreen-toggle').addEventListener('click', async () => 
 });
 
 async function loadTitleResources(): Promise<void> {
-  await new Promise<void>((resolve) => {
-    const image = new Image();
-    let done = false;
-    const finish = () => {
-      if (done) return;
-      done = true;
-      setProgress(100);
-      resolve();
-    };
-    image.onload = finish;
-    image.onerror = finish;
-    image.src = '/game/title/title-bg.jpg';
-    if (image.complete) finish();
+  setProgress(0);
+  // Ember's title load: the real game art (FX, backdrops, portraits…) loads here, so the bar shows
+  // true progress and the game page (Test mode, campaign) opens from the browser cache.
+  // Kept monotonic and below 100% until loading has truly finished, as in Ember's useArtLoadProgress.
+  let peak = 0;
+  const unsubscribe = subscribeArtProgress(() => {
+    peak = Math.max(peak, Math.min(artProgress(), 0.97));
+    setProgress(peak * 100);
   });
+  const background = new Promise<void>((resolve) => {
+    const image = new Image();
+    image.onload = image.onerror = () => resolve();
+    image.src = '/game/title/title-bg.jpg';
+    if (image.complete) resolve();
+  });
+  // The game's loading screen art, stored during this first loading bar in a named Cache Storage
+  // cache (not the browser's HTTP cache, which evicts at will), so it never leaves: game.html and
+  // every in-game loading screen take it from there, complete, at once.
+  const bootArt = (async () => {
+    try {
+      const cache = await caches.open(LOADING_ART_CACHE);
+      if (!(await cache.match(LOADING_ART_URL))) await cache.add(LOADING_ART_URL);
+    } catch {
+      // no Cache Storage (e.g. a private window): at least warm the normal cache
+      await new Promise<void>((resolve) => { const image = new Image(); image.onload = image.onerror = () => resolve(); image.src = LOADING_ART_URL; });
+    }
+  })();
+  await Promise.all([background, bootArt, loadGameArt().catch(() => undefined)]);
+  unsubscribe();
+  setProgress(100);
   titleLoader.classList.add('is-ready');
-  loaderStatus.textContent = translations.ready[language === 'pt' ? 0 : 1];
   mainMenuButtons.forEach((button) => { button.disabled = false; });
   window.setTimeout(() => titleLoader.classList.add('is-leaving'), 900);
   window.setTimeout(() => titleLoader.remove(), 1900);

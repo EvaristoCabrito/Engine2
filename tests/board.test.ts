@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { Board } from '../src/map/board';
 import type { EmberMapDraft, EmberMapFile } from '../src/map/emberMap';
+import { ENGINE2_V3_GROUND_VARIANTS } from '../src/ember/tileVariants';
 
 describe('Ember board loading', () => {
   for (const filename of ['aldeia008.json','ashen-forest-crossing001.json','bosque-003.json']) {
@@ -31,5 +32,14 @@ describe('Ember board loading', () => {
     expect(board.cells[5].surface).toBe(-1);
     expect(board.hasWater).toBe(true);
     expect(new Board({...draft,tiles:['plains']} ).hasWater).toBe(false);
+  });
+  it('maps every appended Engine2 V3 tile to its own baked ground layer', () => {
+    const draft: EmberMapDraft = {
+      id: 'engine2-v3-ground', title: 'Engine2 V3 ground', cols: ENGINE2_V3_GROUND_VARIANTS.length, rows: 1,
+      tiles: ENGINE2_V3_GROUND_VARIANTS.map((entry) => entry.terrain),
+      tileVariants: ENGINE2_V3_GROUND_VARIANTS.map((entry) => entry.variant),
+    };
+    const board = new Board(draft);
+    expect(board.cells.map((cell) => cell.ground)).toEqual([3, 1, 4, 6, 12, 5, 7, 8, 0, 10, 2, 13, 14]);
   });
 });

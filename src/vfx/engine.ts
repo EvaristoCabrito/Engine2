@@ -4,8 +4,8 @@ export interface BattleEngine {
   time: number;
   webZones: Array<{ center?: { x: number; y: number }; createdAt?: number; radius?: number; cells: Set<string> }>;
   units: Array<{ id: string; x: number; y: number; alive: boolean }>;
-  effectAnchor(x: number, y: number): { worldX: number; worldY: number };
+  effectAnchor(x: number, y: number): { worldX: number; worldY: number; worldZ?: number };
   webZoneRadiusTiles(radius: number): number;
-  unitAnchor(unit: BattleEngine['units'][number]): { worldX: number; worldY: number };
+  unitAnchor(unit: BattleEngine['units'][number]): { worldX: number; worldY: number; worldZ?: number };
   unitVisual(unit: BattleEngine['units'][number], tile: number): { footY: number; footOffset: number; h: number; scaleY: number; sway: number; bob: number; lift: number };
 }

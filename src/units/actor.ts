@@ -131,7 +131,21 @@ export class UnitActor {
     if (pose !== 'idle' && pose !== 'idle2' && !this.silent) playPoseSound(this.def, pose);
   }
 
-  revive(): void { this.dead = false; void this.play('idle'); }
+  revive(): void { this.dead = false; this.driven = null; void this.play('idle'); }
+
+  /** Battle: Ember's engine picks the frame (BattleEngine.unitVisual), timed to its wind-ups,
+   * releases, hits, counters and deaths; show that cut at that point `k` (0..1) of its sheet
+   * instead of running a clock of our own. null hands timing back to play(). */
+  private driven: number | null = null;
+  drive(cut: Pose, k: number | null): void {
+    if (k === null) { this.driven = null; return; }
+    if (!this.has(cut)) return;
+    if (this.shown !== cut) { this.shown = cut; void this.ensure(cut); }
+    // the pose the mirroring rules read: the cut without its left/direction variant
+    this.pose = cut.startsWith('walk') ? 'walk' : (cut.replace(/Left$/, '') as Pose);
+    this.dead = cut === 'death' || cut === 'death2';
+    this.driven = k;
+  }
 
   /** Walk along world points (hex centres), one hex per Ember step. */
   async walk(points: { x: number; z: number }[]): Promise<void> {
@@ -178,8 +192,9 @@ export class UnitActor {
     const f = this.frames.get(this.shown);
     if (!f) return;
     f.lastUsed = performance.now();
-    const { frame, done } = framePace(this.def, this.pose, f.n, this.t);
-    if (done && ONE_SHOT.includes(this.pose) && !this.dead) { const ended = this.pose; void this.play('idle'); this.onPoseEnd(ended); }
+    const paced = this.driven === null ? framePace(this.def, this.pose, f.n, this.t) : null;
+    const frame = paced ? paced.frame : Math.min(f.n - 1, Math.max(0, Math.floor(this.driven! * f.n)));
+    if (paced?.done && ONE_SHOT.includes(this.pose) && !this.dead) { const ended = this.pose; void this.play('idle'); this.onPoseEnd(ended); }
 
     const tex = f.textures[frame];
     if (this.mat.map !== tex) { this.mat.map = tex; this.depth.map = tex; this.mat.needsUpdate = true; this.depth.needsUpdate = true; }
@@ -194,7 +209,7 @@ export class UnitActor {
     // walk cut matching its current facing, as Ember picks it every frame, so a unit that turns
     // mid-move never walks backwards on the other side's cut.
     const walking = this.path.length > 0 || this.pose === 'walk';
-    if (!this.path.length && this.pose === 'walk') {
+    if (!this.path.length && this.pose === 'walk' && this.driven === null) {
       const s = this.walkShown();
       if (s !== this.shown && this.has(s)) { this.shown = s; void this.ensure(s); }
     }

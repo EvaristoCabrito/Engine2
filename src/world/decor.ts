@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import {
   DECORATIONS, CHEST_DECOR_IDS, HOUSE_DECOR_IDS, BIG_HOUSE_DECOR_IDS, DECOR_ART_SCALE, HOUSE_ART_SCALE,
-  decorationImage, decorationPlacementArt, decorationFacing, placedFootprint, placedBlockingFootprint, barricadeDecor,
+  decorationImage, decorationPlacementArt, decorationFacing, placedFootprint, placedBlockingFootprint, barricadeDecor, BARRICADE_LIKE_DECOR,
 } from '../ember/data';
 import type { DecorationDef, DecorationPlacement, TerrainId } from '../ember/types';
 import type { Board } from '../map/board';
@@ -162,6 +162,10 @@ export class DecorLayer {
         holder.userData.groundY = holder.position.y;
         holder.scale.x = mirror ? -1 : 1;
         holder.userData.decor = p.id;
+        // Ember's 3D rule (ThreeBattleRenderer, tactics camera): barricades stand in the authored
+        // world direction — along the map, turned by the placement's rot in sixths — instead of
+        // swivelling toward the camera, which would break a continuous fence line.
+        holder.userData.lockedYaw = BARRICADE_LIKE_DECOR.has(p.id) ? -((p.rot ?? 0) * Math.PI) / 3 : null;
         holder.userData.hexes = placedFootprint(p).map(({ dx, dy }) => ({ x: p.x + dx, y: p.y + dy }));
         this.group.add(holder);
         this.cards.push(holder);
@@ -175,7 +179,8 @@ export class DecorLayer {
    * facing straight up like 2D sprites, raised over the terrain, nearer rows drawn on top. */
   face(yaw: number, flatTop: number | null = null): void {
     for (const c of this.cards) {
-      c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, yaw, 0, 'YXZ');
+      const locked = c.userData.lockedYaw as number | null;
+      c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, locked !== null && flatTop === null ? locked : yaw, 0, 'YXZ');
       c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;
       for (const o of c.children) if ((o as THREE.Mesh).isMesh) o.castShadow = flatTop === null && !!o.userData.castsShadow;
     }

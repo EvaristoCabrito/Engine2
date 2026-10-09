@@ -2,6 +2,7 @@
 // cliff faces every 2.
 
 import * as THREE from 'three';
+import { startGroundSets } from './groundSets';
 import { hash, pfbm, pnoise, sstep, smooth } from '../core/noise';
 
 type RGB = [number, number, number];
@@ -59,15 +60,50 @@ export interface GroundTextures {
   grass: THREE.Texture; forest: THREE.Texture; pavers: THREE.Texture; snow: THREE.Texture;
   rock: THREE.Texture; gravel: THREE.Texture; ash: THREE.Texture;
   earth: THREE.Texture; cliff: THREE.Texture;
+  plains049Color: THREE.Texture; plains049Normal: THREE.Texture; plains049Rough: THREE.Texture;
   ripple: THREE.Texture;
+  /** The nine textures above (grass … cliff, in PROTO_LAYERS order) as one texture array: the
+   * terrain shader takes one texture unit for all of them instead of nine, keeping it under
+   * the GPU's 16-unit limit now that the baked ground sets add their own arrays. */
+  proto: THREE.DataArrayTexture;
+}
+
+/** Layer order of GroundTextures.proto (terrainMaterial.ts indexes it by these positions). */
+export const PROTO_LAYERS = ['grass', 'forest', 'pavers', 'snow', 'rock', 'gravel', 'ash', 'earth', 'cliff'] as const;
+
+/** Pack same-size canvas textures into one sRGB, tiling, mipmapped texture array. */
+function packLayers(textures: THREE.Texture[], anisotropy: number): THREE.DataArrayTexture {
+  const size = (textures[0].image as HTMLCanvasElement).width;
+  const data = new Uint8Array(size * size * 4 * textures.length);
+  textures.forEach((t, k) => {
+    const cv = t.image as HTMLCanvasElement;
+    data.set(cv.getContext('2d')!.getImageData(0, 0, size, size).data, k * size * size * 4);
+  });
+  const arr = new THREE.DataArrayTexture(data, size, size, textures.length);
+  arr.colorSpace = THREE.SRGBColorSpace;
+  arr.wrapS = arr.wrapT = THREE.RepeatWrapping;
+  arr.magFilter = THREE.LinearFilter;
+  arr.minFilter = THREE.LinearMipmapLinearFilter;
+  arr.generateMipmaps = true;
+  arr.anisotropy = anisotropy;
+  arr.needsUpdate = true;
+  return arr;
 }
 
 let cache: GroundTextures | null = null;
 
 export function groundTextures(renderer: THREE.WebGLRenderer): GroundTextures {
+  startGroundSets(renderer); // the baked tile set picked in the editor (groundSets.ts)
   if (cache) return cache;
   const A = renderer.capabilities.getMaxAnisotropy();
-  cache = {
+  const loadPbrMap = (file: string, color: boolean): THREE.Texture => {
+    const texture = new THREE.TextureLoader().load(`/game/ground-claude/049-plains/${file}.png`);
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.anisotropy = A;
+    if (color) texture.colorSpace = THREE.SRGBColorSpace;
+    return texture;
+  };
+  const built = {
     grass: paint(S, grassAt, A),
     forest: paint(S, (x, y) => {
       const n = pfbm(x / 28, y / 28, S / 28, S / 28), l = pnoise(x / 5, y / 5, S / 5, S / 5);
@@ -110,6 +146,9 @@ export function groundTextures(renderer: THREE.WebGLRenderer): GroundTextures {
       return mul(c, grain(x, y, 0.14));
     }, A),
     cliff: paint(S, (x, y) => rockAt(x, y, true), A),
+    plains049Color: loadPbrMap('color', true),
+    plains049Normal: loadPbrMap('normal', false),
+    plains049Rough: loadPbrMap('rough', false),
     ripple: (() => {
       const s = 128, cv = document.createElement('canvas');
       cv.width = cv.height = s;
@@ -125,5 +164,6 @@ export function groundTextures(renderer: THREE.WebGLRenderer): GroundTextures {
       return t;
     })(),
   };
+  cache = { ...built, proto: packLayers(PROTO_LAYERS.map(k => built[k]), A) };
   return cache;
 }

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { fbm, vnoise } from '../core/noise';
 import { type HexLayout, hexAt, neighbors, corner, SQ3, STEP } from '../core/hex';
 import type { Board, Cell } from '../map/board';
+import { GROUND_LAYER_COUNT } from '../map/board';
 
 export type EdgeStyle = 'smooth' | 'hard';
 
@@ -20,23 +21,30 @@ const cellAt = (b: Board, L: HexLayout, x: number, z: number): Cell => { const [
 
 const RING7 = [[0, 0], ...Array.from({ length: 6 }, (_, k) => [Math.sin((k * Math.PI) / 3), Math.cos((k * Math.PI) / 3)])];
 
-/** Surface weights around a point: softly blended, void contributes nothing. */
+/** Weights per vertex: 8 shared surfaces plus the baked terrain layers, including V3 City. */
+const STRIDE = 8 + GROUND_LAYER_COUNT;
+const WEIGHT_ATTRIBUTES = ['splatA', 'splatB', 'groundA', 'groundB', 'groundC', 'groundD'] as const;
+
+/** Surface and tile weights around a point: softly blended, void contributes nothing. */
 function splat(b: Board, L: HexLayout, sx: number, sz: number, rad: number, out: Float32Array, o: number): void {
-  const w = [0, 0, 0, 0, 0, 0, 0, 0];
+  const w = new Array<number>(STRIDE).fill(0);
   for (const [ox, oz] of RING7) {
-    const s = cellAt(b, L, sx + ox * rad, sz + oz * rad).surface;
-    if (s >= 0) w[s] += 1 / 7;
+    const cell = cellAt(b, L, sx + ox * rad, sz + oz * rad);
+    if (cell.surface >= 0) w[cell.surface] += 1 / 7;
+    if (cell.ground >= 0) w[8 + cell.ground] += 1 / 7;
   }
-  out.set(w, o * 8);
+  out.set(w, o * STRIDE);
 }
 
 function finish(pos: Float32Array, splats: Float32Array, index: Uint32Array | null, normals: Float32Array | null): THREE.BufferGeometry {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  const n = pos.length / 3, A = new Float32Array(n * 4), B = new Float32Array(n * 4);
-  for (let v = 0; v < n; v++) { A.set(splats.subarray(v * 8, v * 8 + 4), v * 4); B.set(splats.subarray(v * 8 + 4, v * 8 + 8), v * 4); }
-  g.setAttribute('splatA', new THREE.BufferAttribute(A, 4));
-  g.setAttribute('splatB', new THREE.BufferAttribute(B, 4));
+  const n = pos.length / 3, parts = Array.from({ length: Math.ceil(STRIDE / 4) }, () => new Float32Array(n * 4));
+  for (let v = 0; v < n; v++) parts.forEach((part, k) => {
+    const start = v * STRIDE + k * 4, end = Math.min(start + 4, (v + 1) * STRIDE);
+    if (end > start) part.set(splats.subarray(start, end), v * 4);
+  });
+  parts.forEach((part, index) => g.setAttribute(WEIGHT_ATTRIBUTES[index]!, new THREE.BufferAttribute(part, 4)));
   if (index) g.setIndex(new THREE.BufferAttribute(index, 1));
   if (normals) g.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   else g.computeVertexNormals();
@@ -50,7 +58,7 @@ export function buildSmoothGround(b: Board): THREE.BufferGeometry {
   const res = Math.max(0.125, Math.sqrt(((x1 - x0) * (z1 - z0)) / 220000));
   const nx = Math.ceil((x1 - x0) / res), nz = Math.ceil((z1 - z0) / res);
   const VX = nx + 3, VZ = nz + 3; // +1 ring on each side forms the diorama's cut walls
-  const pos = new Float32Array(VX * VZ * 3), splats = new Float32Array(VX * VZ * 8);
+  const pos = new Float32Array(VX * VZ * 3), splats = new Float32Array(VX * VZ * STRIDE);
   const SM = [[0, 0], ...Array.from({ length: 8 }, (_, k) => [Math.sin((k * Math.PI) / 4) * res * 1.1, Math.cos((k * Math.PI) / 4) * res * 1.1])];
   for (let j = 0; j < VZ; j++) for (let i = 0; i < VX; i++) {
     const gi = i - 1, gj = j - 1, edge = gi < 0 || gj < 0 || gi > nx || gj > nz;
@@ -75,13 +83,13 @@ export function buildSmoothGround(b: Board): THREE.BufferGeometry {
 /** Hard look: crisp hex cliffs at every height step, seamless tops. */
 export function buildHardGround(b: Board): THREE.BufferGeometry {
   const L = b.layout, pos: number[] = [], nor: number[] = [], spl: number[] = [];
-  const tmp = new Float32Array(8);
+  const tmp = new Float32Array(STRIDE);
   const face = (a: number[], bb: number[], c: number[]) => {
     const ux = bb[0] - a[0], uy = bb[1] - a[1], uz = bb[2] - a[2], wx = c[0] - a[0], wy = c[1] - a[1], wz = c[2] - a[2];
     const nx = uy * wz - uz * wy, ny = uz * wx - ux * wz, nz = ux * wy - uy * wx, l = Math.hypot(nx, ny, nz) || 1;
     for (const p of [a, bb, c]) {
       pos.push(p[0], p[1], p[2]); nor.push(nx / l, ny / l, nz / l);
-      splat(b, L, p[0], p[2], 0.35, tmp, 0); for (let k = 0; k < 8; k++) spl.push(tmp[k]);
+      splat(b, L, p[0], p[2], 0.35, tmp, 0); for (let k = 0; k < STRIDE; k++) spl.push(tmp[k]);
     }
   };
   const quad = (a0: number[], b0: number[], b1: number[], a1: number[]) => { face(a0, b0, b1); face(a0, b1, a1); };
@@ -117,12 +125,25 @@ export function buildWater(b: Board, style: EdgeStyle): THREE.BufferGeometry | n
   const res = Math.max(0.25, Math.sqrt(((x1 - x0) * (z1 - z0)) / 60000));
   const nx = Math.ceil((x1 - x0) / res), nz = Math.ceil((z1 - z0) / res), VX = nx + 1, VZ = nz + 1;
   const pos = new Float32Array(VX * VZ * 3);
+  // Under dry land the sheet used to sit just under the ground everywhere: on a tall bank or block
+  // it climbed the cliff with it, and its coarser grid poked out through the cliff faces as blue
+  // slivers. Now it only rises to meet the bank beside water (capped at that water's level), and
+  // everywhere else sinks below all the ground.
+  let lowestGround = Infinity;
+  for (const c of b.cells) lowestGround = Math.min(lowestGround, c.groundY);
+  const nearWater = new Map<Cell, number>();
+  for (const c of b.cells) {
+    let level = -Infinity;
+    for (const o of [c, ...neighbors(L, c.c, c.r).map(([nc, nr]) => b.cell(nc, nr))]) if (o?.water) level = Math.max(level, o.waterY);
+    if (level > -Infinity) nearWater.set(c, level);
+  }
   for (let j = 0; j < VZ; j++) for (let i = 0; i < VX; i++) {
     const x = Math.min(x1, x0 + i * res), z = Math.min(z1, z0 + j * res);
     const [sx, sz] = style === 'smooth' ? warp(x, z) : [x, z];
     const cell = cellAt(b, L, sx, sz), v = j * VX + i;
+    const shore = nearWater.get(cell);
     pos[v * 3] = x; pos[v * 3 + 2] = z;
-    pos[v * 3 + 1] = cell.water ? cell.waterY : cell.groundY - 0.35;
+    pos[v * 3 + 1] = cell.water ? cell.waterY : shore !== undefined ? Math.min(cell.groundY - 0.35, shore + 0.05) : lowestGround - 1;
   }
   const index = new Uint32Array(nx * nz * 6);
   let t = 0;

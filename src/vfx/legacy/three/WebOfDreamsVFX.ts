@@ -606,14 +606,14 @@ export class WebOfDreamsVFX {
       let field = this.fields.get(zone);
       if (!field) {
         const anchor = engine.effectAnchor(zone.center.x, zone.center.y);
-        const center = new THREE.Vector3(anchor.worldX, -anchor.worldY, spriteDepthZ(anchor.worldY, tile));
+        const center = new THREE.Vector3(anchor.worldX, -anchor.worldY, anchor.worldZ ?? spriteDepthZ(anchor.worldY, tile));
         const radius = engine.webZoneRadiusTiles(zone.radius ?? 1);
         const age = zone.createdAt == null ? FORMATION_SECONDS : Math.max(0, ageSinceCast - WEB_SHOT_TRAVEL);
         field = new WebZoneVFX(this.scene, center, tile, radius, this.settings, age);
         this.fields.set(zone, field);
       }
       const anchor = engine.effectAnchor(zone.center.x, zone.center.y);
-      field.setAnchor(new THREE.Vector3(anchor.worldX, -anchor.worldY, spriteDepthZ(anchor.worldY, tile)), tile);
+      field.setAnchor(new THREE.Vector3(anchor.worldX, -anchor.worldY, anchor.worldZ ?? spriteDepthZ(anchor.worldY, tile)), tile);
       const targets: WebTarget[] = [];
       for (const unit of engine.units) {
         if (!unit.alive || !zone.cells.has(`${unit.x},${unit.y}`)) continue;
@@ -626,7 +626,7 @@ export class WebOfDreamsVFX {
           position: new THREE.Vector3(
             anchor.worldX + visual.sway,
             -(groundY + visual.bob - visual.lift + centerLocalY),
-            spriteDepthZ(groundY, tile) + UNIT_DEPTH_TIE,
+            anchor.worldZ ?? spriteDepthZ(groundY, tile) + UNIT_DEPTH_TIE,
           ),
         });
       }
