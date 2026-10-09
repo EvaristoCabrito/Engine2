@@ -38,6 +38,8 @@ export class UnitActor {
   x = 0;
   z = 0;
   lightFade = 1;
+  /** No pose sounds of its own: in battle Ember's engine plays every cue (audio.ts), timed to the action. */
+  silent = false;
   private readonly lights = new THREE.Group();
   private readonly card: THREE.Mesh;
   private pose: Pose = 'idle';
@@ -121,12 +123,12 @@ export class UnitActor {
     const left = this.facing === -1 ? LEFT_CUT[pose] : undefined;
     const use = left && this.has(left) ? left : pose;
     await this.ensure(use);
-    if (pose !== 'walk') stopWalkSound(this.def);
+    if (pose !== 'walk' && !this.silent) stopWalkSound(this.def);
     this.pose = pose;
     this.shown = use;
     this.t = 0;
     this.dead = pose === 'death' || pose === 'death2';
-    if (pose !== 'idle' && pose !== 'idle2') playPoseSound(this.def, pose);
+    if (pose !== 'idle' && pose !== 'idle2' && !this.silent) playPoseSound(this.def, pose);
   }
 
   revive(): void { this.dead = false; void this.play('idle'); }
@@ -170,7 +172,7 @@ export class UnitActor {
       }
       const move = Math.min(dist, (Math.sqrt(3) / STEP_SECONDS) * dt);
       if (dist > 1e-4) { this.x += (dx / dist) * move; this.z += (dz / dist) * move; }
-      if (dist - move < 1e-3) { this.path.shift(); if (!this.path.length) { stopWalkSound(this.def); void this.play('idle'); } }
+      if (dist - move < 1e-3) { this.path.shift(); if (!this.path.length) { if (!this.silent) stopWalkSound(this.def); void this.play('idle'); } }
     }
 
     const f = this.frames.get(this.shown);

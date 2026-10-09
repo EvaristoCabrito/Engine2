@@ -136,16 +136,18 @@ export function isMuted(): boolean {
   return muted;
 }
 
-/** One-shot effect from a file in public/game/MUSIC/SoundFX, layered over the music
+/** One-shot effect from a file in public/game/SoundFX (SFX_DIR), layered over the music
  * rather than replacing it — unlike playFile, this never
  * touches the theme/track elements, so it can't interrupt them. A fresh Audio() per call: the
  * previous play is left to finish on its own instead of being cut short by the next one. */
 /** Preloaded copy of a one-shot file, cloned per play so a cue starts from already-fetched data. */
+/** Engine2 keeps sound effects apart from music, in public/game/SoundFX (Ember: MUSIC/SoundFX). */
+const SFX_DIR = "/game/SoundFX";
 const sfxTemplates = new Map<string, HTMLAudioElement>();
 function sfxTemplate(file: string): HTMLAudioElement {
   let el = sfxTemplates.get(file);
   if (!el) {
-    el = new Audio(`/game/MUSIC/SoundFX/${file}`);
+    el = new Audio(`${SFX_DIR}/${file}`);
     el.preload = "auto";
     sfxTemplates.set(file, el);
     el.load();
@@ -173,7 +175,7 @@ function playSfxFile(file: string, volume = 0.55): void {
 const exclusiveSfxEls = new Map<string, HTMLAudioElement>();
 function preloadExclusiveSfx(file: string): void {
   if (typeof Audio === "undefined" || exclusiveSfxEls.has(file)) return;
-  const el = new Audio(`/game/MUSIC/SoundFX/${file}`);
+  const el = new Audio(`${SFX_DIR}/${file}`);
   el.preload = "auto";
   exclusiveSfxEls.set(file, el);
   el.load();
@@ -202,7 +204,7 @@ function playSfxFileExclusive(file: string, volume = 0.55, startAt = 0): void {
   if (muted || typeof Audio === "undefined") return;
   let el = exclusiveSfxEls.get(file);
   if (!el) {
-    el = new Audio(`/game/MUSIC/SoundFX/${file}`);
+    el = new Audio(`${SFX_DIR}/${file}`);
     el.preload = "auto";
     exclusiveSfxEls.set(file, el);
     activeSfx.add(el);

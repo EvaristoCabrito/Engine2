@@ -8,6 +8,7 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 import { SPRITE_FLOOR } from '../units/spriteMaterial';
+import { VolumetricFogPass } from './volumetricFog';
 
 /** Ember's map time-of-day values (Mission.timeOfDay); undefined means "day". */
 export type TimeOfDay = 'day' | 'noon' | 'dawn' | 'dusk' | 'brightNight' | 'darkNight';
@@ -67,6 +68,8 @@ export class Stage {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
   private readonly composer: EffectComposer;
+  /** The 3D mist (volumetricFog.ts): off until a mission's Névoa turns it on. */
+  readonly mist: VolumetricFogPass;
   private readonly bloom: UnrealBloomPass;
   private readonly tilt: ShaderPass[] = [];
   private readonly frameHooks: ((dt: number, t: number) => void)[] = [];
@@ -96,8 +99,12 @@ export class Stage {
 
     // Multisampled target: real anti-aliasing survives the post-processing chain.
     const msaa = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+    // the scene's depth, for the 3D mist to place itself in the world per pixel
+    msaa.depthTexture = new THREE.DepthTexture(1, 1, THREE.UnsignedIntType);
     this.composer = new EffectComposer(this.renderer, msaa);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
+    this.mist = new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
+    this.composer.addPass(this.mist);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.55, 0.9);
     this.composer.addPass(this.bloom);
     for (let i = 0; i < 2; i++) for (const d of [[1, 0], [0, 1]]) {
@@ -141,9 +148,28 @@ export class Stage {
     this.setTimeOfDay(this.timeOfDay);
   }
 
+  /** Tonight's moon (the campaign's phase): scales and tints the night presets' moonlight. */
+  private moon: { strength: number; color?: string; sky?: string; background?: string } = { strength: 1 };
+
+  /** Set the moon (see moonPhase.ts's moonlightFor) and re-light; only night presets use it. */
+  setMoon(moon: { strength: number; color?: string; sky?: string; background?: string }): void {
+    this.moon = moon;
+    this.setTimeOfDay(this.timeOfDay);
+  }
+
   /** Apply one of Ember's time-of-day presets: sun or moon, sky, background, sprite readability. */
   setTimeOfDay(t: TimeOfDay): void {
-    const p = TIME_PRESETS[t] ?? TIME_PRESETS.day;
+    const base = TIME_PRESETS[t] ?? TIME_PRESETS.day;
+    const night = t === 'brightNight' || t === 'darkNight';
+    // at night the "sun" is the moon: its phase sets how bright (and, for a blood moon, how red)
+    const p = night ? {
+      ...base,
+      sun: this.moon.color ?? base.sun,
+      sunIntensity: base.sunIntensity * this.moon.strength,
+      sky: this.moon.sky ?? base.sky,
+      background: this.moon.background ?? base.background,
+      hemi: base.hemi * (0.7 + 0.3 * Math.min(this.moon.strength, 1.3)),
+    } : base;
     this.timeOfDay = t;
     this.sun.color.set(p.sun);
     this.sun.intensity = p.sunIntensity;
@@ -152,7 +178,8 @@ export class Stage {
     this.hemi.color.set(p.sky);
     this.hemi.groundColor.set(p.ground);
     this.hemi.intensity = p.hemi;
-    (this.scene.background as THREE.Color).set(p.background);
+    // a painted backdrop (a texture) keeps its own colours; a plain background takes the preset's
+    if ((this.scene.background as THREE.Color | null)?.isColor) (this.scene.background as THREE.Color).set(p.background);
     if (this.scene.fog) (this.scene.fog as THREE.Fog).color.set(p.background);
     SPRITE_FLOOR.value = p.spriteFloor;
   }

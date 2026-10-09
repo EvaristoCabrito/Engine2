@@ -54,6 +54,13 @@ export function daysToMoon(gameClock: number, phase: MoonPhase): number {
   return -1;
 }
 
+/** Night lighting for a phase: the moonlight's strength (× the night preset's), and for the
+ * blood moon its red colour plus a red-tinted sky and backdrop. */
+export function moonlightFor(phase: MoonPhase): { strength: number; color?: string; sky?: string; background?: string } {
+  if (phase === "blood") return { strength: 1.35, color: "#ff4a3a", sky: "#5a1e26", background: "#2a0a10" };
+  return { strength: 0.2 + 1.1 * moonIllumination(phase).lit };
+}
+
 /** Lit share of the disc, 0 (new) … 1 (full and blood), and which side is lit — for the placeholder icon. */
 export function moonIllumination(phase: MoonPhase): { lit: number; waxing: boolean } {
   const i = phase === "blood" ? MOON_PHASES.indexOf("full") : MOON_PHASES.indexOf(phase);

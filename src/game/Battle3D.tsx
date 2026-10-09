@@ -28,6 +28,8 @@ import { unitForSpawn } from "../units/catalog";
 import type { Mission } from "../ember/types";
 import { BattleAtmosphere3D } from "./battleAtmosphere3d";
 import { BattleVignettes } from "./BattleVignettes";
+import { moonlightFor } from "./moonPhase";
+import { ArrowFx3D } from "./battleProjectiles3d";
 
 type Any = Record<string, any>; // the engine's private helpers (hexCenter, active) are read as-is
 
@@ -81,6 +83,7 @@ export function Battle3D({
           const def = unitForSpawn({ name: u.name, classId: u.classId }, u.side === "player" ? "player" : u.side === "enemy" ? "enemy" : "neutral");
           if (!def) continue;
           const actor = new UnitActor(def);
+          actor.silent = true; // Ember's engine plays the battle's sounds
           view.stage.scene.add(actor.mesh);
           void actor.ready().catch(() => undefined);
           entry = { actor, dead: false, lastAction: null };
@@ -190,11 +193,25 @@ export function Battle3D({
     };
 
     const atmosphere = new BattleAtmosphere3D(view, engine);
+    const arrows = new ArrowFx3D(view, engine);
     // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
     const w = window as Window & { __emberEngine?: BattleEngine };
     w.__emberEngine = engine;
+    // tonight's moon lights night battles by its phase (Mission.moonPhase, set by the campaign);
+    // a time of day changed live (QA, later the battle's own clock) re-lights the scene too
+    let moon: string | undefined, tod: string | undefined;
+    const followMoon = () => {
+      const phase = engine.mission.moonPhase, t = engine.mission.timeOfDay;
+      if (phase === moon && t === tod) return;
+      const relight = tod !== undefined && t !== tod && !!t;
+      moon = phase; tod = t;
+      if (relight) view.stage.timeOfDay = t as typeof view.stage.timeOfDay;
+      view.stage.setMoon(phase ? moonlightFor(phase) : { strength: 1 });
+    };
+
     let hudClock = 0;
     view.stage.onFrame((dt) => {
+      followMoon();
       followCameraButtons();
       // keeps the engine's sight/fog current exactly as its own renderer does every frame
       e.updateCameraLayout(1280, 800);
@@ -204,6 +221,7 @@ export function Battle3D({
       for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt, view.flatTop);
       view.setGrid(gridMarks());
       atmosphere.sync(dt);
+      arrows.sync();
       hudClock += dt;
       if (hudClock > 0.1) { hudClock = 0; onHudRef.current(engine.getHud()); }
     });
@@ -257,6 +275,7 @@ export function Battle3D({
       window.removeEventListener("keydown", onKey);
       for (const { actor } of actors.values()) actor.dispose();
       atmosphere.dispose();
+      arrows.dispose();
       if (w.__emberEngine === engine) delete w.__emberEngine;
       view.dispose();
     };

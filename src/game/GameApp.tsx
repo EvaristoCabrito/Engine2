@@ -52,6 +52,7 @@ import { WorldMapScreen } from "./WorldMapScreen";
 import { campaignHour, campaignTimeOfDay, usesTravelClock } from "./campaignTime";
 import { OverworldMapScreen } from "./OverworldMapScreen";
 import { LoadingCurtain, useLoadingCurtain } from "./MapLoadingOverlay";
+import { moonPhaseOf } from "./moonPhase";
 import { HungerBar } from "./HungerBar";
 import { buyInnMeal, fullness, useRation } from "./hunger";
 import { POISON_TIERS, poisonDice, poisonTierOf } from "./poison";
@@ -1312,7 +1313,7 @@ export function GameApp() {
       setBattleLoadingProgress({ loaded: 0, total: 1 });
       const tutorialMap = resolved.index <= (missionById("thebridge")?.index ?? 3) && !resolved.id.startsWith("random-encounter-");
       // The travel clock drives lighting for random maps and "-crossing" maps only for now — other campaign maps keep their authored time of day.
-      const timed = !testMode && !tutorialMap && (resolved.id.startsWith("random-") || resolved.id.endsWith("-crossing")) && resolved.environment !== "indoor" && usesTravelClock(save)
+      let timed = !testMode && !tutorialMap && (resolved.id.startsWith("random-") || resolved.id.endsWith("-crossing")) && resolved.environment !== "indoor" && usesTravelClock(save)
         ? (() => {
             const timeOfDay = campaignTimeOfDay(campaignHour(save));
             const light = TIME_OF_DAY_LIGHT[timeOfDay];
@@ -1321,6 +1322,8 @@ export function GameApp() {
         : resolved;
       // Companions sit in the walkable Inn as NPCs, but only once they've actually joined.
       const freedAldric =
+      // tonight's moon: night battles are lit by the phase of the campaign's current day
+      timed = { ...timed, moonPhase: moonPhaseOf(save.gameClock) };
         !testMode && timed.id === "watchtower-prison" && heroRecruited("Aldric", save.completed, save.flags) && timed.neutralSpawns
           ? { ...timed, neutralSpawns: timed.neutralSpawns.filter((spawn) => spawn.name !== "Aldric") }
           : timed;
