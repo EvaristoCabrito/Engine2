@@ -356,14 +356,27 @@ const PORTAL_FX_CAP = 4;
 function blankPortalFx(): PortalFx {
   return { live: false, x: 0, y: 0, t: 0, max: 0.85, seed: 0, body: null, red: false, warp: false, radius: 1 };
 }
-let warpPortalImage: HTMLImageElement | null = null;
-function getWarpPortalImage(): HTMLImageElement | null {
+let warpPortalFallbackImage: HTMLImageElement | null = null;
+let warpPortalFlipbooks: [HTMLImageElement, HTMLImageElement, HTMLImageElement] | null = null;
+function getWarpPortalFlipbooks(): [HTMLImageElement, HTMLImageElement, HTMLImageElement] | null {
   if (typeof Image === "undefined") return null;
-  if (!warpPortalImage) {
-    warpPortalImage = new Image();
-    warpPortalImage.src = "/game/effects/warp-portal-v02-pixel.png";
+  if (!warpPortalFlipbooks) {
+    warpPortalFlipbooks = ["main", "secondary", "particles"].map((layer) => {
+      const image = new Image();
+      image.src = `/game/fx/warp-v3-${layer}-flipbook-4x4.png`;
+      return image;
+    }) as [HTMLImageElement, HTMLImageElement, HTMLImageElement];
   }
-  return warpPortalImage.complete && warpPortalImage.naturalWidth > 0 ? warpPortalImage : null;
+  const [main, secondary, particles] = warpPortalFlipbooks;
+  return [main, secondary, particles].every((image) => image.complete && image.naturalWidth > 0) ? warpPortalFlipbooks : null;
+}
+function getWarpPortalFallbackImage(): HTMLImageElement | null {
+  if (typeof Image === "undefined") return null;
+  if (!warpPortalFallbackImage) {
+    warpPortalFallbackImage = new Image();
+    warpPortalFallbackImage.src = "/game/effects/warp-portal-v01.png";
+  }
+  return warpPortalFallbackImage.complete && warpPortalFallbackImage.naturalWidth > 0 ? warpPortalFallbackImage : null;
 }
 
 /** Divine light / potion burst sitting on a character. Independent of healGlow so the old
@@ -13173,44 +13186,55 @@ export class BattleEngine {
         ctx.ellipse(cx, cy, r * 1.35, r * 0.34, 0, 0, Math.PI * 2);
         ctx.fill();
 
-        const portalImage = getWarpPortalImage();
-        if (portalImage) {
-          // The texture supplies the fluid filaments; this WebGL-composited pass adds
-          // animated refraction, a luminous rim, and reflected light on the board.
+        const flipbooks = getWarpPortalFlipbooks();
+        if (flipbooks) {
+          const [mainSheet, groundSheet, moteSheet] = flipbooks;
+          const frame = (Math.floor(p.t * 12) + Math.floor(p.seed * 3)) % 16;
+          const drawFrame = (sheet: HTMLImageElement, index: number, x: number, y: number, w: number, h: number) => {
+            const sw = sheet.naturalWidth / 4, sh = sheet.naturalHeight / 4;
+            const sx = (index % 4) * sw, sy = Math.floor(index / 4) * sh;
+            ctx.drawImage(sheet, sx, sy, sw, sh, x, y, w, h);
+          };
+
+          // Poison V2's layered flipbook technique: a looping 4x4 main atlas, a separate
+          // animated floor reflection, and independently phased motes from their own atlas.
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.imageSmoothingEnabled = true;
+          ctx.globalAlpha = 0.72 * radiusK;
+          drawFrame(groundSheet, (frame + 3) % 16, cx - r * 1.25, cy - r * 0.38, r * 2.5, r * 0.76);
+
           const imageW = gateW * 2.75;
           const imageH = gateH * 2.55;
           ctx.save();
-          ctx.imageSmoothingEnabled = false;
           ctx.translate(cx, gateY);
-          const sway = Math.sin(spin * 0.46) * 0.018;
-          ctx.rotate(sway);
-          ctx.globalAlpha = 0.88 * radiusK;
-          ctx.drawImage(portalImage, -imageW / 2, -imageH / 2, imageW, imageH);
-          ctx.rotate(-sway * 2 + Math.sin(spin * 0.31) * 0.012);
-          ctx.globalAlpha = 0.16 * radiusK;
-          ctx.drawImage(portalImage, -imageW * 0.52, -imageH * 0.52, imageW * 1.04, imageH * 1.04);
+          ctx.rotate(Math.sin(spin * 0.46) * 0.018);
+          ctx.globalAlpha = 0.9 * radiusK;
+          drawFrame(mainSheet, frame, -imageW / 2, -imageH / 2, imageW, imageH);
           ctx.restore();
 
-          ctx.save();
-          ctx.lineCap = "round";
-          ctx.shadowColor = "rgba(100,180,255,0.95)";
-          ctx.shadowBlur = tile * 0.34;
-          ctx.strokeStyle = `rgba(190,230,255,${(0.38 + Math.sin(spin * 0.7) * 0.08) * radiusK})`;
-          ctx.lineWidth = Math.max(1, tile * 0.018);
-          ctx.beginPath();
-          ctx.ellipse(cx, gateY, gateW * 1.03, gateH * 1.02, Math.sin(spin * 0.18) * 0.018, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          for (let mote = 0; mote < Math.round(12 + (p.radius ?? 1) * 5); mote++) {
-            const angle = p.seed + mote * 2.399;
-            const rise = (p.t * 0.55 + mote * 0.13) % 1;
-            const mx = cx + Math.cos(angle + spin * 0.15) * r * (0.62 + rise * 0.22);
+          const moteCount = Math.round(12 + (p.radius ?? 1) * 5);
+          for (let mote = 0; mote < moteCount; mote++) {
+            const rise = (p.t * 0.55 + mote * 0.13 + (p.seed % 1)) % 1;
+            const angle = p.seed + mote * 2.399 + spin * 0.15;
+            const mx = cx + Math.cos(angle) * r * (0.62 + rise * 0.22);
             const my = gateY + gateH * (0.82 - rise * 1.68);
-            ctx.fillStyle = `rgba(186,226,255,${(1 - rise) * 0.72 * radiusK})`;
-            ctx.beginPath();
-            ctx.arc(mx, my, Math.max(1, tile * 0.022), 0, Math.PI * 2);
-            ctx.fill();
+            const size = tile * (0.12 + ((mote * 7) % 5) * 0.018);
+            ctx.globalAlpha = (1 - rise) * 0.78 * radiusK;
+            drawFrame(moteSheet, (frame + mote * 5) % 16, mx - size / 2, my - size / 2, size, size);
           }
+          ctx.restore();
+          ctx.restore();
+          continue;
+        }
+
+        const portalImage = getWarpPortalFallbackImage();
+        if (portalImage) {
+          const imageW = gateW * 2.75;
+          const imageH = gateH * 2.55;
+          ctx.save();
+          ctx.globalAlpha = 0.9 * radiusK;
+          ctx.drawImage(portalImage, cx - imageW / 2, gateY - imageH / 2, imageW, imageH);
           ctx.restore();
           ctx.restore();
           continue;
