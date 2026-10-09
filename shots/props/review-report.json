@@ -1,0 +1,273 @@
+{
+  "entries": [
+    {
+      "kind": "pine",
+      "variant": 0,
+      "label": "pine",
+      "triangles": 1384
+    },
+    {
+      "kind": "broadleaf-tree",
+      "variant": 0,
+      "label": "broadleaf-tree",
+      "triangles": 1504
+    },
+    {
+      "kind": "dead-tree",
+      "variant": 0,
+      "label": "dead-tree",
+      "triangles": 624
+    },
+    {
+      "kind": "stump",
+      "variant": 0,
+      "label": "stump",
+      "triangles": 288
+    },
+    {
+      "kind": "bush",
+      "variant": 0,
+      "label": "bush",
+      "triangles": 280
+    },
+    {
+      "kind": "rock",
+      "variant": 0,
+      "label": "rock 1",
+      "triangles": 180
+    },
+    {
+      "kind": "rock",
+      "variant": 1,
+      "label": "rock 2",
+      "triangles": 180
+    },
+    {
+      "kind": "rock",
+      "variant": 2,
+      "label": "rock 3",
+      "triangles": 180
+    },
+    {
+      "kind": "boulder-cluster",
+      "variant": 0,
+      "label": "boulder-cluster",
+      "triangles": 900
+    },
+    {
+      "kind": "cottage",
+      "variant": 0,
+      "label": "cottage",
+      "triangles": 140
+    },
+    {
+      "kind": "ruined-wall",
+      "variant": 0,
+      "label": "ruined-wall",
+      "triangles": 204
+    },
+    {
+      "kind": "stone-wall",
+      "variant": 0,
+      "label": "stone-wall",
+      "triangles": 300
+    },
+    {
+      "kind": "wooden-fence",
+      "variant": 0,
+      "label": "wooden-fence",
+      "triangles": 48
+    },
+    {
+      "kind": "gate",
+      "variant": 0,
+      "label": "gate",
+      "triangles": 144
+    },
+    {
+      "kind": "wooden-bridge",
+      "variant": 0,
+      "label": "wooden-bridge",
+      "triangles": 336
+    },
+    {
+      "kind": "well",
+      "variant": 0,
+      "label": "well",
+      "triangles": 224
+    },
+    {
+      "kind": "torch",
+      "variant": 0,
+      "label": "torch",
+      "triangles": 448
+    },
+    {
+      "kind": "brazier",
+      "variant": 0,
+      "label": "brazier",
+      "triangles": 784
+    },
+    {
+      "kind": "barrel",
+      "variant": 0,
+      "label": "barrel",
+      "triangles": 576
+    },
+    {
+      "kind": "crate",
+      "variant": 0,
+      "label": "crate",
+      "triangles": 60
+    },
+    {
+      "kind": "chest",
+      "variant": 0,
+      "label": "chest small",
+      "triangles": 60
+    },
+    {
+      "kind": "chest",
+      "variant": 1,
+      "label": "chest medium",
+      "triangles": 60
+    },
+    {
+      "kind": "chest",
+      "variant": 2,
+      "label": "chest large",
+      "triangles": 60
+    },
+    {
+      "kind": "signpost",
+      "variant": 0,
+      "label": "signpost",
+      "triangles": 60
+    },
+    {
+      "kind": "tent",
+      "variant": 0,
+      "label": "tent",
+      "triangles": 116
+    },
+    {
+      "kind": "campfire",
+      "variant": 0,
+      "label": "campfire",
+      "triangles": 1984
+    }
+  ],
+  "checks": {
+    "scatterMeshes": 2,
+    "scatterComponents": 786,
+    "bridgeLength": 7.14,
+    "lights": 0,
+    "bases": [
+      {
+        "label": "pine",
+        "minY": 0
+      },
+      {
+        "label": "broadleaf-tree",
+        "minY": 0
+      },
+      {
+        "label": "dead-tree",
+        "minY": 0
+      },
+      {
+        "label": "stump",
+        "minY": 0
+      },
+      {
+        "label": "bush",
+        "minY": 0
+      },
+      {
+        "label": "rock 1",
+        "minY": 0
+      },
+      {
+        "label": "rock 2",
+        "minY": 0
+      },
+      {
+        "label": "rock 3",
+        "minY": 0
+      },
+      {
+        "label": "boulder-cluster",
+        "minY": 0
+      },
+      {
+        "label": "cottage",
+        "minY": 0
+      },
+      {
+        "label": "ruined-wall",
+        "minY": 0
+      },
+      {
+        "label": "stone-wall",
+        "minY": 0
+      },
+      {
+        "label": "wooden-fence",
+        "minY": 0
+      },
+      {
+        "label": "gate",
+        "minY": 0
+      },
+      {
+        "label": "wooden-bridge",
+        "minY": 0
+      },
+      {
+        "label": "well",
+        "minY": 0
+      },
+      {
+        "label": "torch",
+        "minY": 0
+      },
+      {
+        "label": "brazier",
+        "minY": 0
+      },
+      {
+        "label": "barrel",
+        "minY": 0
+      },
+      {
+        "label": "crate",
+        "minY": 0
+      },
+      {
+        "label": "chest small",
+        "minY": 0
+      },
+      {
+        "label": "chest medium",
+        "minY": 0
+      },
+      {
+        "label": "chest large",
+        "minY": 0
+      },
+      {
+        "label": "signpost",
+        "minY": 0
+      },
+      {
+        "label": "tent",
+        "minY": 0
+      },
+      {
+        "label": "campfire",
+        "minY": 0
+      }
+    ]
+  },
+  "errors": []
+}

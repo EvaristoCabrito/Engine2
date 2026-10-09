@@ -1,0 +1,164 @@
+[
+  {
+    "unit": "familiar2",
+    "frames": 180,
+    "score": 77.59612327898154,
+    "blobs": 1,
+    "shadow": 2.03695818241391,
+    "verdict": "Review edge cleaning",
+    "contact": "familiar2.png"
+  },
+  {
+    "unit": "apparition",
+    "frames": 276,
+    "score": 68.07923147595068,
+    "blobs": 8,
+    "shadow": 2.330285708781093,
+    "verdict": "Review edge cleaning",
+    "contact": "apparition.png"
+  },
+  {
+    "unit": "carnivorous-plant-001",
+    "frames": 180,
+    "score": 63.53876917083222,
+    "blobs": 8,
+    "shadow": 4.644145770280925,
+    "verdict": "Review edge cleaning",
+    "contact": "carnivorous-plant-001.png"
+  },
+  {
+    "unit": "sapling-001",
+    "frames": 216,
+    "score": 62.24571678326477,
+    "blobs": 15,
+    "shadow": 3.6895876184125043,
+    "verdict": "Review edge cleaning",
+    "contact": "sapling-001.png"
+  },
+  {
+    "unit": "jacare",
+    "frames": 216,
+    "score": 51.05497511786528,
+    "blobs": 1,
+    "shadow": 3.557797804995984,
+    "verdict": "Review edge cleaning",
+    "contact": "jacare.png"
+  },
+  {
+    "unit": "familiar4",
+    "frames": 144,
+    "score": 46.69696204662122,
+    "blobs": 30,
+    "shadow": 4.715476711808108,
+    "verdict": "Review edge cleaning",
+    "contact": "familiar4.png"
+  },
+  {
+    "unit": "zombieDog",
+    "frames": 252,
+    "score": 42.51623486787952,
+    "blobs": 1,
+    "shadow": 1.5869578001458406,
+    "verdict": "Review edge cleaning",
+    "contact": "zombieDog.png"
+  },
+  {
+    "unit": "salazar",
+    "frames": 16,
+    "score": 42.072006546049636,
+    "blobs": 0,
+    "shadow": 0.5532889473963338,
+    "verdict": "Review edge cleaning",
+    "contact": "salazar.png"
+  },
+  {
+    "unit": "undeadOx",
+    "frames": 216,
+    "score": 26.732547483162083,
+    "blobs": 5,
+    "shadow": 2.289953115409859,
+    "verdict": "Review edge cleaning",
+    "contact": "undeadOx.png"
+  },
+  {
+    "unit": "familiar",
+    "frames": 28,
+    "score": 15.843777565893891,
+    "blobs": 4,
+    "shadow": 0.0,
+    "verdict": "Review edge cleaning",
+    "contact": "familiar.png"
+  },
+  {
+    "unit": "Kael_Final/kael-final-002",
+    "frames": 108,
+    "score": 11.01815577653073,
+    "blobs": 4,
+    "shadow": 1.9732816029021638,
+    "verdict": "Review edge cleaning",
+    "contact": "Kael_Final__kael-final-002.png"
+  },
+  {
+    "unit": "aldric",
+    "frames": 252,
+    "score": 9.724671036156973,
+    "blobs": 1,
+    "shadow": 0.10966662383162212,
+    "verdict": "Review edge cleaning",
+    "contact": "aldric.png"
+  },
+  {
+    "unit": "familiar3",
+    "frames": 216,
+    "score": 9.278471000171908,
+    "blobs": 3,
+    "shadow": 0.649921863816125,
+    "verdict": "Review edge cleaning",
+    "contact": "familiar3.png"
+  },
+  {
+    "unit": "voss",
+    "frames": 16,
+    "score": 6.442852700113361,
+    "blobs": 0,
+    "shadow": 0.651256920726976,
+    "verdict": "Review edge cleaning",
+    "contact": "voss.png"
+  },
+  {
+    "unit": "malrec",
+    "frames": 216,
+    "score": 5.938839342507578,
+    "blobs": 35,
+    "shadow": 0.09076033058453985,
+    "verdict": "Review edge cleaning",
+    "contact": "malrec.png"
+  },
+  {
+    "unit": "neera",
+    "frames": 288,
+    "score": 3.083576252756515,
+    "blobs": 5,
+    "shadow": 0.17264380444165423,
+    "verdict": "Review shadow/blobs only",
+    "contact": "neera.png"
+  },
+  {
+    "unit": "militia-v2",
+    "frames": 216,
+    "score": 2.2210428954356622,
+    "blobs": 1,
+    "shadow": 0.4141331087956586,
+    "verdict": "Keep unchanged pending visual review",
+    "contact": "militia-v2.png"
+  },
+  {
+    "unit": "neera/neera-v2-001",
+    "frames": 288,
+    "score": 1.989259808373586,
+    "blobs": 1,
+    "shadow": 0.13551869198809116,
+    "verdict": "Keep unchanged pending visual review",
+    "contact": "neera__neera-v2-001.png"
+  }
+]

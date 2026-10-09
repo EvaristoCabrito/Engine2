@@ -1,0 +1,2737 @@
+{
+  "preserved": [
+    {
+      "name": "FireballVFX",
+      "unchanged": true,
+      "sha256": "6d33502aacebf726bc887acbe19ebf852ba686ec31350cc711a6cdc25a812375",
+      "importChanges": []
+    },
+    {
+      "name": "OldFireBall",
+      "unchanged": true,
+      "sha256": "505c9dc436dc37fcb39dd96880e8e58b868d36e5bc8ec311ff57cc73ab4934f3",
+      "importChanges": []
+    },
+    {
+      "name": "FireballImpactVFX",
+      "unchanged": true,
+      "sha256": "2e262a45e8faa56910e1f9712ac1cc6b439e8765b02e73a0e6ad0185bb16997a",
+      "importChanges": []
+    },
+    {
+      "name": "CausticVenomVFX",
+      "unchanged": true,
+      "sha256": "28e3779922e087074ba47dec0b76a2a9c58e71f8e9b5a873e1764038f6e76266",
+      "importChanges": []
+    },
+    {
+      "name": "BlessVFX",
+      "unchanged": true,
+      "sha256": "4d638d73f883a03b4d84d54ed40019f4e8e492d5c85698c73b608db82a27bbb8",
+      "importChanges": []
+    },
+    {
+      "name": "MagicMissileV2VFX",
+      "unchanged": true,
+      "sha256": "fb9fa243af2a19d03993240116d30fd386c4f5d4db7c8116616a70ac53926917",
+      "importChanges": []
+    },
+    {
+      "name": "WebOfDreamsVFX",
+      "unchanged": true,
+      "sha256": "b3f54cda638af3527447e654392749d633d24a38e825f11d484b4912643e41b5",
+      "importChanges": []
+    },
+    {
+      "name": "PhantasmalForceVFX",
+      "unchanged": true,
+      "sha256": "f0b49a59ae1f62f34944280c3234cd0e4a0df2d2d442f7084c0d63dbc65242e9",
+      "importChanges": []
+    },
+    {
+      "name": "BurningHandsV2VFX",
+      "unchanged": true,
+      "sha256": "9ab007e0d227f0ac747e399f41cf1ac2b3ca37d22a0c67536dfa2ad45dde628d",
+      "importChanges": []
+    },
+    {
+      "name": "BurningHandsV3VFX",
+      "unchanged": true,
+      "sha256": "bc8214fd7478b99c448e658cd6ac7f773c5d15c88ef0c05472c0b29ec32f1be0",
+      "importChanges": []
+    },
+    {
+      "name": "VarreduraVFX",
+      "unchanged": true,
+      "sha256": "b5f43443d81a2101268225ad7e97f2100c9b91ca480bdccd7329f891c00eb2cd",
+      "importChanges": []
+    },
+    {
+      "name": "ProceduralElementEmitter",
+      "unchanged": true,
+      "sha256": "cb8c0b6d0af61473130f595f5092b0331e701eba38f65ee6eee1f80d87c679e1",
+      "importChanges": []
+    },
+    {
+      "name": "ThreeVfxSystem",
+      "unchanged": true,
+      "sha256": "def3d150b22d488410f22def6ac8ba79c06d426c27c5481e39a643d982ba56c6",
+      "importChanges": []
+    },
+    {
+      "name": "ElementFlipbookAtlas",
+      "unchanged": true,
+      "sha256": "44373ad2896a9187bd82e0339f433c1959dd3d88a778048de21b19a7564a891e",
+      "importChanges": []
+    }
+  ],
+  "authoredHexRadius": 1,
+  "humanHeight": 2.65,
+  "spacingHexes": 4,
+  "effects": [
+    "fireball",
+    "causticVenom",
+    "bless",
+    "magicMissileV2",
+    "webOfDreams",
+    "phantasmalForce",
+    "burningHandsV2",
+    "burningHandsV3",
+    "cleave",
+    "sweep",
+    "poisonBreath"
+  ],
+  "screenshots": [
+    "C:/Engine2/shots/vfx/fireball-day.png",
+    "C:/Engine2/shots/vfx/fireball-night.png",
+    "C:/Engine2/shots/vfx/causticVenom-day.png",
+    "C:/Engine2/shots/vfx/causticVenom-night.png",
+    "C:/Engine2/shots/vfx/bless-day.png",
+    "C:/Engine2/shots/vfx/bless-night.png",
+    "C:/Engine2/shots/vfx/magicMissileV2-day.png",
+    "C:/Engine2/shots/vfx/magicMissileV2-night.png",
+    "C:/Engine2/shots/vfx/webOfDreams-day.png",
+    "C:/Engine2/shots/vfx/webOfDreams-night.png",
+    "C:/Engine2/shots/vfx/phantasmalForce-day.png",
+    "C:/Engine2/shots/vfx/phantasmalForce-night.png",
+    "C:/Engine2/shots/vfx/burningHandsV2-day.png",
+    "C:/Engine2/shots/vfx/burningHandsV2-night.png",
+    "C:/Engine2/shots/vfx/burningHandsV3-day.png",
+    "C:/Engine2/shots/vfx/burningHandsV3-night.png",
+    "C:/Engine2/shots/vfx/cleave-day.png",
+    "C:/Engine2/shots/vfx/cleave-night.png",
+    "C:/Engine2/shots/vfx/sweep-day.png",
+    "C:/Engine2/shots/vfx/sweep-night.png",
+    "C:/Engine2/shots/vfx/poisonBreath-day.png",
+    "C:/Engine2/shots/vfx/poisonBreath-night.png"
+  ],
+  "memory": [
+    {
+      "kind": "fireball",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 2,
+        "programs": 3
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 2,
+        "programs": 3
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 2,
+          "programs": 3
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "causticVenom",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 5
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 5
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 5
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "bless",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 6
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 6
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 6
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 6
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 6
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "webOfDreams",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 7
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 7
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "phantasmalForce",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 7
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 7
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 7
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "burningHandsV2",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 8
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 8
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "burningHandsV3",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 8
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 8
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 8
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "cleave",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "sweep",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    },
+    {
+      "kind": "poisonBreath",
+      "count": 20,
+      "before": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "after": {
+        "geometries": 2,
+        "textures": 3,
+        "programs": 9
+      },
+      "observations": [
+        {
+          "cast": 1,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 2,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 3,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 4,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 5,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 6,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 7,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 8,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 9,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 10,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 11,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 12,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 13,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 14,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 15,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 16,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 17,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 18,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 19,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        },
+        {
+          "cast": 20,
+          "geometries": 2,
+          "textures": 3,
+          "programs": 9
+        }
+      ],
+      "geometryDelta": 0,
+      "textureDelta": 0
+    }
+  ],
+  "disposed": {
+    "geometries": 2,
+    "textures": 3,
+    "programs": 9
+  },
+  "impacts": [
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-1"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-2"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-3"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-4"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-5"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-6"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-7"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-8"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-9"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-10"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-11"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-12"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-13"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-14"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-15"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-16"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-17"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-18"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-19"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-20"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-21"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-22"
+    },
+    {
+      "kind": "fireball",
+      "castId": "engine2-vfx-23"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-24"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-25"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-26"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-27"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-28"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-29"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-30"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-31"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-32"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-33"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-34"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-35"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-36"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-37"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-38"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-39"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-40"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-41"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-42"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-43"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-44"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-45"
+    },
+    {
+      "kind": "causticVenom",
+      "castId": "engine2-vfx-46"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-47",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-48",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-49",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-50",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-51",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-52",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-53",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-54",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-55",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-56",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-57",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-58",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-59",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-60",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-61",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-62",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-63",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-64",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-65",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-66",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-67",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-68",
+      "targetId": "target"
+    },
+    {
+      "kind": "bless",
+      "castId": "engine2-vfx-69",
+      "targetId": "target"
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-70",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-71",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-72",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-73",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-74",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-75",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-76",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-77",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-78",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-79",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-80",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-81",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-82",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-83",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-84",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-85",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-86",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-87",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-88",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-89",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-90",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-91",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "magicMissileV2",
+      "castId": "engine2-vfx-92",
+      "targetId": "target",
+      "missileIndex": 0
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-93"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-94"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-95"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-96"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-97"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-98"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-99"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-100"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-101"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-102"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-103"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-104"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-105"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-106"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-107"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-108"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-109"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-110"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-111"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-112"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-113"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-114"
+    },
+    {
+      "kind": "webOfDreams",
+      "castId": "engine2-vfx-115"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-116"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-117"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-118"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-119"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-120"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-121"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-122"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-123"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-124"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-125"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-126"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-127"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-128"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-129"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-130"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-131"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-132"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-133"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-134"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-135"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-136"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-137"
+    },
+    {
+      "kind": "phantasmalForce",
+      "castId": "engine2-vfx-138"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-139"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-140"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-141"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-142"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-143"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-144"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-145"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-146"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-147"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-148"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-149"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-150"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-151"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-152"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-153"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-154"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-155"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-156"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-157"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-158"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-159"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-160"
+    },
+    {
+      "kind": "burningHandsV2",
+      "castId": "engine2-vfx-161"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-162"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-163"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-164"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-165"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-166"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-167"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-168"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-169"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-170"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-171"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-172"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-173"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-174"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-175"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-176"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-177"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-178"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-179"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-180"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-181"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-182"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-183"
+    },
+    {
+      "kind": "burningHandsV3",
+      "castId": "engine2-vfx-184"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-185"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-186"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-187"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-188"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-189"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-190"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-191"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-192"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-193"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-194"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-195"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-196"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-197"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-198"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-199"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-200"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-201"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-202"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-203"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-204"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-205"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-206"
+    },
+    {
+      "kind": "cleave",
+      "castId": "engine2-vfx-207"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-208"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-209"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-210"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-211"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-212"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-213"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-214"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-215"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-216"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-217"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-218"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-219"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-220"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-221"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-222"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-223"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-224"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-225"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-226"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-227"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-228"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-229"
+    },
+    {
+      "kind": "sweep",
+      "castId": "engine2-vfx-230"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-231"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-232"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-233"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-234"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-235"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-236"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-237"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-238"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-239"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-240"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-241"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-242"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-243"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-244"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-245"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-246"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-247"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-248"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-249"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-250"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-251"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-252"
+    },
+    {
+      "kind": "poisonBreath",
+      "castId": "engine2-vfx-253"
+    }
+  ],
+  "errors": []
+}

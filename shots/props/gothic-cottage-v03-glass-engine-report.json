@@ -1,0 +1,57 @@
+{
+  "metrics": {
+    "metrics": {
+      "lods": [
+        {
+          "name": "GothicCottage_LOD0",
+          "triangles": 34052
+        },
+        {
+          "name": "GothicCottage_LOD1",
+          "triangles": 12969
+        }
+      ],
+      "glassTriangles": 52,
+      "textures": [
+        {
+          "width": 2048,
+          "height": 2048,
+          "mipmaps": true
+        },
+        {
+          "width": 2048,
+          "height": 2048,
+          "mipmaps": true
+        },
+        {
+          "width": 2048,
+          "height": 2048,
+          "mipmaps": true
+        }
+      ],
+      "gpuTextureMiB": 64
+    },
+    "bounds": {
+      "min": [
+        -3.2383108139038086,
+        0,
+        -2.5487029552459717
+      ],
+      "max": [
+        3.2383108139038086,
+        6.481050491333008,
+        2.8777172565460205
+      ]
+    },
+    "drawCalls": 16,
+    "triangles": 26134
+  },
+  "lod": {
+    "activeLOD": 1,
+    "visible": [
+      false,
+      true
+    ]
+  },
+  "errors": []
+}
