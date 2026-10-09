@@ -3173,7 +3173,7 @@ export function spellIcon(id: string): string {
   if (id === "shield-bash") return "/game/icons/shield-bash.png";
   if (id === "poison-breath") return "/game/icons/poison-breath.png";
   if (id === "create-food-and-water") return "/game/icons/create-food-and-water.png";
-  if (id === "warp") return "/game/icons/warp.jpg";
+  if (id === "warp") return "/game/icons/warp-portal.png";
   if (id === "multi-shot") return "/game/icons/refresh-006/combat/multi-shot-006.png";
   if (id === "cure-light") return "/game/icons/refresh-006/healing/cure-light-new-006.png";
   if (id === "cure-minor") return "/game/icons/refresh-006/healing/cure-light-new-006.png";

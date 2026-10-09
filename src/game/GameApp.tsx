@@ -1735,6 +1735,12 @@ export function GameApp() {
     } else {
       persistCurrent({ ...save, completed, seenInnArrivalIntro: true, pendingMission: null, battle: null });
     }
+    // After the arrival scene the party walks into the Inn map, as on every later visit;
+    // the tavern/smith menus open from talking to Brue and Vargan there.
+    if (missionById("estalagem")?.explore) {
+      startBattle("estalagem");
+      return;
+    }
     setScreen("inn");
   };
 
@@ -1855,8 +1861,11 @@ export function GameApp() {
   // Campaign maps reuse the mode stored in that save. Debug always opens the chooser so
   // each test run can select the kind of map independently of the last Debug session.
   const goToMap = useCallback(() => {
+    // Test mode asks how to travel once per test-mode start (leaveBoot), then keeps that choice;
+    // the campaign never asks — it uses the save's own choice below.
     if (testMode) {
-      setScreen("mapChoice");
+      if (!mapMode) { setScreen("mapChoice"); return; }
+      setScreen(mapMode === "classic" ? "worldMap" : "overworldMap");
       return;
     }
     // Older campaign records predate the RPG map preference. Returning from a mission
@@ -3291,7 +3300,7 @@ function TitleScreen({
           button stays where it was, bottom-left. */}
       <div className="relative z-10 flex flex-1 flex-col justify-end px-5 pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] max-w-xl mx-auto w-full">
         <p className="text-sm tracking-[0.12em] text-[#dfbf8e] mb-3">{uiText("Táticas em cinzas")}</p>
-        <h1 className="font-display text-[#dfbf8e] text-4xl sm:text-5xl font-medium tracking-tight leading-none mb-4">Ember</h1>
+        <h1 className="font-display text-[#dfbf8e] text-3xl sm:text-4xl font-medium tracking-tight leading-none mb-4">Ember</h1>
         <p className="text-[11px] tracking-[0.18em] text-[#dfbf8e] -mt-3 mb-4">Version {DISPLAY_VERSION}</p>
         <p className="text-[#dfbf8e] text-base leading-relaxed mb-8 max-w-md">
           {uiText("Seis sobreviventes. Um tabuleiro de guerra. Cada casa conta.")}

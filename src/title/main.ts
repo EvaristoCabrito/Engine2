@@ -220,6 +220,7 @@ function chooseSaveSlot(index: number): void {
       : `Slot ${slotNumber} loaded: ${summary.title} · ${summary.detail}.`;
   }
   updateContinueButton();
+  try { sessionStorage.removeItem("engine2:game-launched"); } catch { /* storage blocked */ }
   window.location.assign(`/game.html?start=${launchMode}`);
 }
 

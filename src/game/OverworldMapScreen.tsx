@@ -229,6 +229,7 @@ export function OverworldMapScreen({
     }
   }, [affinityOpen, save.partyFormation]);
   const [movementOpen, setMovementOpen] = useState(false);
+  const [warpMenuHero, setWarpMenuHero] = useState<string | null>(null);
 
   const [inventoryHero, setInventoryHero] = useState<string | null>(null);
   const stepLock = useRef(false);
@@ -241,7 +242,12 @@ export function OverworldMapScreen({
     stepLock.current = false;
   }, [overworldPos.col, overworldPos.row]);
   useEffect(() => {
-    const cancel = (e: KeyboardEvent) => { if (e.key === "Escape") setMovementOpen(false); };
+    const cancel = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMovementOpen(false);
+        setWarpMenuHero(null);
+      }
+    };
     window.addEventListener("keydown", cancel);
     return () => window.removeEventListener("keydown", cancel);
   }, []);
@@ -373,6 +379,14 @@ export function OverworldMapScreen({
     window.setTimeout(() => setWarpVisual(null), durationMs);
   };
 
+  const warpMenuLevel = warpMenuHero ? save.levels[warpMenuHero] ?? 1 : 1;
+  const warpMenuCities = locations.filter((location) => {
+    if (!location.warpCity) return false;
+    const hex = worldToHex(location.x, location.y);
+    return (hex.x !== overworldPos.col || hex.y !== overworldPos.row) &&
+      ((save.exploredHexes ?? []).includes(key(hex.x, hex.y)) || location.missionIds.some((id) => save.completed.includes(id)));
+  });
+
   // Everything the party can step to right now: its own hex (re-clicking it just reopens
   // whatever's there, no day spent — see stepOverworld's same-hex no-op) plus its six
   // neighbors. The only adjacency rule the UI is allowed to know about.
@@ -456,6 +470,57 @@ export function OverworldMapScreen({
   return (
     <section className="relative h-dvh min-h-0 flex flex-col overflow-hidden bg-bg">
       <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 30% 20%, #241f19 0%, #0c0b0a 70%)" }} />
+      {warpMenuHero && onCastWarp && (
+        <div
+          className="fixed inset-0 z-[75] grid place-items-center bg-black/60 p-4"
+          role="presentation"
+          onClick={() => setWarpMenuHero(null)}
+        >
+          <div
+            className="relative aspect-square w-[min(86vw,380px)] rounded-full border border-[#dfbf8e]/45 bg-[#17130f]/95 shadow-[0_0_48px_rgba(65,113,190,0.32),inset_0_0_36px_rgba(65,113,190,0.16)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${uiText("Escolha o destino do Warp", { en: "Choose a Warp destination" })} · ${warpMenuHero}`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="absolute left-1/2 top-1/2 z-10 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#dfbf8e]/50 bg-[#241b15] p-2 text-center shadow-lg">
+              <div>
+                <img src={spellIcon("warp")} alt="" className="mx-auto mb-1 size-9 rounded object-cover" />
+                <p className="text-xs text-[#dfbf8e]">Warp</p>
+                <p className="max-w-20 truncate text-[10px] text-muted">{warpMenuHero}</p>
+              </div>
+            </div>
+            {warpMenuCities.map((city, index) => {
+              const angle = (index / warpMenuCities.length) * Math.PI * 2 - Math.PI / 2;
+              const left = 50 + Math.cos(angle) * 34;
+              const top = 50 + Math.sin(angle) * 34;
+              return (
+                <button
+                  key={city.id}
+                  type="button"
+                  className="absolute z-20 flex min-h-11 w-[clamp(92px,27vw,124px)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#dfbf8e]/60 bg-[#33271d] px-2 text-center text-xs text-[#f0dfc5] shadow-md transition hover:bg-[#55402c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#dfbf8e]"
+                  style={{ left: `${left}%`, top: `${top}%` }}
+                  onClick={() => {
+                    const ok = onCastWarp(warpMenuHero, city.id);
+                    setWarpMenuHero(null);
+                    if (ok) playWarpGate(warpMenuLevel);
+                    showHint(ok ? `${warpMenuHero} atravessou para ${city.name}.` : "Não foi possível lançar Warp.");
+                  }}
+                >
+                  {city.name}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              className="absolute bottom-[-3.25rem] left-1/2 -translate-x-1/2 rounded-md border border-white/20 bg-[#17130f]/95 px-3 py-1.5 text-xs text-[#dfbf8e]"
+              onClick={() => setWarpMenuHero(null)}
+            >
+              {uiText("Cancelar", { en: "Cancel" })}
+            </button>
+          </div>
+        </div>
+      )}
       {warpVisual && <div aria-hidden className="pointer-events-none fixed inset-0 z-[70] grid place-items-center bg-black/35">
         <img src={spellIcon("warp")} alt="" draggable={false} className="h-[58dvh] max-h-[620px] w-auto select-none object-contain mix-blend-screen drop-shadow-[0_0_30px_rgba(74,150,255,0.8)]" style={{ opacity: warpVisual === "closing" ? 0 : warpVisual === "forming" ? 0.15 : 1, transform: warpVisual === "forming" ? "scale(0.42,0.5)" : warpVisual === "closing" ? "scale(1.08,1.12)" : "scale(1,1)", transition: "opacity 550ms ease-out, transform 950ms cubic-bezier(.18,.7,.26,1)" }} />
       </div>}
@@ -586,19 +651,24 @@ export function OverworldMapScreen({
                     const level = save.levels[name] ?? 1;
                     const classId = save.promotions[name] ?? "mage";
                     const remaining = Math.max(0, tierUses(classId, WARP.tier, level) - (save.spellUses[name]?.tier3 ?? 0));
-                    return <div key={`warp-${name}`} className="flex flex-col gap-1 border-t border-[var(--ember-border)] pt-2">
-                      <div className="flex items-center gap-2 text-sm">
+                    return <div key={`warp-${name}`} className="border-t border-[var(--ember-border)] pt-2">
+                      <button
+                        type="button"
+                        disabled={remaining <= 0 || cities.length === 0}
+                        aria-label={`${uiText("Warp", { en: "Warp" })} · ${name} · ${remaining}x`}
+                        className="flex w-full items-center gap-2 rounded-md p-1 text-left text-sm hover:bg-surface-2 disabled:opacity-40"
+                        onClick={() => {
+                          setFieldSpellsOpen(false);
+                          setWarpMenuHero(name);
+                        }}
+                      >
                         <img src={spellIcon("warp")} alt="" className="size-7 rounded object-cover" />
                         <span className="text-fg">{uiText("Warp", { en: "Warp" })}</span>
                         <span className="ml-auto text-xs text-muted">{name} · Lv {level} · {remaining}x</span>
-                      </div>
-                      {cities.length ? cities.map((city) => <button key={city.id} type="button" disabled={remaining <= 0} className="h-8 px-2 ember-plate text-xs disabled:opacity-40" onClick={() => {
-                        const ok = onCastWarp(name, city.id);
-                        if (ok) playWarpGate(level);
-                        showHint(ok ? `${name} atravessou para ${city.name}.` : "Não foi possível lançar Warp.");
-                      }}>{uiText("Ir para", { en: "Travel to" })} {city.name}</button>) : <p className="text-xs text-subtle">{uiText("Nenhuma cidade visitada.", { en: "No visited cities." })}</p>}
+                      </button>
                     </div>;
                   })}
+                  {onCastWarp && mages.length > 0 && cities.length === 0 && <p className="text-xs text-subtle">{uiText("Nenhuma cidade visitada.", { en: "No visited cities." })}</p>}
                   {healers.length === 0 && mages.length === 0 && <p className="text-sm text-subtle">{uiText("Nenhum feitiço de campo disponível.", { en: "No field spells available." })}</p>}
                   </>;
                 })()}
@@ -721,7 +791,6 @@ export function OverworldMapScreen({
           ) : (
             <div className="w-[70dvw] h-[70dvh] max-w-md" />
           )}
-          {artOk && usesTravelClock(save) && <div aria-hidden className="pointer-events-none absolute inset-0 transition-colors duration-[1500ms]" style={{ backgroundColor: skyTint }} />}
           {artOk && !test && (
             // Fog of war: dark everywhere except a soft radius around every hex the party
             // has ever stood on (see exploredSet above). Test mode skips this like it skips
@@ -750,6 +819,7 @@ export function OverworldMapScreen({
               <rect x="0" y="0" width="100" height="100" fill="rgba(8,6,4,0.78)" mask="url(#ow-fog-mask)" />
             </svg>
           )}
+          {artOk && usesTravelClock(save) && <div aria-hidden className="pointer-events-none absolute inset-0 transition-colors duration-[1500ms]" style={{ backgroundColor: skyTint }} />}
           <div className="absolute inset-0">
             {locations.filter(isExplored).map((loc) => {
               const st = status(loc);
