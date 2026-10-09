@@ -49,6 +49,9 @@ function hexRing(rIn: number, rOut: number): THREE.BufferGeometry {
   return g;
 }
 
+/** One battle-grid mark: a hex fill (no rIn) or hex border, radii in hex radii, rgba colour. */
+export interface GridMark { x: number; y: number; color: string; rOut: number; rIn?: number }
+
 export class DioramaView {
   readonly stage: Stage;
   readonly rig: CameraRig;
@@ -58,7 +61,7 @@ export class DioramaView {
   private readonly waterMat: THREE.MeshStandardMaterial;
   private ground: THREE.Mesh | null = null;
   private water: THREE.Mesh | null = null;
-  private readonly decor: DecorLayer;
+  readonly decor: DecorLayer;
   private readonly unitGroup = new THREE.Group();
   private readonly hover: THREE.Mesh;
   private readonly marks = new THREE.Group();
@@ -90,13 +93,33 @@ export class DioramaView {
     this.marks.renderOrder = 6;
     this.stage.scene.add(this.hover, this.marks, this.unitGroup);
     initFrames(this.stage.renderer);
-    this.stage.onFrame(dt => {
+    this.stage.onFrame((dt, time) => {
       pumpUploads();
       const yaw = this.rig.facingYaw;
-      this.decor.face(yaw);
-      for (const u of this.units) u.actor.update(dt, yaw, this.groundAt);
+      this.decor.face(yaw, this.flatTop);
+      this.decor.updateLights(time);
+      for (const u of this.units) u.actor.update(dt, yaw, this.groundAt, this.flatTop);
     });
   }
+
+  private flatFog: THREE.Fog | null = null;
+  private boardTop = 0;
+
+  /** Height the 2D view's flat cards lie at (above all terrain), or null in the normal 3D view. */
+  get flatTop(): number | null { return this.rig.flat ? this.boardTop : null; }
+
+  /** Old-school 2D view (Ember's original battle camera) on or off. Off returns to the exact angle it left. */
+  setFlat(on: boolean): void {
+    if (on === this.rig.flat) return;
+    this.rig.flat = on;
+    // distance fog would grey out the whole board from the long lens's far position
+    if (on) { this.flatFog = this.stage.scene.fog as THREE.Fog | null; this.stage.scene.fog = null; }
+    else if (this.flatFog) { this.stage.scene.fog = this.flatFog; this.flatFog = null; }
+    this.rig.apply();
+  }
+
+  /** The terrain's surface meshes (ground, and water when the map has any). */
+  get surfaces(): THREE.Mesh[] { return [this.ground, this.water].filter((m): m is THREE.Mesh => !!m); }
 
   readonly groundAt = (x: number, z: number): number => (this.board ? groundHeightAt(this.board, EDGES, x, z) : 0);
 
@@ -105,6 +128,7 @@ export class DioramaView {
     const gen = ++this.gen;
     const board = new Board(draftFromMission(m));
     this.board = board;
+    this.boardTop = board.cells.reduce((top, c) => Math.max(top, c.groundY), 0) + 1;
     const key = `${m.id}|${m.cols}x${m.rows}`;
     const b = board.bounds(), w = b.x1 - b.x0 + 2.4, depth = b.z1 - b.z0 + 2.4;
     const tod = (['day', 'noon', 'dawn', 'dusk', 'brightNight', 'darkNight'] as TimeOfDay[]).includes(m.timeOfDay as TimeOfDay) ? m.timeOfDay as TimeOfDay : 'day';
@@ -272,6 +296,68 @@ export class DioramaView {
     }
   }
 
+  private readonly gridGroup = new THREE.Group();
+  private gridKey = '';
+  private readonly gridMats = new Map<string, THREE.MeshBasicMaterial>();
+
+  /** Ember's battle grid marks (movement wash, edges, targets, route, turn marker, cursor): hex
+   * fills (rIn absent) and hex borders in exact rgba colours, draped on the ground. Later marks
+   * sit on top of earlier ones. Rebuilt only when the marks change. */
+  setGrid(marks: GridMark[]): void {
+    const key = marks.map(m => `${m.x},${m.y},${m.color},${m.rOut},${m.rIn ?? 0}`).join(';');
+    if (key === this.gridKey || !this.board) return;
+    this.gridKey = key;
+    if (!this.gridGroup.parent) this.stage.scene.add(this.gridGroup);
+    for (const child of this.gridGroup.children) (child as THREE.Mesh).geometry.dispose();
+    this.gridGroup.clear();
+    const L = this.board.layout;
+    // One mesh per run of same-coloured marks (a whole layer is one draw), stacked in order.
+    const batches = new Map<string, { pos: number[]; idx: number[]; order: number }>();
+    let run = -1, lastColor = '';
+    for (const m of marks) {
+      if (m.x < 0 || m.y < 0 || m.x >= L.cols || m.y >= L.rows) continue;
+      if (m.color !== lastColor) { run++; lastColor = m.color; }
+      const c = this.board.cell(m.x, m.y);
+      const lift = 0.05 + run * 0.002;
+      const at = (dx: number, dz: number, b: { pos: number[] }) =>
+        b.pos.push(c.x + dx, (c.water ? c.waterY : this.groundAt(c.x + dx, c.z + dz)) + lift, c.z + dz);
+      const batchKey = `${m.color}|${run}`;
+      let b = batches.get(batchKey);
+      if (!b) { b = { pos: [], idx: [], order: run }; batches.set(batchKey, b); }
+      const base = b.pos.length / 3;
+      if (!m.rIn) {
+        at(0, 0, b);
+        for (let k = 0; k < 6; k++) { const [x, z] = corner(0, 0, k, m.rOut); at(x, z, b); }
+        for (let k = 0; k < 6; k++) b.idx.push(base, base + 1 + k, base + 1 + ((k + 1) % 6));
+      } else {
+        for (let k = 0; k < 6; k++) {
+          const [ox, oz] = corner(0, 0, k, m.rOut), [ix, iz] = corner(0, 0, k, m.rIn);
+          at(ox, oz, b); at(ix, iz, b);
+        }
+        for (let k = 0; k < 6; k++) { const a = base + k * 2, n = base + ((k + 1) % 6) * 2; b.idx.push(a, n, a + 1, n, n + 1, a + 1); }
+      }
+    }
+    for (const [batchKey, b] of batches) {
+      const color = batchKey.slice(0, batchKey.lastIndexOf('|'));
+      let mat = this.gridMats.get(color);
+      if (!mat) {
+        const p = /rgba?\(([^,]+),([^,]+),([^,)]+)(?:,([^)]+))?\)/.exec(color);
+        mat = new THREE.MeshBasicMaterial({
+          color: p ? new THREE.Color(Number(p[1]) / 255, Number(p[2]) / 255, Number(p[3]) / 255) : new THREE.Color(1, 1, 1),
+          opacity: p?.[4] !== undefined ? Number(p[4]) : 1,
+          transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+        });
+        this.gridMats.set(color, mat);
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(b.pos, 3));
+      g.setIndex(b.idx);
+      const mesh = new THREE.Mesh(g, mat);
+      mesh.renderOrder = 6 + b.order * 0.001;
+      this.gridGroup.add(mesh);
+    }
+  }
+
   /** Zoom as a share of the framed distance (Ember's preview percentage). */
   setZoom(zoom: number): void {
     this.rig.dist = THREE.MathUtils.clamp(this.baseDist / zoom, this.rig.minDist, this.rig.maxDist);
@@ -290,6 +376,8 @@ export class DioramaView {
     this.units = [];
     for (const m of [this.ground, this.water]) m?.geometry.dispose();
     this.groundMat.dispose(); this.waterMat.dispose(); this.backdrop?.dispose();
+    for (const child of this.gridGroup.children) (child as THREE.Mesh).geometry.dispose();
+    for (const mat of this.gridMats.values()) mat.dispose();
     this.rig.dispose();
     this.stage.dispose();
   }

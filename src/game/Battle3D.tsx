@@ -1,17 +1,33 @@
 // Engine2's 3D battlefield, standing in for Ember's 2D BattleCanvas (same props). Ember's
 // BattleEngine still runs every rule, turn and AI decision; this only draws its state on the 3D
 // map (Engine2 terrain, decorations, full-resolution sprites) and feeds clicks back as hexes.
-// First pass: units snap/walk between hexes with idle, walk, attack and death poses; reach and
-// selection show as hex rings. Spell/hit effects and the HUD's finer overlays come later.
+// Units snap/walk between hexes with idle, walk, attack and death poses; the grid (reach,
+// targets, route, turn marker, cursor) is Ember's own, hidden on city hubs. Spell/hit effects
+// and the HUD's finer overlays come later.
 
 import { useEffect, useRef } from "react";
-import * as THREE from "three";
 import type { BattleEngine } from "./engine";
 import type { HudSnapshot, Unit } from "./types";
-import { DioramaView } from "../editor/ember/dioramaView";
+import { DioramaView, type GridMark } from "../editor/ember/dioramaView";
+import { tacticalGridStyleQuiet as tacticalGridStyle, GRID_ROUTE, GRID_MOVE, GRID_ENEMY_TARGET, GRID_OFFHAND_TARGET } from "./tacticalGrid";
+import { TERRAIN } from "./data";
+import { tileAt } from "./pathfinding";
+
+/** Inner edge of Ember's hex border mesh (buildHexBorder(0.47) on a 0.5 hex). */
+const BORDER_INNER = 0.47 / 0.5;
+
+/** Ember's ThreeBattleRenderer fadedFill: an rgba colour with its alpha scaled by `fade`. */
+function fadedFill(fill: string, fade: number): string {
+  const m = /rgba?\(([^,]+),([^,]+),([^,)]+)(?:,([^)]+))?\)/.exec(fill);
+  if (!m) return fill;
+  const a = (m[4] !== undefined ? Number(m[4]) : 1) * fade;
+  return `rgba(${m[1]},${m[2]},${m[3]},${(Math.round(a * 50) / 50).toFixed(2)})`;
+}
 import { UnitActor } from "../units/actor";
 import { unitForSpawn } from "../units/catalog";
 import type { Mission } from "../ember/types";
+import { BattleAtmosphere3D } from "./battleAtmosphere3d";
+import { BattleVignettes } from "./BattleVignettes";
 
 type Any = Record<string, any>; // the engine's private helpers (hexCenter, active) are read as-is
 
@@ -42,7 +58,12 @@ export function Battle3D({
     // Ember's loading curtain lifts on "ember:battle-ready": sent once the board and its
     // decorations are in the scene and a frame has been drawn.
     void view.setMission({ ...(engine.mission as unknown as Mission), playerSpawns: [], enemySpawns: [], neutralSpawns: [] })
-      .then(() => requestAnimationFrame(() => window.dispatchEvent(new Event("ember:battle-ready"))));
+      .then(() => {
+        // camera testing: zoom from right up against a unit to far beyond the whole board
+        view.rig.minDist = 1;
+        view.rig.maxDist = Math.max(view.rig.maxDist * 4, 400);
+        requestAnimationFrame(() => window.dispatchEvent(new Event("ember:battle-ready")));
+      });
 
     const actors = new Map<string, { actor: UnitActor; dead: boolean; lastAction: unknown }>();
     const toWorld = (wx: number, wy: number) => {
@@ -70,7 +91,9 @@ export function Battle3D({
         const p = toWorld(anchor.worldX, anchor.worldY);
         actor.x = p.x; actor.z = p.z;
         actor.facing = (u.facing ?? 1) >= 0 ? 1 : -1;
-        actor.mesh.visible = (u.fade ?? 1) > 0;
+        // fog of war: an enemy out of the party's sight is not drawn (Ember's unitHidden)
+        actor.mesh.visible = (u.fade ?? 1) > 0 && !engine.unitHidden(u);
+        actor.lightFade = u.alive && !engine.unitHidden(u) ? (u.fade ?? 1) : 0;
         const active = e.active as Any | null;
         if (!u.alive) {
           if (!entry.dead) { entry.dead = true; void actor.play("death"); }
@@ -93,18 +116,94 @@ export function Battle3D({
       for (const [id, entry] of actors) if (!seen.has(id)) { view.stage.scene.remove(entry.actor.mesh); entry.actor.dispose(); actors.delete(id); }
     };
 
+    // Ember's battle grid, exactly as its ThreeBattleRenderer.syncOverlay drew it: the engine's
+    // own boardOverlayLayers (movement wash + edges, targets, spell areas…), the route, the
+    // active-turn marker and the cursor. City hubs and free-roam maps show no grid — only the
+    // cursor, so the player still sees which hex a click goes to.
+    const gridMarks = (): GridMark[] => {
+      const marks: GridMark[] = [];
+      const add = (x: number, y: number, color: string, rOut: number, rIn?: number) => marks.push({ x, y, color, rOut, rIn });
+      const border = (r: number) => r * BORDER_INNER; // Ember's buildHexBorder(0.47) of a 0.5 hex
+      if (!engine.mission.hub && !engine.mission.explore) {
+        const fade = (e.overlayFade as number | undefined) ?? 1;
+        for (const layer of engine.boardOverlayLayers()) {
+          const f = layer.fill === GRID_MOVE ? fade : 1;
+          const style = tacticalGridStyle(layer.fill);
+          for (const c of layer.cells) add(c.x, c.y, fadedFill(style.fill, f), 1);
+          if (layer.fill === GRID_MOVE || layer.fill === GRID_ENEMY_TARGET || layer.fill === GRID_OFFHAND_TARGET) {
+            for (const c of layer.cells) add(c.x, c.y, fadedFill(style.edge, f), 0.94, border(0.94));
+          }
+        }
+        const route = engine.movementPreview();
+        route.forEach((c, i) => {
+          const last = i === route.length - 1;
+          if (last) add(c.x, c.y, "rgba(8,12,16,0.95)", 0.985, border(0.985)); else add(c.x, c.y, "rgba(8,12,16,0.95)", 0.16);
+          if (last) add(c.x, c.y, "rgba(220,226,235,0.12)", 1.01, border(1.01));
+          if (last) add(c.x, c.y, GRID_ROUTE, 0.94, border(0.94)); else add(c.x, c.y, GRID_ROUTE, 0.12);
+        });
+        const active = engine.activeTurnHighlight();
+        if (active) {
+          if (active.player) {
+            add(active.x, active.y, "rgba(220,226,235,0.012)", 1.035, border(1.035));
+            add(active.x, active.y, "rgba(220,226,235,0.022)", 1.01, border(1.01));
+            add(active.x, active.y, "rgba(220,226,235,0.04)", 0.985, border(0.985));
+          }
+          add(active.x, active.y, "rgba(12,20,25,0.85)", 0.98, border(0.98));
+          add(active.x, active.y, active.player ? fadedFill(active.fill, 0.28) : active.fill, 0.94, border(0.94));
+        }
+      }
+      const cur = (e.hover ?? e.cursor) as { x: number; y: number } | null;
+      if (cur && tileAt(engine.tiles, engine.cols, cur.x, cur.y) !== "void" && e.explored(cur.x, cur.y)) {
+        const blocked = !TERRAIN[tileAt(engine.tiles, engine.cols, cur.x, cur.y)].passable;
+        add(cur.x, cur.y, "rgba(8,12,16,0.95)", 0.985, border(0.985));
+        add(cur.x, cur.y, blocked ? "rgba(231,133,115,0.95)" : "rgba(220,226,235,1)", 0.94, border(0.94));
+      }
+      return marks;
+    };
+
+    // The HUD's camera buttons (Normal/Tática, tilt, turn, reset) still drive Ember's
+    // engine.cameraTilt / cameraTiltSide. Their changes move the 3D rig by the same degrees, on
+    // top of whatever the mouse did; back to 0/0 (the reset button) is the rig's normal view.
+    // Tática (engine.tacticsCamera) is Ember's original camera: the old-school 2D view, straight
+    // overhead with flat sprites. Leaving it lands on the normal view.
+    let camTilt = e.cameraTilt as number, camSide = e.cameraTiltSide as number;
+    let leavingFlat = false; // the HUD animates back to 0/0 on the way out of Tática: skip those steps
+    const followCameraButtons = () => {
+      const flat = !!e.tacticsCamera;
+      const tilt = e.cameraTilt as number, side = e.cameraTiltSide as number;
+      if (flat !== view.rig.flat) {
+        view.setFlat(flat);
+        leavingFlat = !flat && (tilt !== 0 || side !== 0);
+        if (!flat && !leavingFlat) view.resetAngle();
+      }
+      if (tilt === camTilt && side === camSide) return;
+      if (flat || leavingFlat) {
+        if (leavingFlat && tilt === 0 && side === 0) { leavingFlat = false; view.resetAngle(); }
+        camTilt = tilt; camSide = side;
+        return;
+      }
+      // the HUD normalizes the turn into -180..180 after each move; only the real change counts
+      const dSide = ((side - camSide + 540) % 360) - 180;
+      if (tilt === 0 && side === 0) view.resetAngle();
+      else { view.tilt(tilt - camTilt); view.turn(dSide); }
+      camTilt = tilt; camSide = side;
+    };
+
+    const atmosphere = new BattleAtmosphere3D(view, engine);
+    // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
+    const w = window as Window & { __emberEngine?: BattleEngine };
+    w.__emberEngine = engine;
     let hudClock = 0;
     view.stage.onFrame((dt) => {
+      followCameraButtons();
       // keeps the engine's sight/fog current exactly as its own renderer does every frame
       e.updateCameraLayout(1280, 800);
       if (!pausedRef.current) engine.tick(dt);
       syncUnits();
       const yaw = view.rig.facingYaw;
-      for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt);
-      const reach = [...(engine.reach?.keys?.() ?? [])].map((k: string) => { const [x, y] = k.split(",").map(Number); return { x, y }; });
-      view.setRings("reach", reach, new THREE.Color(0.9, 1.9, 2.8));
-      const sel = engine.selectedId ? (engine.units as Unit[]).find(u => u.id === engine.selectedId) : null;
-      view.setRings("selected", sel ? [{ x: sel.x, y: sel.y }] : [], new THREE.Color(2.6, 2.1, 0.9));
+      for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt, view.flatTop);
+      view.setGrid(gridMarks());
+      atmosphere.sync(dt);
       hudClock += dt;
       if (hudClock > 0.1) { hudClock = 0; onHudRef.current(engine.getHud()); }
     });
@@ -120,7 +219,6 @@ export function Battle3D({
     };
     const onMove = (ev: PointerEvent) => {
       const cell = view.cellAt(ev.clientX, ev.clientY);
-      view.setHover(cell);
       if (!cell) { onTileReadout?.(false); return; }
       const p = cssPoint(cell.x, cell.y);
       engine.pointerMove(p.cx, p.cy);
@@ -158,9 +256,16 @@ export function Battle3D({
       canvas.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
       for (const { actor } of actors.values()) actor.dispose();
+      atmosphere.dispose();
+      if (w.__emberEngine === engine) delete w.__emberEngine;
       view.dispose();
     };
   }, [engine]);
 
-  return <div ref={hostRef} className="absolute inset-0 bg-black" onContextMenu={(ev) => ev.preventDefault()} />;
+  return (
+    <div className="absolute inset-0">
+      <div ref={hostRef} className="absolute inset-0 bg-black" onContextMenu={(ev) => ev.preventDefault()} />
+      <BattleVignettes engine={engine} />
+    </div>
+  );
 }

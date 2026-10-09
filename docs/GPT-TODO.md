@@ -97,6 +97,49 @@ Ember is read-only. Only your files above. Never rename or delete what you didn'
 nothing of the user directly; report and wait between steps: **step 1** = 3 families end-to-end (grass plains,
 dungeon flagstone, fresh snow) with the engine change, then wait for the user's OK; **step 2** = the other 27.
 
+## ▶ Also yours — Task 10: moon phase icons for the world map (round 6, from the user via Claude)
+
+Art only, no code. Can be done alongside Task 9.
+
+### Why
+The campaign now tracks the **moon phase** from the day count (`src/game/moonPhase.ts`, Claude's file — read only).
+The world map (RPG map) shows it in a small box right after the "Dia N · HH:00" clock, like the moon in
+**Shin Megami Tensei**. The cycle is **8 days**, the eight phases one per day; **every third cycle the full moon is a blood moon**
+instead (days 21, 45, 69…). A werewolf character will play on the phases later, so the blood moon must read as the special one.
+Right now the box draws a plain placeholder disc; your icons replace it automatically, no code change needed.
+
+### What to make
+Nine PNGs, exactly these names, in **`C:\Engine2\public\game\ui\moon\`** (new folder, yours):
+
+| File | Phase |
+|---|---|
+| `moon-new.png` | new moon (dark disc, only a faint rim visible) |
+| `moon-waxingCrescent.png` | waxing crescent (thin sliver lit on the **right**) |
+| `moon-firstQuarter.png` | first quarter (right half lit) |
+| `moon-waxingGibbous.png` | waxing gibbous (mostly lit, dark sliver on the left) |
+| `moon-full.png` | full moon |
+| `moon-waningGibbous.png` | waning gibbous (mostly lit, dark sliver on the **right**) |
+| `moon-lastQuarter.png` | last quarter (left half lit) |
+| `moon-waningCrescent.png` | waning crescent (thin sliver lit on the left) |
+| `moon-blood.png` | **blood moon** — full disc, deep red (see below) |
+
+- **256×256, transparent background**, the moon disc centred and filling ~88% of the canvas, same size and
+  position in all nine (the box swaps them in place — nothing may jump between phases).
+- **Shown tiny:** drawn at 28 px inside a 36 px dark plate. Test every one at 28 px: the phase shape must read
+  instantly at that size (strong lit/dark contrast, no fine detail that turns to mush).
+- **Style:** Ember Ashes / Bloodborne — a photoreal, painted moon (craters, maria), cold bone-white light, a
+  faint soft glow around the lit part; the unlit part a deep blue-black that still shows the disc's outline against
+  a dark UI. One consistent light and texture across all nine (same moon, different shadow).
+- **Full moon:** the ordinary full moon, plain bone-white like the others.
+- **Blood moon:** the same full moon, unmistakably blood red (deep crimson, darker at the rim), with a stronger red
+  halo — the dangerous night, the werewolf's. Same crater texture, still clearly the same moon; at 28 px it must be
+  told apart from the full moon at a glance.
+- Also deliver a 28 px contact sheet of all nine in order on a dark background: `shots/moon/contact-28px.png`.
+
+### Rules (as always)
+Ember is read-only. Only your files above. Never rename or delete what you didn't create. No git commits. Ask
+nothing of the user directly; when done, report in `docs/GPT-REPORT.md` (files made, the contact sheet) and wait.
+
 ## ✓ DONE — Task 6: port Ember's battle rules into Engine2 (round 4, from the user via Claude)
 
 We are still **importing the game**. No drawing, no 3D, no art. You wrote `docs/ember-battle-flow.md`; now

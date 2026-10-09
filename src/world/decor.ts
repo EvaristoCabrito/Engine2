@@ -13,6 +13,10 @@ import type { DecorationDef, DecorationPlacement, TerrainId } from '../ember/typ
 import type { Board } from '../map/board';
 import { makeSpriteMaterial } from '../units/spriteMaterial';
 import decorFiles from './decor-files.json';
+import { LIGHT_DEFS, LIGHT_RADIUS_MUL, MAP_LIGHT_MIN_HEIGHT } from '../ember/lighting';
+import { CarriedLight } from '../render/carriedLight';
+import { FLAT_ROW_STEP } from '../render/cameraRig';
+import { CARD_RENDER_ORDER } from '../render/drawOrder';
 
 const SQRT3 = Math.sqrt(3);
 const FILES = new Set(decorFiles as string[]);
@@ -43,7 +47,7 @@ function decorSize(id: string, def: DecorationDef, tile = 1): { w: number; h: nu
 const fileOf = (url: string) => url.split('?')[0].split('/').pop()!;
 const hasArt = (file: string) => FILES.has(fileOf(decorationImage(file)));
 
-interface Art { texture: THREE.Texture; base: { u: number; v: number } }
+interface Art { texture: THREE.Texture; base: { u: number; v: number }; flame: { u: number; v: number } }
 const artCache = new Map<string, Promise<Art>>();
 
 /** Load an image at full resolution and measure its opaque base (Ember's artBase idea). */
@@ -58,6 +62,15 @@ function loadArt(url: string, anisotropy: number): Promise<Art> {
       const cv = new OffscreenCanvas(sw, sh), g = cv.getContext('2d')!;
       g.drawImage(bm, 0, 0, sw, sh);
       const d = g.getImageData(0, 0, sw, sh).data;
+      // Ember's brightness-weighted flame centroid; bitmap v runs upwards here.
+      let weight = 0, fu = 0, fv = 0;
+      for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) {
+        const i = (y * sw + x) * 4, r = d[i], green = d[i + 1], blue = d[i + 2];
+        if (d[i + 3] < 128 || r < 190 || green < 90 || r < green || green < blue + 20) continue;
+        const w = (r + green - blue) / 255;
+        weight += w; fu += w * (x + 0.5); fv += w * (y + 0.5);
+      }
+      const flame = weight > 4 ? { u: fu / weight / sw, v: fv / weight / sh } : { u: 0.5, v: 0.7 };
       // the bitmap is flipped (row 0 = bottom of the art)
       let bottom = 0;
       outer: for (let y = 0; y < sh; y++) for (let x = 0; x < sw; x++) if (d[(y * sw + x) * 4 + 3] > 128) { bottom = y; break outer; }
@@ -67,7 +80,7 @@ function loadArt(url: string, anisotropy: number): Promise<Art> {
       const t = new THREE.Texture(bm);
       t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = anisotropy;
       t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.needsUpdate = true;
-      return { texture: t, base: { u: n ? (sx / n + 0.5) / sw : 0.5, v: bottom / sh } };
+      return { texture: t, base: { u: n ? (sx / n + 0.5) / sw : 0.5, v: bottom / sh }, flame };
     })();
     artCache.set(url, p);
   }
@@ -90,7 +103,7 @@ export class DecorLayer {
 
   clear(): void {
     this.gen++;
-    for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); }); }
+    for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); if (o instanceof CarriedLight) o.dispose(); }); }
     this.cards = [];
     this.blocked.clear();
     this.stats = { placed: 0, skippedArchitecture: 0, missingArt: [] };
@@ -129,14 +142,27 @@ export class DecorLayer {
         const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5, map: art.texture });
         const card = new THREE.Mesh(cardGeo, mat);
         card.castShadow = true;
+        card.renderOrder = CARD_RENDER_ORDER;
         card.customDepthMaterial = depth;
         card.scale.set(w, h, 1);
         card.position.set((0.5 - art.base.u) * w, -art.base.v * h, 0); // opaque base onto the anchor
         const holder = new THREE.Group();
         holder.add(card);
+        const lightDef = LIGHT_DEFS[p.id];
+        if (lightDef) {
+          const height = Math.max(MAP_LIGHT_MIN_HEIGHT, (art.flame.v - art.base.v) * h);
+          const light = new CarriedLight(lightDef, (p.x * 7.31 + p.y * 3.17) % 6.28, lightDef.radius * LIGHT_RADIUS_MUL, height);
+          light.position.x = (art.flame.u - art.base.u) * w;
+          holder.add(light);
+          // A flame card must not block its own light.
+          card.castShadow = false;
+        }
+        card.userData.castsShadow = card.castShadow;
         holder.position.set(x, groundAt(x, z), z);
+        holder.userData.groundY = holder.position.y;
         holder.scale.x = mirror ? -1 : 1;
         holder.userData.decor = p.id;
+        holder.userData.hexes = placedFootprint(p).map(({ dx, dy }) => ({ x: p.x + dx, y: p.y + dy }));
         this.group.add(holder);
         this.cards.push(holder);
         this.stats.placed++;
@@ -145,6 +171,33 @@ export class DecorLayer {
     await Promise.all(jobs);
   }
 
-  /** Cards face the camera like the units (the camera only turns within the good angles). */
-  face(yaw: number): void { for (const c of this.cards) c.rotation.y = yaw; }
+  /** Cards face the camera like the units. `flatTop` set = the old-school 2D view: cards lie flat
+   * facing straight up like 2D sprites, raised over the terrain, nearer rows drawn on top. */
+  face(yaw: number, flatTop: number | null = null): void {
+    for (const c of this.cards) {
+      c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, yaw, 0, 'YXZ');
+      c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;
+      for (const o of c.children) if ((o as THREE.Mesh).isMesh) o.castShadow = flatTop === null && !!o.userData.castsShadow;
+    }
+  }
+
+  /** How many decoration cards are placed (they load in after the board). */
+  get count(): number { return this.cards.length; }
+
+  /** Fog of war (Ember's rule): a decoration shows once any hex of its footprint has been seen.
+   * In 3D it stands up out of the fog sheet, so out of sight it is dimmed like the ground under
+   * it. `fog(x, y)` is that hex's darkness: 0 in sight, Ember's 0.6 remembered, 1 never seen. */
+  shade(fog: ((x: number, y: number) => number) | null): void {
+    for (const c of this.cards) {
+      const dark = fog ? Math.min(...(c.userData.hexes as { x: number; y: number }[]).map(h => fog(h.x, h.y))) : 0;
+      c.visible = dark < 1;
+      for (const o of c.children) {
+        const m = (o as THREE.Mesh).material as THREE.MeshLambertMaterial | undefined;
+        if ((o as THREE.Mesh).isMesh && m) m.color.setScalar(1 - dark);
+        if (o instanceof CarriedLight) o.visible = dark < 1;
+      }
+    }
+  }
+
+  updateLights(time: number): void { this.group.traverse(o => { if (o instanceof CarriedLight) o.update(time); }); }
 }

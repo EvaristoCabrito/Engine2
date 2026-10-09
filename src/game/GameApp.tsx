@@ -8923,7 +8923,8 @@ function BattleScreen({
                 const enabled = !tacticsCamera;
                 engine.tacticsCamera = enabled;
                 setTacticsCamera(enabled);
-                moveCamera(enabled ? 45 : 0, enabled ? 30 : 0);
+                // Tática is the straight-overhead 2D view (Battle3D): no tilt or turn either way
+                moveCamera(0, 0);
               }}
               className="h-7 px-2 ember-plate text-[10px] tracking-[0.14em] uppercase"
               aria-pressed={tacticsCamera}
@@ -8933,27 +8934,25 @@ function BattleScreen({
             </button>
             <button
               type="button"
-              onClick={() => moveCamera(Math.max(tacticsCamera ? 35 : 0, cameraTilt - 5), cameraTiltSide)}
+              onClick={() => moveCamera(cameraTilt - 5, cameraTiltSide)}
               className="size-7 grid place-items-center ember-plate disabled:opacity-40"
               aria-label={`Diminuir inclinação da câmera (${cameraTilt}°)`}
               title="Diminuir inclinação da câmera"
-              disabled={cameraTilt <= (tacticsCamera ? 35 : 0)}
             >
               <ChevronDown className="size-3.5" />
             </button>
             <button
               type="button"
-              onClick={() => moveCamera(Math.min(55, cameraTilt + 5), cameraTiltSide)}
+              onClick={() => moveCamera(cameraTilt + 5, cameraTiltSide)}
               className="size-7 grid place-items-center ember-plate disabled:opacity-40"
               aria-label={`Aumentar inclinação da câmera (${cameraTilt}°)`}
               title="Aumentar inclinação da câmera"
-              disabled={cameraTilt >= 55}
             >
               <ChevronUp className="size-3.5" />
             </button>
             <button
               type="button"
-              onClick={() => moveCamera(cameraTilt, tacticsCamera ? 30 + Math.round((cameraTiltSide - 30) / 60) * 60 - 60 : cameraTiltSide - 15)}
+              onClick={() => moveCamera(cameraTilt, cameraTiltSide - 15)}
               className="size-7 grid place-items-center ember-plate disabled:opacity-40"
               aria-label={`Girar câmera para a esquerda (${cameraTiltSide}°)`}
               title="Girar câmera para a esquerda"
@@ -8962,7 +8961,7 @@ function BattleScreen({
             </button>
             <button
               type="button"
-              onClick={() => moveCamera(cameraTilt, tacticsCamera ? 30 + Math.round((cameraTiltSide - 30) / 60) * 60 + 60 : cameraTiltSide + 15)}
+              onClick={() => moveCamera(cameraTilt, cameraTiltSide + 15)}
               className="size-7 grid place-items-center ember-plate disabled:opacity-40"
               aria-label={`Girar câmera para a direita (${cameraTiltSide}°)`}
               title="Girar câmera para a direita"

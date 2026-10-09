@@ -22,6 +22,15 @@ export const START_YAW = THREE.MathUtils.degToRad(-30);
 /** The normal view's tilt (angle above the horizon). */
 export const START_PITCH = THREE.MathUtils.degToRad(20);
 
+/** The normal (perspective) lens. */
+const NORMAL_FOV = 30, NORMAL_NEAR = 0.5, NORMAL_FAR = 600;
+/** The old-school 2D view (Ember's original battle camera: straight overhead, no perspective)
+ * uses a very long lens from far away, so it stays a perspective camera for picking and panning. */
+const FLAT_FOV = 1;
+/** In the 2D view each world unit of depth (z) raises a flat card this much, so nearer rows are
+ * drawn over farther ones, like a 2D game's painter order. */
+export const FLAT_ROW_STEP = 0.002;
+
 const Y_AXIS = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0);
 const qYaw = new THREE.Quaternion(), qPitch = new THREE.Quaternion(), back = new THREE.Vector3();
 
@@ -33,6 +42,9 @@ export class CameraRig {
   /** Angle above the horizon, radians. In free mode it wraps all the way round (over the top, under the ground). */
   pitch = START_PITCH;
   dist = 50;
+  /** Old-school 2D view: straight overhead, no perspective, no turning (zoom and pan still work).
+   * The turn and tilt underneath are kept, so leaving it returns to the same angle. */
+  flat = false;
   minDist = 6;
   maxDist = 150;
   private holdTimer = 0;
@@ -83,7 +95,13 @@ export class CameraRig {
 
   /** The turn cards should face: past straight-down the camera is on the far side, so it flips. */
   get facingYaw(): number {
+    if (this.flat) return 0;
     return Math.cos(this.pitch) < 0 ? this.yaw + Math.PI : this.yaw;
+  }
+
+  /** Camera distance actually used: the 2D view's long lens stands back so the same `dist` frames the same area. */
+  private get viewDist(): number {
+    return this.flat ? this.dist * Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2)) / Math.tan(THREE.MathUtils.degToRad(FLAT_FOV / 2)) : this.dist;
   }
 
   apply(): void {
@@ -92,10 +110,16 @@ export class CameraRig {
     this.yaw = wrap(this.yaw);
     this.pitch = wrap(this.pitch);
     // Orientation from turn then tilt (no lookAt), so going over the top or under the ground never flips or locks up.
-    qYaw.setFromAxisAngle(Y_AXIS, this.yaw);
-    qPitch.setFromAxisAngle(X_AXIS, -this.pitch);
+    qYaw.setFromAxisAngle(Y_AXIS, this.flat ? 0 : this.yaw);
+    qPitch.setFromAxisAngle(X_AXIS, this.flat ? -Math.PI / 2 : -this.pitch);
     this.camera.quaternion.copy(qYaw).multiply(qPitch);
-    back.set(0, 0, this.dist).applyQuaternion(this.camera.quaternion);
+    const d = this.viewDist;
+    const [fov, near, far] = this.flat ? [FLAT_FOV, Math.max(NORMAL_NEAR, d - 200), d + 200] : [NORMAL_FOV, NORMAL_NEAR, NORMAL_FAR];
+    if (this.camera.fov !== fov || this.camera.near !== near || this.camera.far !== far) {
+      Object.assign(this.camera, { fov, near, far });
+      this.camera.updateProjectionMatrix();
+    }
+    back.set(0, 0, d).applyQuaternion(this.camera.quaternion);
     this.camera.position.copy(this.target).add(back);
   }
 
@@ -106,7 +130,7 @@ export class CameraRig {
     if (e.button === 0) {
       clearTimeout(this.holdTimer);
       this.holdTimer = window.setTimeout(() => { this.panning = true; document.documentElement.classList.add('engine2-grabbing'); }, HOLD_MS);
-    } else if (e.button === 2 && this.mode === 'free') {
+    } else if (e.button === 2 && this.mode === 'free' && !this.flat) {
       this.turning = true;
     }
   }
@@ -169,7 +193,7 @@ export class CameraRig {
 
   /** Apply screen-space drag distance to the camera target; keyboard panning uses the same movement. */
   private panBy(dx: number, dy: number): void {
-    const scale = (2 * this.dist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))) / this.el.clientHeight;
+    const scale = (2 * this.viewDist * Math.tan(THREE.MathUtils.degToRad(this.camera.fov / 2))) / this.el.clientHeight;
     this.camera.updateMatrixWorld(true);
     this.panRight.setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize();
     this.panUp.setFromMatrixColumn(this.camera.matrixWorld, 1).setY(0);

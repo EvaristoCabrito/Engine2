@@ -19,6 +19,7 @@ import { key } from "./pathfinding";
 import { QUESTS, questProgress, questStatus } from "./quests";
 import { MapLoadingOverlay, useMapLoading } from "./MapLoadingOverlay";
 import { campaignHour, campaignTimeOfDay } from "./campaignTime";
+import { MoonPhaseBadge } from "./MoonPhaseBadge";
 import { AFFINITY_HEROES, affinityBonus, affinityGrade, affinityScore, canUseAffinityDuo, canUseAffinityUltimate, type AffinityHero } from "./affinity";
 import { uiText } from "./gamePreferences";
 
@@ -568,6 +569,7 @@ export function OverworldMapScreen({
           <Clock aria-hidden className="size-4" />
           <span>Dia <span className="text-fg tabular-nums">{gameClock} · {String(campaignHour(save)).padStart(2, "0")}:00</span></span>
         </p>
+        <MoonPhaseBadge gameClock={gameClock} />
         <p className="text-sm text-muted ember-plate px-2 py-1">Rações <span className="text-fg tabular-nums">{rations}</span></p>
         {hungerStreak > 0 && (
           <p className="text-sm ember-plate px-2 py-1 text-danger">

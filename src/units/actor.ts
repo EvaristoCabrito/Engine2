@@ -9,6 +9,10 @@ import { loadPose, type PoseFrames } from './frames';
 import { unitBox, framePace } from './visual';
 import { playPoseSound, stopWalkSound } from './sounds';
 import { makeSpriteMaterial } from './spriteMaterial';
+import { UNIT_LIGHT_DEFS } from '../ember/lighting';
+import { CarriedLight } from '../render/carriedLight';
+import { FLAT_ROW_STEP } from '../render/cameraRig';
+import { CARD_RENDER_ORDER } from '../render/drawOrder';
 
 const LEFT_CUT: Partial<Record<Pose, Pose>> = { walk: 'walkLeft', attack: 'attackLeft', attack2: 'attack2Left', cast: 'castLeft' };
 /** Authored left-facing cuts: shown as drawn, never mirrored. */
@@ -33,6 +37,8 @@ export class UnitActor {
   facing: 1 | -1 = 1;
   x = 0;
   z = 0;
+  lightFade = 1;
+  private readonly lights = new THREE.Group();
   private readonly card: THREE.Mesh;
   private pose: Pose = 'idle';
   private shown: Pose = 'idle';
@@ -51,6 +57,7 @@ export class UnitActor {
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5 });
     this.card = new THREE.Mesh(cardGeo, this.mat);
     this.card.castShadow = true;
+    this.card.renderOrder = CARD_RENDER_ORDER;
     // Cards don't receive shadow-map shadows: a flat card shadows itself whenever the sun is behind it.
     // Standing in a building's or tree's shadow will be tested at the unit's position instead (TODO).
     this.card.receiveShadow = false;
@@ -58,6 +65,22 @@ export class UnitActor {
     this.card.userData.actor = this;
     this.mesh = new THREE.Group();
     this.mesh.add(this.card);
+    this.mesh.add(this.lights);
+    const lightDef = UNIT_LIGHT_DEFS[def.classId];
+    if (lightDef) {
+      const offsets = def.classId === 'familiar3'
+        ? (def.footprint ?? [{ dx: 0, dy: 0 }]).map(o => ({ x: Math.sqrt(3) * (o.dx + ((o.dy & 1) ? 0.5 : 0)), z: o.dy * 1.5, radius: lightDef.radius }))
+        : def.classId === 'familiar4'
+          ? [{ x: 0, z: 0, radius: 3 }, { x: -Math.sqrt(3) / 2, z: -1.5, radius: 2 }, { x: Math.sqrt(3) / 2, z: -1.5, radius: 2 }]
+          : [{ x: 0, z: 0, radius: lightDef.radius }];
+      const front = offsets.filter(o => o.z === 0);
+      const center = def.classId === 'familiar3' ? front.reduce((s, o) => s + o.x / front.length, 0) : 0;
+      for (const offset of offsets) {
+        const light = new CarriedLight(lightDef, this.t, offset.radius);
+        light.position.x = offset.x - center; light.position.z = offset.z;
+        this.lights.add(light);
+      }
+    }
     this.mesh.visible = false;
   }
 
@@ -130,7 +153,9 @@ export class UnitActor {
     return this.has('walk') ? 'walk' : this.pose;
   }
 
-  update(dt: number, cameraYaw: number, groundAt: (x: number, z: number) => number): void {
+  /** `flatTop` set = the old-school 2D view (straight overhead): the card lies flat facing the
+   * camera like a 2D sprite, raised to that height so terrain never covers it, nearer rows on top. */
+  update(dt: number, cameraYaw: number, groundAt: (x: number, z: number) => number, flatTop: number | null = null): void {
     this.t += dt;
     if (this.path.length) {
       const next = this.path[0], dx = next.x - this.x, dz = next.z - this.z, dist = Math.hypot(dx, dz);
@@ -163,11 +188,28 @@ export class UnitActor {
     this.card.scale.set(box.w * cw, box.h * ch, 1);
     this.card.position.set(box.w * (u0 + cw / 2 - 0.5), box.h * vBottom - box.foot, 0);
 
-    const usesLeftCut = LEFT_CUTS.has(this.shown) || (this.path.length > 0 && DIR_ACTION_WALK.has(this.def.sprite));
+    // In battle the engine moves the unit (no path of its own) while the pose is 'walk': keep the
+    // walk cut matching its current facing, as Ember picks it every frame, so a unit that turns
+    // mid-move never walks backwards on the other side's cut.
+    const walking = this.path.length > 0 || this.pose === 'walk';
+    if (!this.path.length && this.pose === 'walk') {
+      const s = this.walkShown();
+      if (s !== this.shown && this.has(s)) { this.shown = s; void this.ensure(s); }
+    }
+    const usesLeftCut = LEFT_CUTS.has(this.shown) || (walking && DIR_ACTION_WALK.has(this.def.sprite));
     const mirror = !usesLeftCut && ((this.facing === -1) !== this.drawnReversed());
     this.mesh.scale.set(mirror ? -1 : 1, 1, 1);
-    this.mesh.position.set(this.x, groundAt(this.x, this.z), this.z);
-    this.mesh.rotation.set(0, cameraYaw, 0);
+    const ground = groundAt(this.x, this.z), lean = flatTop === null ? 0 : Math.PI / 2;
+    const y = flatTop === null ? ground : flatTop + this.z * FLAT_ROW_STEP + FLAT_ROW_STEP / 2; // over decor on its own row
+    this.mesh.position.set(this.x, y, this.z);
+    this.mesh.rotation.set(-lean, cameraYaw, 0, 'YXZ');
+    this.card.castShadow = flatTop === null;
+    // Cancel billboard mirroring, rotation and lean: the footprint's lights stay on world hexes.
+    this.lights.scale.x = mirror ? -1 : 1;
+    this.lights.rotation.set(lean, mirror ? cameraYaw : -cameraYaw, 0, 'XYZ');
+    // ...and back down from the flat card's raised height to the ground (in the leaned frame)
+    this.lights.position.set(0, (ground - y) * Math.cos(lean), (ground - y) * Math.sin(lean));
+    for (const light of this.lights.children as CarriedLight[]) light.update(this.t * 0.5, this.dead ? 0 : this.lightFade);
   }
 
   /** Ember's facing reversals (computeUnitVisual): art drawn facing the opposite way for this pose. */
@@ -176,8 +218,10 @@ export class UnitActor {
     return !!this.def.drawnFacingLeft || this.def.classId === 'familiar' ||
       (s === 'defaultWarrior' && !atk) ||       // kael-v2 stand cut shot facing left, its ATT facing right
       s === 'cobalt-blue-deer' ||
-      (s === 'kaelFinal' && !atk && !this.path.length); // Kael Final's idle is turned to the left
+      // Kael Final's idle is turned to the left; his walk and attack face right. In battle the
+      // engine moves him (no path of his own), so the walk pose itself is what says he is walking.
+      (s === 'kaelFinal' && !atk && this.pose !== 'walk' && !this.path.length);
   }
 
-  dispose(): void { this.mat.dispose(); this.depth.dispose(); }
+  dispose(): void { this.mat.dispose(); this.depth.dispose(); for (const light of this.lights.children as CarriedLight[]) light.dispose(); }
 }
