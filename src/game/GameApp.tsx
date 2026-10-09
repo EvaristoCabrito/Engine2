@@ -3264,7 +3264,8 @@ function TitleScreen({
     <section className="relative min-h-dvh flex flex-col overflow-hidden">
       <div className="title-hero absolute inset-0" aria-hidden />
       <div className="title-veil absolute inset-0" />
-      <header className="relative z-10 flex items-center justify-end px-4 pt-[max(1.25rem,env(safe-area-inset-top))]">
+      <header className="relative z-10 flex items-center justify-between px-4 pt-[max(1.25rem,env(safe-area-inset-top))]">
+        <span className="text-[0.95rem] tracking-[0.18em] text-[#dfbf8e]" style={{ fontFamily: '"Pirata One", var(--font-display)' }}>Ember Ashes</span>
         <button
           type="button"
           onClick={onMute}
@@ -3287,10 +3288,10 @@ function TitleScreen({
       {/* Menu column lifted to leave room for the loading bar underneath it; the tiny "Modo teste"
           button stays where it was, bottom-left. */}
       <div className="relative z-10 flex flex-1 flex-col justify-end px-5 pb-[max(6.5rem,calc(env(safe-area-inset-bottom)+5.5rem))] max-w-xl mx-auto w-full">
-        <p className="text-sm tracking-[0.28em] uppercase text-muted mb-3">{uiText("Táticas em cinzas")}</p>
-        <h1 className="font-display text-5xl sm:text-7xl font-medium tracking-tight leading-none mb-4">Ember</h1>
-        <p className="text-[11px] tracking-[0.18em] uppercase text-muted -mt-3 mb-4">Version {DISPLAY_VERSION}</p>
-        <p className="text-muted text-base leading-relaxed mb-8 max-w-md">
+        <p className="text-sm tracking-[0.12em] text-[#dfbf8e] mb-3">{uiText("Táticas em cinzas")}</p>
+        <h1 className="font-display text-[#dfbf8e] text-4xl sm:text-5xl font-medium tracking-tight leading-none mb-4">Ember</h1>
+        <p className="text-[11px] tracking-[0.18em] text-[#dfbf8e] -mt-3 mb-4">Version {DISPLAY_VERSION}</p>
+        <p className="text-[#dfbf8e] text-base leading-relaxed mb-8 max-w-md">
           {uiText("Seis sobreviventes. Um tabuleiro de guerra. Cada casa conta.")}
         </p>
         <div className="flex flex-col gap-3">
