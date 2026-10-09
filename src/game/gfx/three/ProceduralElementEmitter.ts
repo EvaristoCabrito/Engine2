@@ -14,7 +14,7 @@ export type PixelElementSettings = {
   visualsEnabled: boolean;
 };
 export type PixelElementPreset = {
-  id: string; family: "procedural_pixel"; element: PixelElement; version: 1 | 2;
+  id: string; family: "procedural_pixel"; element: PixelElement; version: 1 | 2 | 3;
   label: string; color: number; light: number; radius: number; flicker: number;
   motion: "fire" | "frost" | "electric" | "poison" | "arcane" | "holy" | "shadow" | "ember";
 };
@@ -32,9 +32,12 @@ const pixelEntries: PixelElementPreset[] = [
 const pixelV2Entries = pixelEntries.map((entry): PixelElementPreset => ({
   ...entry, id:`procedural_pixel_v2_${entry.element}`, version:2, label:`${entry.label} V2`,
 }));
+const pixelV3Entries = pixelEntries.map((entry): PixelElementPreset => ({
+  ...entry, id:`procedural_pixel_v3_${entry.element}`, version:3, label:`${entry.label} V3`,
+}));
 
 export const PIXEL_ELEMENT_IDS = pixelEntries.map((entry) => entry.element) as readonly PixelElement[];
-export const PIXEL_ELEMENT_PRESETS: readonly PixelElementPreset[] = Object.freeze([...pixelEntries, ...pixelV2Entries]);
+export const PIXEL_ELEMENT_PRESETS: readonly PixelElementPreset[] = Object.freeze([...pixelEntries, ...pixelV2Entries, ...pixelV3Entries]);
 export const pixelPresetsFor = (element: PixelElement): readonly PixelElementPreset[] => PIXEL_ELEMENT_PRESETS.filter((entry) => entry.element === element).sort((a,b) => b.version-a.version);
 export const pixelPreset = (element: PixelElement, presetId?: string): PixelElementPreset =>
   PIXEL_ELEMENT_PRESETS.find((entry) => entry.element === element && (!presetId || entry.id === presetId)) ??
@@ -64,7 +67,7 @@ const PIXEL_V2_DEFAULTS: Partial<Record<PixelElement, Partial<PixelElementSettin
   holy: { particleCount:12, lifetime:0.72, velocity:0.16, verticalForce:0.02, spread:0.08, drag:1.4, turbulence:0.02, emissive:1.05, opacity:0.7, animationSpeed:0.8 },
   fire: { particleCount:12, lifetime:0.8, velocity:0.18, verticalForce:0.02, spread:0.08, drag:1.35, turbulence:0.03, emissive:1.15, opacity:0.9, animationSpeed:0.95 },
 };
-export const pixelDefaults = (element: PixelElement, version: 1 | 2 = 1): PixelElementSettings => ({ ...DEFAULT_PIXEL_SETTINGS, ...PIXEL_DEFAULTS[element], ...(version === 2 ? PIXEL_V2_DEFAULTS[element] : {}) });
+export const pixelDefaults = (element: PixelElement, version: 1 | 2 | 3 = 1): PixelElementSettings => ({ ...DEFAULT_PIXEL_SETTINGS, ...PIXEL_DEFAULTS[element], ...(version >= 2 ? PIXEL_V2_DEFAULTS[element] : {}) });
 
 /** Registry drives the editor's family, element and preset selectors. Old placements have no
  * family field and remain on their original EffectsRenderer path. */
@@ -131,7 +134,7 @@ export class ProceduralElementEmitter {
     void Promise.all(layers.map((layer) => loadElementFlipbook(element, layer, preset.version))).then((textures) => {
       if (this.disposed) return;
       const [r, g, b] = ELEMENT_TINTS[element];
-      if (preset.version === 2) {
+      if (preset.version >= 2) {
         this.createElementV2Sprites(element, textures);
         return;
       }

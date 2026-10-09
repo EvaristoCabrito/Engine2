@@ -15,15 +15,16 @@ import { BurningHandsV2VFX, DEFAULT_BURNING_HANDS_V2_SETTINGS, getActiveBurningH
 import { BurningHandsV3VFX, DEFAULT_BURNING_HANDS_V3_SETTINGS, getActiveBurningHandsV3Settings, setActiveBurningHandsV3Settings, type BurningHandsV3Settings } from "./BurningHandsV3VFX";
 import { CleaveSweepVFX, DEFAULT_VARREDURA_SETTINGS, getActiveVarreduraSettings, setActiveVarreduraSettings, VarreduraVFX, type VarreduraSettings } from "./VarreduraVFX";
 
-type PreviewMode = "flame" | `pixel-${Exclude<PixelElement, "fire">}` | `pixel-v2-${PixelElement}` | "impact" | "phantasmal" | "bless" | "magic-missile-v2" | "web-of-dreams" | "burning-hands-v2" | "burning-hands-v3" | "varredura-v2" | "cleave-sweep-v2";
+type PreviewMode = "flame" | `pixel-${Exclude<PixelElement, "fire">}` | `pixel-v2-${PixelElement}` | `pixel-v3-${PixelElement}` | "impact" | "phantasmal" | "bless" | "magic-missile-v2" | "web-of-dreams" | "burning-hands-v2" | "burning-hands-v3" | "varredura-v2" | "cleave-sweep-v2";
 
 const pixelModeElement = (mode: PreviewMode): PixelElement | null =>
-  mode.startsWith("pixel-v2-") ? mode.slice(9) as PixelElement : mode.startsWith("pixel-") ? mode.slice(6) as Exclude<PixelElement, "fire"> : null;
+  mode.startsWith("pixel-v2-") || mode.startsWith("pixel-v3-") ? mode.slice(9) as PixelElement : mode.startsWith("pixel-") ? mode.slice(6) as Exclude<PixelElement, "fire"> : null;
 const pixelModePresetId = (mode: PreviewMode): string | undefined => {
   const element = pixelModeElement(mode);
-  return element ? `procedural_pixel_${mode.startsWith("pixel-v2-") ? "v2_" : ""}${element}` : undefined;
+  const version = mode.startsWith("pixel-v3-") ? "v3_" : mode.startsWith("pixel-v2-") ? "v2_" : "";
+  return element ? `procedural_pixel_${version}${element}` : undefined;
 };
-const pixelModeVersion = (mode: PreviewMode): 1 | 2 => mode.startsWith("pixel-v2-") ? 2 : 1;
+const pixelModeVersion = (mode: PreviewMode): 1 | 2 | 3 => mode.startsWith("pixel-v3-") ? 3 : mode.startsWith("pixel-v2-") ? 2 : 1;
 
 type PreviewState = {
   settings: FireEmitterSettings;
@@ -913,7 +914,7 @@ export function VfxDebugPanel() {
           <span className="text-muted">Efeito</span>
           <select aria-label="Selecionar efeito VFX" value={mode} onChange={(event) => switchMode(event.target.value as PreviewMode)} className="min-h-11 rounded-md border border-border bg-bg px-3 py-2 font-display text-lg text-fg focus:border-accent focus:outline-none">
             <option value="flame">Emissor de fogo estacionário</option>
-            {PIXEL_ELEMENT_PRESETS.filter((entry) => entry.version === 2 || entry.element !== "fire").map((entry) => <option key={entry.id} value={`pixel-${entry.version === 2 ? "v2-" : ""}${entry.element}`}>{entry.label} · estacionário</option>)}
+            {PIXEL_ELEMENT_PRESETS.filter((entry) => entry.version >= 2 || entry.element !== "fire").map((entry) => <option key={entry.id} value={`pixel-${entry.version >= 2 ? `v${entry.version}-` : ""}${entry.element}`}>{entry.label} · estacionário</option>)}
             <option value="impact">Explosão de impacto Fireball · original</option>
             <option value="phantasmal">Força Fantasmal · 3D compressão espectral</option>
             <option value="bless">Bless · onda dourada 3D e luz real</option>
