@@ -1,13 +1,13 @@
 import { FORMATION_SLOTS, cleanPartyFormation, partyLeaderOf } from "./partyFormation";
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from "react";
-import { BookOpen, Check, ChevronLeft, Clock, Lock, MapPin, Save, SlidersHorizontal, Volume2, VolumeX, X, ZoomIn, ZoomOut } from "lucide-react";
+import { BookOpen, Check, ChevronLeft, Clock, Lock, MapPin, X, ZoomIn, ZoomOut } from "lucide-react";
 import { isCrossingDungeon, missionsForLocation } from "./mapstore";
 import type { EquipSlot, Mission, PotionId, SaveData, WeaponType, WorldLocation } from "./types";
 import { PartyInventoryOverlay, preloadPartyInventoryAssets } from "./InventoryScreens";
 import { CREATE_FOOD_AND_WATER, POTIONS, WARP, createFoodAndWaterFormula, createFoodAndWaterPower, gearStatBonus, heroRecruited, rulesClass, spellIcon, statsFor, tierUses, warpPortalDuration } from "./data";
 import { fullness, travelHungerCost } from "./hunger";
 import { GoldAmount } from "./GoldAmount";
-import { getAudioVolumes, setCutsceneVolume, setMusicVolume, setSfxVolume, sfxPlay, unlockAudio } from "./audio";
+import { OptionsButton } from "./OptionsMenu";
 import { canStepOverworld, hungerPenaltyFor, wispForestHex, wispForestUncleared, hexToWorld, isOverworldCell, locationExpired, neighborsOf, OVERWORLD_START_HEX, travelHoursForHex, travelTimeLabel, type OverworldEvent, worldToHex } from "./overworld";
 import { HungerBar, LifeBar } from "./HungerBar";
 import { poisonTierOf } from "./poison";
@@ -141,6 +141,7 @@ export function OverworldMapScreen({
   onTeleport,
   onBack,
   onSave,
+  onLoad,
   onSaveFormation,
   onSaveLeader,
   onSetTravelTraining,
@@ -195,6 +196,7 @@ export function OverworldMapScreen({
   onTeleport?: (col: number, row: number) => void;
   onBack: () => void;
   onSave?: () => void;
+  onLoad?: () => void;
   /** Saves the formation board and reports whether it really landed (read back from the save). */
   onSaveFormation?: (order: string[]) => { ok: boolean; test: boolean };
   /** Party menu: saves the hero who walks the world map and free-roam maps. */
@@ -286,10 +288,8 @@ export function OverworldMapScreen({
   const [flashId, setFlashId] = useState<string | null>(null);
   const [hint, setHint] = useState<string | null>(null);
   const [zoomIdx, setZoomIdx] = useState(ZOOM_STOPS.length - 1);
-  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const [fieldSpellsOpen, setFieldSpellsOpen] = useState(false);
   const [warpVisual, setWarpVisual] = useState<"forming" | "open" | "closing" | null>(null);
-  const [audioLevels, setAudioLevels] = useState(() => getAudioVolumes());
   const [dragging, setDragging] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ x: number; y: number; scrollLeft: number; scrollTop: number; moved: boolean } | null>(null);
@@ -553,18 +553,6 @@ export function OverworldMapScreen({
           <BookOpen className="size-4" />
           <span>Missões</span>
         </button>
-        {!test && onSave && (
-          <button
-            type="button"
-            onClick={onSave}
-            aria-label="Salvar jogo em outro slot"
-            title="Salvar jogo"
-            className="h-9 inline-flex items-center gap-1.5 ember-plate px-2.5 text-xs sm:text-sm"
-          >
-            <Save className="size-3.5" />
-            <span>Salvar</span>
-          </button>
-        )}
         <p aria-label="Relógio do jogo" aria-live="polite" className="inline-flex items-center gap-2 text-sm text-muted ember-plate px-2 py-1">
           <Clock aria-hidden className="size-4" />
           <span>Dia <span className="text-fg tabular-nums">{gameClock} · {String(campaignHour(save)).padStart(2, "0")}:00</span></span>
@@ -686,91 +674,14 @@ export function OverworldMapScreen({
             )}
           </div>
         )}
-        <button type="button" onClick={onMute} className="size-9 grid place-items-center ember-icon-btn" aria-label="Som">
-          {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
-        </button>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setAudioSettingsOpen((o) => !o)}
-            className="size-9 grid place-items-center ember-icon-btn"
-            aria-label="Volumes"
-            aria-expanded={audioSettingsOpen}
-          >
-            <SlidersHorizontal className="size-4" />
-          </button>
-          {audioSettingsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 ember-plate p-3 flex flex-col gap-3 z-20">
-              <label className="flex flex-col gap-1.5">
-                <span className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-muted">
-                  Música <span className="tabular-nums text-fg">{Math.round(audioLevels.music * 100)}%</span>
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={audioLevels.music}
-                  onChange={(e) => {
-                    const music = Number(e.target.value);
-                    setMusicVolume(music);
-                    setAudioLevels((levels) => ({ ...levels, music }));
-                  }}
-                  aria-label="Volume da música"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-muted">
-                  Efeitos <span className="tabular-nums text-fg">{Math.round(audioLevels.sfx * 100)}%</span>
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={audioLevels.sfx}
-                  onChange={(e) => {
-                    const sfx = Number(e.target.value);
-                    setSfxVolume(sfx);
-                    setAudioLevels((levels) => ({ ...levels, sfx }));
-                  }}
-                  aria-label="Volume dos efeitos"
-                />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="flex items-center justify-between text-xs uppercase tracking-[0.14em] text-muted">
-                  Cutscenes <span className="tabular-nums text-fg">{Math.round(audioLevels.cutscene * 100)}%</span>
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={audioLevels.cutscene}
-                  onChange={(e) => {
-                    const cutscene = Number(e.target.value);
-                    setCutsceneVolume(cutscene);
-                    setAudioLevels((levels) => ({ ...levels, cutscene }));
-                  }}
-                  aria-label="Volume das cutscenes"
-                />
-              </label>
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-muted">Música em 0% deixa só os efeitos.</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    unlockAudio();
-                    sfxPlay.magicAttack();
-                  }}
-                  className="h-8 px-3 ember-plate text-xs uppercase tracking-[0.1em]"
-                >
-                  Testar
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <OptionsButton
+          muted={muted}
+          onMute={onMute}
+          iconOnly
+          onSaveGame={!test ? onSave : undefined}
+          onLoadGame={onLoad}
+          onReturnToTitle={onBack}
+        />
         <p className="text-sm text-muted ember-plate px-2 py-1"><GoldAmount amount={ember} /></p>
       </header>
 

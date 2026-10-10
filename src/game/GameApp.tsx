@@ -19,7 +19,7 @@ import { cloneElement, Fragment, isValidElement, type CSSProperties, type Pointe
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dices, Grip, ListOrdered, Lock, Pencil, RotateCcw, Shuffle, SlidersHorizontal, Swords, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { artProgress, ensureDecorationArt, ensureTerrainArt, ensureSpriteArt, loadGameArt, portraitFor, releaseSpriteArt, subscribeArtProgress, TILE_VARIANT_COUNT, tileVariantName, tileVariantSrc } from "./assets";
-import { getAudioVolumes, installAudioUnlock, pauseMusic, playFile, playMenuMusic, playTheme, resumeAudio, resumeMusic, setCutsceneVolume, setMusicVolume, setMuted, setSfxVolume, sfxPlay, stopMusic, unlockAudio } from "./audio";
+import { getAudioVolumes, getCutsceneAudioSettings, installAudioUnlock, pauseMusic, playFile, playMenuMusic, playTheme, resumeAudio, resumeMusic, setCutsceneEnabled, setCutsceneVolume, setMusicVolume, setMuted, setSfxVolume, sfxPlay, stopMusic, unlockAudio } from "./audio";
 import { Battle3D as BattleCanvas } from "./Battle3D";
 import { MapEditorScreen as MapEditorScreen3D } from "../editor/ember/MapEditorScreen";
 import { GroundSetPicker } from "../render/GroundSetPicker";
@@ -2371,6 +2371,12 @@ export function GameApp() {
             setSlotMode("save");
             setScreen("saveSlots");
           }}
+          onLoad={() => {
+            setOverwrite(null);
+            setSlotReturnScreen("overworldMap");
+            setSlotMode("load");
+            setScreen("saveSlots");
+          }}
           overworldPos={overworldSave.overworldPos}
           gameClock={overworldSave.gameClock}
           rations={overworldSave.rations}
@@ -3116,6 +3122,9 @@ export function GameApp() {
           onPick={(index) => {
             bootAudio();
             if (slotMode === "new") {
+              // A new campaign starts with cutscene dialogue at full volume, independent
+              // of the previous campaign's audio mix.
+              setCutsceneVolume(1);
               const next = writeSlot(bank, index, { ...emptySave(muted), pendingMission: "vau", mapMode: "rpg" });
               applySlot(next);
               setSlotMode(null);
@@ -3227,9 +3236,8 @@ export function CutsceneScreen({
 }) {
   const prefs = useGamePreferences();
   const ref = useRef<HTMLVideoElement>(null);
-  // Every cutscene starts with sound on, whatever the game's mute toggle says; the button
-  // here only affects this video and never carries over to the rest of the game.
-  const [soundOn, setSoundOn] = useState(true);
+  // Cutscene audio is an independent persisted setting; the game's master mute does not touch it.
+  const [cutsceneSoundEnabled, setCutsceneSoundEnabled] = useState(() => getCutsceneAudioSettings().enabled);
   const subtitleTracks = CUTSCENE_SUBTITLES[src] ?? subtitles;
   const selectedSubtitle = prefs.subtitles ? subtitleTracks?.[prefs.subtitleLanguage] : undefined;
   useEffect(() => {
@@ -3257,12 +3265,11 @@ export function CutsceneScreen({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    // The cutscene volume slider sets its level; the game's mute toggle doesn't apply here.
-    const cutsceneVolume = getAudioVolumes().cutscene;
-    el.volume = cutsceneVolume;
-    el.muted = cutsceneVolume <= 0;
-    setSoundOn(!el.muted);
-    const syncSound = () => setSoundOn(!el.muted && el.volume > 0);
+    const settings = getCutsceneAudioSettings();
+    el.volume = settings.volume;
+    el.muted = !settings.enabled;
+    setCutsceneSoundEnabled(settings.enabled);
+    const syncSound = () => setCutsceneSoundEnabled(getCutsceneAudioSettings().enabled);
     el.addEventListener("volumechange", syncSound);
     let stuckTimer = 0;
     const clearStuckTimer = () => {
@@ -3300,7 +3307,7 @@ export function CutsceneScreen({
   return (
     <section className="relative h-dvh w-dvw bg-black overflow-hidden">
       <div className="cutscene-stage">
-        <video ref={ref} src={src} playsInline autoPlay preload="auto" onEnded={onSkip} onError={onSkip}>
+        <video ref={ref} src={src} playsInline autoPlay preload="auto" data-ember-cutscene onEnded={onSkip} onError={onSkip}>
           {selectedSubtitle && <track key={selectedSubtitle} kind="subtitles" src={selectedSubtitle} srcLang={prefs.subtitleLanguage === "pt" ? "pt-BR" : "en"} label={prefs.subtitleLanguage === "pt" ? "Português (Brasil)" : "English"} default onLoad={() => syncSubtitles(ref.current?.textTracks, prefs.subtitles, prefs.subtitleLanguage)} />}
         </video>
       </div>
@@ -3313,19 +3320,20 @@ export function CutsceneScreen({
         <button
           type="button"
           className="grid size-9 place-items-center rounded bg-black/40 text-white/90"
-          aria-label={uiText(soundOn ? "Silenciar" : "Ativar som")}
-          aria-pressed={soundOn}
+          aria-label={uiText(cutsceneSoundEnabled ? "Silenciar cutscenes" : "Ativar som das cutscenes")}
+          aria-pressed={cutsceneSoundEnabled}
           onClick={() => {
             const video = ref.current;
             if (!video) return;
-            const enable = video.muted || video.volume <= 0;
-            if (enable && video.volume <= 0) video.volume = getAudioVolumes().cutscene || 1;
-            video.muted = !enable;
-            setSoundOn(enable);
+            // Browsers can force-mute an autoplay attempt. In that case this click resumes
+            // the enabled setting; otherwise it toggles the independent cutscene mute.
+            const enable = cutsceneSoundEnabled && video.muted ? true : !cutsceneSoundEnabled;
+            setCutsceneEnabled(enable);
+            setCutsceneSoundEnabled(getCutsceneAudioSettings().enabled);
             if (enable) void video.play().catch(() => {});
           }}
         >
-          {soundOn ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
+          {cutsceneSoundEnabled ? <Volume2 className="size-4" /> : <VolumeX className="size-4" />}
         </button>
       </div>
       <div className="absolute inset-x-0 bottom-0 z-10 p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] flex justify-end">

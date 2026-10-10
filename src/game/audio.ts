@@ -9,20 +9,20 @@ const AUDIO_SETTINGS_KEY = "ember-ashes-audio-v1";
 const clampVolume = (value: number) => Math.max(0, Math.min(1, value));
 let musicVolume = 1;
 let sfxVolume = 1;
-// Cutscenes carry their own dialogue/sfx track, not just background music — on by default
-// and independent of the master mute toggle (see CutsceneScreen), same as music/sfx are
-// independent of each other. Its own slider in the audio settings panel, defaulting to full.
+// Cutscenes carry their own dialogue/sfx track with separate persisted volume and mute state.
 let cutsceneVolume = 1;
+let cutsceneEnabled = true;
 let musicTimer = 0;
 let retryTimer = 0;
 const endedMusicTracks = new WeakSet<HTMLAudioElement>();
 
 if (typeof window !== "undefined") {
   try {
-    const saved = JSON.parse(window.localStorage.getItem(AUDIO_SETTINGS_KEY) ?? "{}") as { music?: unknown; sfx?: unknown; cutscene?: unknown };
+    const saved = JSON.parse(window.localStorage.getItem(AUDIO_SETTINGS_KEY) ?? "{}") as { music?: unknown; sfx?: unknown; cutscene?: unknown; cutsceneEnabled?: unknown };
     if (typeof saved.music === "number") musicVolume = clampVolume(saved.music);
     if (typeof saved.sfx === "number") sfxVolume = clampVolume(saved.sfx);
     if (typeof saved.cutscene === "number") cutsceneVolume = clampVolume(saved.cutscene);
+    if (typeof saved.cutsceneEnabled === "boolean") cutsceneEnabled = saved.cutsceneEnabled;
   } catch {
     // Audio preferences are optional; defaults keep the game playable when storage is blocked.
   }
@@ -31,7 +31,7 @@ if (typeof window !== "undefined") {
 function persistAudioSettings(): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify({ music: musicVolume, sfx: sfxVolume, cutscene: cutsceneVolume }));
+    window.localStorage.setItem(AUDIO_SETTINGS_KEY, JSON.stringify({ music: musicVolume, sfx: sfxVolume, cutscene: cutsceneVolume, cutsceneEnabled }));
   } catch {
     // A private-storage browser can still use the current session's settings.
   }
@@ -45,8 +45,20 @@ function applyMusicVolume(): void {
   });
 }
 
+function applyCutsceneAudio(): void {
+  if (typeof document === "undefined") return;
+  document.querySelectorAll<HTMLVideoElement>("video[data-ember-cutscene]").forEach((video) => {
+    video.volume = cutsceneVolume;
+    video.muted = !cutsceneEnabled;
+  });
+}
+
 export function getAudioVolumes(): { music: number; sfx: number; cutscene: number } {
   return { music: musicVolume, sfx: sfxVolume, cutscene: cutsceneVolume };
+}
+
+export function getCutsceneAudioSettings(): { enabled: boolean; volume: number } {
+  return { enabled: cutsceneEnabled, volume: cutsceneVolume };
 }
 
 export function setMusicVolume(value: number): void {
@@ -57,6 +69,13 @@ export function setMusicVolume(value: number): void {
 
 export function setCutsceneVolume(value: number): void {
   cutsceneVolume = clampVolume(value);
+  applyCutsceneAudio();
+  persistAudioSettings();
+}
+
+export function setCutsceneEnabled(enabled: boolean): void {
+  cutsceneEnabled = enabled;
+  applyCutsceneAudio();
   persistAudioSettings();
 }
 
