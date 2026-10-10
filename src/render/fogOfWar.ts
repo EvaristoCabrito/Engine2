@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import type { Board } from '../map/board';
 import { hexAt } from '../core/hex';
+import { FOG_RENDER_ORDER } from './drawOrder';
 import { boxBlur } from '../game/gfx/three/ThreeGroundAO';
 import { EXPLORED_ALPHA, UNSEEN_ALPHA, FOG_UNSEEN, FOG_EXPLORED, FOG_VISIBLE } from '../game/gfx/three/ThreeFogMask';
 
@@ -69,7 +70,7 @@ export class FogOfWar {
         const m = new THREE.Mesh(s.geometry, this.material);
         m.matrixAutoUpdate = false;
         m.matrix.copy(s.matrixWorld);
-        m.renderOrder = 100; // over the ground, grid and mist, like Ember's
+        m.renderOrder = FOG_RENDER_ORDER; // over ground/grid; cards have their own fog shading
         this.group.add(m);
       }
     }
