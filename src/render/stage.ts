@@ -201,7 +201,7 @@ export class Stage {
   }
 
   /** Compile spell/actor materials while loading, including currently hidden effects. */
-  async prepareMaterials(): Promise<void> {
+  async prepareMaterials(onProgress?: (ready: number, total: number) => void): Promise<void> {
     const parked = this.parkHiddenLights();
     this.balanceLightCount();
     try {
@@ -212,7 +212,24 @@ export class Stage {
           for (const value of Object.values(material)) if ((value as THREE.Texture)?.isTexture) this.renderer.initTexture(value as THREE.Texture);
         }
       });
-      await this.renderer.compileAsync(this.scene, this.camera);
+      const compiling = this.renderer.compileAsync(this.scene, this.camera);
+      if (onProgress) {
+        // compileAsync has just created every program it waits on: report how many the GPU
+        // driver has finished (WebGLProgram.isReady, a non-blocking query) once per frame.
+        const programs = [...(this.renderer.info.programs ?? [])] as unknown as { isReady(): boolean }[];
+        let compiled = false;
+        const poll = () => {
+          if (compiled) return;
+          let ready = 0;
+          for (const program of programs) if (program.isReady()) ready++;
+          onProgress(ready, programs.length);
+          requestAnimationFrame(poll);
+        };
+        poll();
+        const done = () => { compiled = true; onProgress(programs.length, programs.length); };
+        compiling.then(done, done);
+      }
+      await compiling;
     } finally { this.restoreParkedLights(parked); }
   }
 

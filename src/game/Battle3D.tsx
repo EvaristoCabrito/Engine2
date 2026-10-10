@@ -78,11 +78,14 @@ export function Battle3D({
     // the board only: battle units come from the engine, not the map's spawn list
     // Ember's loading curtain lifts on "ember:battle-ready": sent once the board and its
     // decorations are in the scene and a frame has been drawn.
-    void view.setMission({ ...(engine.mission as unknown as Mission), playerSpawns: [], enemySpawns: [], neutralSpawns: [] })
+    // GameApp's battle bar shows these real steps: the board's decoration images, then shaders.
+    const loadStep = (step: "board" | "shaders", done: number, total: number) =>
+      window.dispatchEvent(new CustomEvent("ember:battle-step", { detail: { step, done, total } }));
+    void view.setMission({ ...(engine.mission as unknown as Mission), playerSpawns: [], enemySpawns: [], neutralSpawns: [] }, (done, total) => loadStep("board", done, total))
       .then(async () => {
         // Compile the preserved spell materials and upload existing textures before the
         // gameplay loading screen lifts; a first cast must not initialize GPU state mid-frame.
-        await view.stage.prepareMaterials();
+        await view.stage.prepareMaterials((done, total) => loadStep("shaders", done, total));
         // camera testing: zoom from right up against a unit to far beyond the whole board
         view.rig.minDist = 1;
         view.rig.maxDist = Math.max(view.rig.maxDist * 4, 400);

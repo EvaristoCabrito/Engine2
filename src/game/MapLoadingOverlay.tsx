@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 /** Streams the map image once so the loading bar reports bytes actually received. */
 export function useMapLoading(source: string) {
@@ -81,7 +81,52 @@ if (loadingArtPreload) {
   loadingArtPreload.decode?.().catch(() => {});
 }
 
-function LoadingArt({ progress, label, barLabel, z }: { progress: number | null; label: string; barLabel: string; z: string }) {
+/** game.html's castle bar handed on to the loading screen(s) shown right after it (see its
+ * script and main.tsx): their bar continues from `offset` instead of restarting at 0, for as
+ * long as some loading screen stays up. When the last one closes, the boot's share of the whole
+ * time is remembered so the next boot of this entry fills its part of the bar to match. */
+let bootChain: { offset: number; bootMs: number; key: string } | null = null;
+let openLoadingScreens = 0;
+const bootChainListeners = new Set<() => void>();
+const subscribeBootChain = (listener: () => void) => {
+  bootChainListeners.add(listener);
+  return () => { bootChainListeners.delete(listener); };
+};
+const currentBootChain = () => bootChain;
+
+export function openLoadingScreenCount(): number {
+  return openLoadingScreens;
+}
+
+export function continueBootBar(offset: number, key: string): void {
+  bootChain = { offset, bootMs: performance.now(), key };
+  for (const listener of bootChainListeners) listener();
+}
+
+function loadingScreenOpened(): void {
+  openLoadingScreens++;
+}
+
+function loadingScreenClosed(): void {
+  openLoadingScreens--;
+  // one screen can replace another in the same commit (battle curtain → map): end the chain
+  // only if none is up a frame later
+  requestAnimationFrame(() => {
+    if (openLoadingScreens > 0 || !bootChain) return;
+    try { localStorage.setItem(bootChain.key, String(Math.min(1, bootChain.bootMs / performance.now()))); } catch { /* storage blocked */ }
+    bootChain = null;
+  });
+}
+
+function LoadingArt({ progress: ownProgress, label: ownLabel, barLabel, z }: { progress: number | null; label: string; barLabel: string; z: string }) {
+  useLayoutEffect(() => {
+    loadingScreenOpened();
+    return loadingScreenClosed;
+  }, []);
+  // Continuing game.html's bar: this screen's own 0-100 fills the part after the boot's.
+  const chain = useSyncExternalStore(subscribeBootChain, currentBootChain, () => null);
+  const progress = chain ? Math.floor(chain.offset + ((100 - chain.offset) * (ownProgress ?? 0)) / 100) : ownProgress;
+  const label = chain ? `${ownLabel.replace(/ · \d+%$/, "")} · ${progress}%` : ownLabel;
   // The art, bar and plaque text appear together: only the dark backdrop until the picture is
   // ready, so the bar never shows on its own before the image. (A failed image still reveals
   // the bar, so loading progress is never hidden.)

@@ -109,7 +109,7 @@ export class DecorLayer {
     this.stats = { placed: 0, skippedArchitecture: 0, missingArt: [] };
   }
 
-  async populate(b: Board, groundAt: (x: number, z: number) => number): Promise<void> {
+  async populate(b: Board, groundAt: (x: number, z: number) => number, onProgress?: (loaded: number, total: number) => void): Promise<void> {
     this.clear();
     const gen = this.gen, d = b.draft, L = b.layout;
     const placements: DecorationPlacement[] = [
@@ -172,6 +172,10 @@ export class DecorLayer {
         this.stats.placed++;
       }).catch(() => { this.stats.missingArt.push(p.id); }));
     }
+    // decoration images settled so far, for a loading bar (jobs never reject: see the catch above)
+    let settled = 0;
+    onProgress?.(0, jobs.length);
+    if (onProgress) for (const job of jobs) void job.then(() => onProgress(++settled, jobs.length));
     await Promise.all(jobs);
   }
 

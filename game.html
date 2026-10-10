@@ -14,30 +14,65 @@
          shown while the game code loads; main.tsx removes it once the app has painted. */
       #boot-loading { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: #151311; transition: opacity .25s ease; }
       #boot-loading.is-leaving { opacity: 0; }
-      #boot-loading .art { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 2128 / 912)); aspect-ratio: 2128 / 912; transform: translate(-50%, -50%); background: url(/game/ui/LoadingSCreen.jpg?v=2) center / 100% 100% no-repeat; }
+      /* art, bar and text appear together, only once the complete art is decoded: nothing else is
+         painted before it, so the browser keeps the title on screen until the castle is ready. */
+      #boot-loading.is-ready .art { visibility: visible; }
+      #boot-loading .art { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 2128 / 912)); aspect-ratio: 2128 / 912; transform: translate(-50%, -50%); background: var(--boot-art) center / 100% 100% no-repeat; visibility: hidden; }
       #boot-loading .bar { position: absolute; left: 35.34%; top: 86.29%; width: 28.67%; height: 2.63%; border-radius: 2px; overflow: hidden; }
       #boot-fill { width: 0; height: 100%; background: linear-gradient(90deg, #713718, #e1a541, #fff0a2); transition: width .1s linear; }
       #boot-loading p { position: absolute; left: 42.43%; top: 92.32%; width: 14.1%; height: 4.28%; margin: 0; display: grid; place-items: center; text-align: center; text-transform: uppercase; color: #eee0c8; filter: drop-shadow(0 1px 2px #000); font: calc(max(100vh, 100vw * 912 / 2128) * 0.0125)/1.15 system-ui, sans-serif; letter-spacing: .08em; }
     </style>
   </head>
   <body>
-    <div id="boot-loading" hidden aria-live="polite" aria-label="Preparando a tela…">
+    <div id="boot-loading" hidden aria-live="polite" aria-label="Carregando o jogo…">
       <div class="art">
         <!-- Full-resolution art is loaded and decoded during title boot. -->
-        <div class="bar" role="progressbar" aria-label="Preparando a tela" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="boot-fill"></div></div>
-        <p id="boot-status">Preparando a tela…</p>
+        <div class="bar" role="progressbar" aria-label="Carregando o jogo" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="boot-fill"></div></div>
+        <p id="boot-status">Carregando o jogo…</p>
       </div>
     </div>
     <script>
+      // The complete castle art, from the permanent Cache Storage the title screen filled during its
+      // boot bar (fetched and stored now if the game was opened without the title), decoded once
+      // as an object URL that is shown at once.
+      (function () {
+        var URL_ = '/game/ui/LoadingSCreen.jpg?v=2', CACHE = 'ember-loading-art-v1';
+        var boot = document.getElementById('boot-loading');
+        function show(src) {
+          var img = new Image();
+          function done() {
+            window.__loadingArtUrl = src;
+            boot.style.setProperty('--boot-art', 'url("' + src + '")');
+            boot.classList.add('is-ready');
+          }
+          img.onload = function () { (img.decode ? img.decode() : Promise.resolve()).then(done, done); };
+          img.onerror = function () { boot.classList.add('is-ready'); };
+          img.src = src;
+        }
+        (window.caches ? caches.open(CACHE).then(function (cache) {
+          return cache.match(URL_).then(function (hit) {
+            if (hit) return hit;
+            return fetch(URL_).then(function (res) { if (res.ok) cache.put(URL_, res.clone()); return res; });
+          });
+        }).then(function (res) { return res.blob(); }).then(function (blob) { return URL.createObjectURL(blob); })
+          : Promise.reject()).catch(function () { return URL_; }).then(show);
+      })();
       // Real progress only: files received so far against the count the last full boot needed
       // (remembered by main.tsx), or BOOT_TOTAL_FALLBACK (measured: 250) on a first visit. Held
       // below 100% until the app has actually painted; main.tsx then sets 100 and fades it.
+      // When another loading follows at once (a battle or the map, on the same castle art), this
+      // load is only the first part of one bar: it fills up to the share of the time it took
+      // the last time this entry was opened (ember.bootShare:<start>, written by
+      // MapLoadingOverlay.tsx), and that screen's bar continues from there instead of from 0.
       (function () {
         var BOOT_TOTAL_FALLBACK = 250, expected = BOOT_TOTAL_FALLBACK, seen = 0, peak = 0;
         try { var n = Number(localStorage.getItem('ember.bootFileTotal')); if (n > 0) expected = n; } catch (e) {}
         var boot = document.getElementById('boot-loading');
         // Preloading the castle during boot must never display it over the title/opening.
         var start = new URLSearchParams(window.location.search).get('start');
+        var share = start === 'test' ? 1 : 0.25;
+        try { var s = Number(localStorage.getItem('ember.bootShare:' + start)); if (s > 0 && s <= 1) share = s; } catch (e) {}
+        window.__bootShareKey = 'ember.bootShare:' + start;
         var navigation = performance.getEntriesByType('navigation')[0];
         var editorResume = false;
         try { editorResume = !!sessionStorage.getItem('ember:editor-resume'); } catch (e) {}
@@ -45,20 +80,30 @@
         boot.hidden = !gameplayEntry || (navigation && navigation.type === 'reload' && !editorResume);
         var fill = document.getElementById('boot-fill'), status = document.getElementById('boot-status'), bar = fill.parentNode;
         var observer = null, finished = false;
-        window.__bootProgress = function (pct) {
-          if (finished) return;
+        function show(pct, caption) {
           peak = Math.max(peak, pct);
           fill.style.width = peak + '%';
           bar.setAttribute('aria-valuenow', String(Math.round(peak)));
-          status.textContent = 'Preparando a tela · ' + Math.round(peak) + '%';
-        };
-        // Boot is a one-way lifecycle. Gameplay owns its React loading overlays.
-        window.__finishBoot = function () {
+          status.textContent = caption + ' · ' + Math.round(peak) + '%';
+        }
+        window.__bootProgress = function (pct) {
           if (finished) return;
-          window.__bootProgress(100);
+          show(pct * share, 'Carregando o jogo · ' + seen + '/' + Math.max(seen, expected) + ' arquivos');
+        };
+        /** The bar's value right now, for the loading screen that continues it. */
+        window.__bootShown = function () { return peak; };
+        // Boot is a one-way lifecycle. Gameplay owns its React loading overlays. `handedOn`: a
+        // loading screen continues this bar, so it stays where it is instead of jumping to 100.
+        window.__finishBoot = function (handedOn) {
+          if (finished) return;
+          if (!handedOn) show(100, 'Carregando o jogo');
           finished = true;
+          // How many files this boot needed, so the next boot's bar measures against it. Counted
+          // here: performance.getEntriesByType('resource') stops at 250 entries.
+          try { if (seen > 0) localStorage.setItem('ember.bootFileTotal', String(seen)); } catch (e) {}
           if (observer) observer.disconnect();
           delete window.__bootProgress;
+          delete window.__bootShown;
           delete window.__finishBoot;
           boot.classList.add('is-leaving');
           window.setTimeout(function () { boot.remove(); }, 260);

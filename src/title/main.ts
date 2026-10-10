@@ -402,7 +402,15 @@ async function loadTitleResources(): Promise<void> {
     image.onerror = () => reject(new Error('Unable to preload the castle loading screen.'));
     image.src = '/game/ui/LoadingSCreen.jpg?v=2';
   });
-  await Promise.all([background, bootArt, loadGameArt().catch(() => undefined)]);
+  // Also kept in a named Cache Storage cache (the HTTP cache evicts/revalidates at will), so
+  // game.html takes it from there, complete, at once. game.html reads the same cache name.
+  const bootArtCache = (async () => {
+    try {
+      const cache = await caches.open('ember-loading-art-v1');
+      if (!(await cache.match('/game/ui/LoadingSCreen.jpg?v=2'))) await cache.add('/game/ui/LoadingSCreen.jpg?v=2');
+    } catch { /* no Cache Storage (e.g. a private window): game.html fetches it itself */ }
+  })();
+  await Promise.all([background, bootArt, bootArtCache, loadGameArt().catch(() => undefined)]);
   unsubscribe();
   setProgress(100);
   titleLoader.classList.add('is-ready');

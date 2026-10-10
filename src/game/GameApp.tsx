@@ -55,6 +55,7 @@ import { campaignHour, campaignTimeOfDay, usesTravelClock } from "./campaignTime
 import { moonPhaseOf } from "./moonPhase";
 import { OverworldMapScreen } from "./OverworldMapScreen";
 import { LoadingCurtain, useLoadingCurtain } from "./MapLoadingOverlay";
+import { rememberedStepMs, rememberStepMs, StepClock, stepPercent } from "./loadStages";
 import { HungerBar } from "./HungerBar";
 import { buyInnMeal, fullness, useRation } from "./hunger";
 import { POISON_TIERS, poisonDice, poisonTierOf } from "./poison";
@@ -917,6 +918,17 @@ function battleSpriteIds(battle: BattleEngine): SpriteId[] {
   return battle.units.map((u) => u.sprite);
 }
 
+/** How long each battle-loading step took last time (ms), so the bar can weigh them. */
+const BATTLE_LOAD_STEPS_KEY = "ember.battleLoadStepMs";
+const BATTLE_LOAD_STEPS_FALLBACK = [1000, 4000, 4000];
+
+/** The caption under the battle bar: which real step is running, with its own count. */
+function battleLoadCaption({ step, done, total }: { step: number; done: number; total: number }): string {
+  if (step === 0) return total ? `Carregando personagens · ${done}/${total}` : "Carregando personagens";
+  if (step === 1) return total ? `Montando o campo · ${done}/${total}` : "Montando o campo";
+  return total ? `Compilando efeitos · ${done}/${total}` : "Compilando efeitos";
+}
+
 /** Handoff before paint: the gameplay document never draws its legacy title. */
 function TitlePageHandoff() {
   useLayoutEffect(() => { stopMusic(); returnToTitle(); }, []);
@@ -936,7 +948,23 @@ export function GameApp() {
   // one-time work happens behind it instead of as stalls mid-fight. The timer is only a
   // safety net so the curtain can never get stuck.
   const [battleLoading, setBattleLoading] = useState(false);
-  const [battleLoadingProgress, setBattleLoadingProgress] = useState({ loaded: 0, total: 1 });
+  // The battle bar's real steps (see loadStages.ts): 0 sprites + decorations (files), 1 building
+  // the 3D battlefield (its decoration images, from Battle3D), 2 compiling shaders (programs the
+  // GPU has finished). Each step's share of the bar is the time it took last time.
+  const [battleLoad, setBattleLoad] = useState({ step: 0, done: 0, total: 0 });
+  const battleClock = useRef<StepClock | null>(null);
+  const battleStepMs = useRef(rememberedStepMs(BATTLE_LOAD_STEPS_KEY, BATTLE_LOAD_STEPS_FALLBACK));
+  const battleLoadShown = useRef("");
+  const setBattleStep = useCallback((step: number, done: number, total: number) => {
+    const clock = battleClock.current;
+    if (!clock || step < clock.current) return;
+    clock.enter(step);
+    // The warm-up reports every frame: only a real change re-renders.
+    const key = `${step}|${done}|${total}`;
+    if (key === battleLoadShown.current) return;
+    battleLoadShown.current = key;
+    setBattleLoad({ step, done, total });
+  }, []);
   const battleAssetProgress = useRef({
     sprites: { loaded: 0, total: 0 },
     decorations: { loaded: 0, total: 0 },
@@ -947,22 +975,30 @@ export function GameApp() {
     const groups = Object.values(battleAssetProgress.current);
     const loadedAssets = groups.reduce((sum, item) => sum + item.loaded, 0);
     const assetCount = groups.reduce((sum, item) => sum + item.total, 0);
-    // Keep one final task for the renderer's first complete, warmed frame.
-    setBattleLoadingProgress({ loaded: loadedAssets, total: assetCount + 1 });
-  }, []);
+    setBattleStep(0, loadedAssets, assetCount);
+  }, [setBattleStep]);
   useEffect(() => {
     if (!battleLoading) return;
+    const warm = (event: Event) => {
+      const status = (event as CustomEvent<{ step: string; done: number; total: number }>).detail;
+      setBattleStep(status.step === "shaders" ? 2 : 1, status.done, status.total);
+    };
     const done = () => {
-      setBattleLoadingProgress((current) => ({ loaded: current.total, total: current.total }));
+      const clock = battleClock.current;
+      if (clock) rememberStepMs(BATTLE_LOAD_STEPS_KEY, clock.finish());
+      battleClock.current = null;
+      setBattleLoad({ step: BATTLE_LOAD_STEPS_FALLBACK.length, done: 1, total: 1 });
       setBattleLoading(false);
     };
+    window.addEventListener("ember:battle-step", warm);
     window.addEventListener("ember:battle-ready", done);
     const safety = window.setTimeout(() => setBattleLoading(false), 20000);
     return () => {
+      window.removeEventListener("ember:battle-step", warm);
       window.removeEventListener("ember:battle-ready", done);
       window.clearTimeout(safety);
     };
-  }, [battleLoading]);
+  }, [battleLoading, setBattleStep]);
   // The currently active map style. Normal campaigns persist their choice in SaveData;
   // test mode deliberately remains session-only.
   const [mapMode, setMapMode] = useState<"classic" | "rpg" | null>(() => (startOnMap ? "rpg" : null));
@@ -1324,7 +1360,10 @@ export function GameApp() {
         decorations: { loaded: 0, total: 0 },
         terrain: { loaded: 0, total: 0 },
       };
-      setBattleLoadingProgress({ loaded: 0, total: 1 });
+      battleClock.current = new StepClock(BATTLE_LOAD_STEPS_FALLBACK.length);
+      battleStepMs.current = rememberedStepMs(BATTLE_LOAD_STEPS_KEY, BATTLE_LOAD_STEPS_FALLBACK);
+      battleLoadShown.current = "";
+      setBattleLoad({ step: 0, done: 0, total: 0 });
       const tutorialMap = resolved.index <= (missionById("thebridge")?.index ?? 3) && !resolved.id.startsWith("random-encounter-");
       // The travel clock drives lighting for random maps and "-crossing" maps only for now — other campaign maps keep their authored time of day.
       let timed = !testMode && !tutorialMap && (resolved.id.startsWith("random-") || resolved.id.endsWith("-crossing")) && resolved.environment !== "indoor" && usesTravelClock(save)
@@ -1454,6 +1493,7 @@ export function GameApp() {
         Promise.resolve(),
       ]).then(() => {
         if (load !== battleLoadRef.current) return;
+        setBattleStep(1, 0, 1);
         awardedRef.current = null;
         battleStartProgressRef.current = Object.fromEntries(battle.units.filter((u) => u.side === "player").map((u) => [u.name, { level: u.level, xp: u.xp }]));
         setEngine(battle);
@@ -1466,7 +1506,7 @@ export function GameApp() {
         setScreen("battle");
       });
     },
-    [art, save, testMode, testOverworld, freshTestOverworld, muted, bank, campaignLocations, partyHasConjurer, reportBattleAssetProgress],
+    [art, save, testMode, testOverworld, freshTestOverworld, muted, bank, campaignLocations, partyHasConjurer, reportBattleAssetProgress, setBattleStep],
   );
 
   useEffect(() => {
@@ -2176,8 +2216,8 @@ export function GameApp() {
     <main className="relative h-dvh min-h-0 bg-bg text-fg overflow-hidden">
       <LoadingCurtain
         visible={screen !== "title" && screen !== "boot" && (loadingCurtain || battleLoading || (screen === "battle" && !engine))}
-        progress={battleLoading || screen === "battle" ? Math.floor((battleLoadingProgress.loaded / Math.max(1, battleLoadingProgress.total)) * 100) : null}
-        status={battleLoading || screen === "battle" ? `Preparando batalha · ${battleLoadingProgress.loaded}/${battleLoadingProgress.total} recursos` : undefined}
+        progress={battleLoading || screen === "battle" ? Math.floor(stepPercent(battleStepMs.current, battleLoad.step, battleLoad.done, battleLoad.total)) : null}
+        status={battleLoading || screen === "battle" ? battleLoadCaption(battleLoad) : undefined}
       />
       {screen === "boot" && (
         <CutsceneScreen src="/game/title-open.mp4" onSkip={leaveBoot} />

@@ -124,7 +124,7 @@ export class DioramaView {
   readonly groundAt = (x: number, z: number): number => (this.board ? groundHeightAt(this.board, EDGES, x, z) : 0);
 
   /** Draw the editor's current mission. The camera is kept while the same map is being edited. */
-  async setMission(m: Mission): Promise<void> {
+  async setMission(m: Mission, onDecorProgress?: (loaded: number, total: number) => void): Promise<void> {
     const gen = ++this.gen;
     const board = new Board(draftFromMission(m));
     this.board = board;
@@ -147,7 +147,7 @@ export class DioramaView {
     }
     void this.applyBackdrop(board.draft);
     this.placeUnits(m);
-    await this.decor.populate(board, this.groundAt);
+    await this.decor.populate(board, this.groundAt, onDecorProgress);
     if (gen !== this.gen) return;
   }
 

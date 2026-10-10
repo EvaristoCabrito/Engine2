@@ -1,6 +1,7 @@
 import "@/styles.css";
 import { createRoot } from "react-dom/client";
 import { GameApp } from "./GameApp";
+import { continueBootBar, openLoadingScreenCount } from "./MapLoadingOverlay";
 import { returnToTitle, shouldReturnToTitle } from "./titleNavigation";
 
 const root = document.getElementById("app");
@@ -20,9 +21,14 @@ else {
   const boot = document.getElementById("boot-loading");
   if (boot) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      // Remember how many files this boot needed, so the next boot's bar measures against it.
-      try { localStorage.setItem("ember.bootFileTotal", String(performance.getEntriesByType("resource").length)); } catch { /* storage blocked */ }
-      (window as Window & { __finishBoot?: () => void }).__finishBoot?.();
+      // (game.html's __finishBoot remembers how many files this boot needed.)
+      const w = window as Window & { __finishBoot?: (handedOn?: boolean) => void; __bootShown?: () => number; __bootShareKey?: string };
+      // A loading screen already up underneath (a battle or the map) continues this same bar;
+      // otherwise the boot was the whole load and its bar ends at 100.
+      const handOn = !boot.hidden && openLoadingScreenCount() > 0 && !!w.__bootShown && !!w.__bootShareKey;
+      if (handOn) continueBootBar(w.__bootShown!(), w.__bootShareKey!);
+      else if (!boot.hidden && w.__bootShareKey) { try { localStorage.setItem(w.__bootShareKey, "1"); } catch { /* storage blocked */ } }
+      w.__finishBoot?.(handOn);
     }));
   }
 }
