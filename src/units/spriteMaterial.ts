@@ -22,7 +22,7 @@ const LAMBERT_WRAPPED = THREE.ShaderChunk.lights_lambert_pars_fragment.replace(
   `float dotNL = saturate( ( dot( geometryNormal, directLight.direction ) + ${WRAP.toFixed(2)} ) / ${(1 + WRAP).toFixed(2)} );`,
 );
 
-export function makeSpriteMaterial(): THREE.MeshLambertMaterial {
+export function makeSpriteMaterial(pointLightsOnBothSides = false): THREE.MeshLambertMaterial {
   const m = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.004, side: THREE.DoubleSide, depthWrite: true });
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uSpriteExposure = SPRITE_EXPOSURE;
@@ -38,7 +38,18 @@ export function makeSpriteMaterial(): THREE.MeshLambertMaterial {
       .replace('#include <common>', '#include <common>\nuniform float uSpriteExposure;\nuniform float uSpriteFloor;')
       .replace('#include <lights_lambert_pars_fragment>', LAMBERT_WRAPPED)
       .replace('#include <opaque_fragment>', 'outgoingLight = max( outgoingLight, diffuseColor.rgb * uSpriteFloor ) * uSpriteExposure;\n#include <opaque_fragment>');
+    if (pointLightsOnBothSides) {
+      // A photographic character card represents a body, not a one-sided wall.
+      // Face its lighting normal toward each point source so billboard yaw/mirroring
+      // cannot reject nearby light. The first RE_Direct call belongs to point lights;
+      // directional sun and spot lights retain their existing response.
+      const localLights = THREE.ShaderChunk.lights_fragment_begin.replace(
+        'RE_Direct( directLight, geometryPosition, geometryNormal,',
+        'RE_Direct( directLight, geometryPosition, dot( geometryNormal, directLight.direction ) < 0.0 ? -geometryNormal : geometryNormal,',
+      );
+      sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_begin>', localLights);
+    }
   };
-  m.customProgramCacheKey = () => 'engine2-sprite-lit-v2';
+  m.customProgramCacheKey = () => pointLightsOnBothSides ? 'engine2-unit-sprite-lit-v3' : 'engine2-sprite-lit-v2';
   return m;
 }

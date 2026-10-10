@@ -1307,8 +1307,10 @@ const DUST_VERTEX = /* glsl */ `
     // brighter/bigger near the top of its float range, so height actually reads as height.
     float zNorm = clamp((z - 3.0) / 6.0, 0.0, 1.0);
     vec3 worldPos = vec3(aBase + wander, z);
-    vec3 corner = worldPos + vec3(position.xy * aSize * mix(0.55, 1.0, zNorm), 0.0);
-    gl_Position = projectionMatrix * viewMatrix * vec4(corner, 1.0);
+    vec4 center = modelViewMatrix * vec4(worldPos, 1.0);
+    float worldScale = length(modelMatrix[0].xyz);
+    center.xy += position.xy * aSize * mix(0.55, 1.0, zNorm) * worldScale;
+    gl_Position = projectionMatrix * center;
     vAlpha = mix(0.3, 1.0, zNorm) * (0.5 + 0.5 * sin(t * 0.6 + aSeed * 5.0));
   }
 `;
@@ -1338,8 +1340,12 @@ const EMBER_VERTEX = /* glsl */ `
     // ground and swells as it climbs, echoing a real spark catching more open air, instead of
     // popping into existence as a full-size dot with no sense of where it started.
     float sizeMul = mix(0.5, 1.2, smoothstep(0.0, 0.55, rise01));
-    vec3 corner = worldPos + vec3(position.xy * aSize * sizeMul, 0.0);
-    gl_Position = projectionMatrix * viewMatrix * vec4(corner, 1.0);
+    // The parent converts Ember's pixel coordinates and Z-up into the battle world.
+    // Offset in camera space so the card keeps its shape in tactical and normal views.
+    vec4 center = modelViewMatrix * vec4(worldPos, 1.0);
+    float worldScale = length(modelMatrix[0].xyz);
+    center.xy += position.xy * aSize * sizeMul * worldScale;
+    gl_Position = projectionMatrix * center;
     // smoothstep both ends so the loop-back to the ground is invisible, not a pop.
     vAlpha = smoothstep(0.0, 0.08, rise01) * smoothstep(1.0, 0.85, rise01);
   }

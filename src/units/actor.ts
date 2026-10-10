@@ -55,7 +55,7 @@ export class UnitActor {
 
   constructor(def: UnitDef) {
     this.def = def;
-    this.mat = makeSpriteMaterial();
+    this.mat = makeSpriteMaterial(true);
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5 });
     this.card = new THREE.Mesh(cardGeo, this.mat);
     this.card.castShadow = true;

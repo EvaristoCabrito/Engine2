@@ -50,7 +50,7 @@ function hexRing(rIn: number, rOut: number): THREE.BufferGeometry {
 }
 
 /** One battle-grid mark: a hex fill (no rIn) or hex border, radii in hex radii, rgba colour. */
-export interface GridMark { x: number; y: number; color: string; rOut: number; rIn?: number }
+export interface GridMark { x: number; y: number; color: string; rOut: number; rIn?: number; flat?: boolean }
 
 export class DioramaView {
   readonly stage: Stage;
@@ -304,7 +304,7 @@ export class DioramaView {
    * fills (rIn absent) and hex borders in exact rgba colours, draped on the ground. Later marks
    * sit on top of earlier ones. Rebuilt only when the marks change. */
   setGrid(marks: GridMark[]): void {
-    const key = marks.map(m => `${m.x},${m.y},${m.color},${m.rOut},${m.rIn ?? 0}`).join(';');
+    const key = marks.map(m => `${m.x},${m.y},${m.color},${m.rOut},${m.rIn ?? 0},${m.flat ? 1 : 0}`).join(';');
     if (key === this.gridKey || !this.board) return;
     this.gridKey = key;
     if (!this.gridGroup.parent) this.stage.scene.add(this.gridGroup);
@@ -319,8 +319,11 @@ export class DioramaView {
       if (m.color !== lastColor) { run++; lastColor = m.color; }
       const c = this.board.cell(m.x, m.y);
       const lift = 0.05 + run * 0.002;
+      // Corner samples can belong to a neighbouring raised/lowered tile. Connecting those
+      // heights makes a grid border into a large vertical triangle across a cliff.
+      const surfaceY = c.water ? c.waterY : this.groundAt(c.x, c.z);
       const at = (dx: number, dz: number, b: { pos: number[] }) =>
-        b.pos.push(c.x + dx, (c.water ? c.waterY : this.groundAt(c.x + dx, c.z + dz)) + lift, c.z + dz);
+        b.pos.push(c.x + dx, surfaceY + lift, c.z + dz);
       const batchKey = `${m.color}|${run}`;
       let b = batches.get(batchKey);
       if (!b) { b = { pos: [], idx: [], order: run }; batches.set(batchKey, b); }
