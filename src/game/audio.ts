@@ -221,7 +221,8 @@ function playSfxFileExclusive(file: string, volume = 0.55, startAt = 0): void {
  * the sheet's first frame. Only videos without a music bed were used; idle never has sound.
  * Keyed by sprite id. A sprite/kind absent here keeps the game's generic cue. */
 /** "attack2" is the cue for a sprite's second attack sheet (GameArt.attacks2), when it has one. */
-export type MonsterSfxKind = "attack" | "attack2" | "cast" | "walk" | "hit" | "death" | "death2";
+/** "heal" is the cue for a support spell's healing sheet (GameArt.castsHeal), when it has one. */
+export type MonsterSfxKind = "attack" | "attack2" | "cast" | "heal" | "walk" | "hit" | "death" | "death2";
 const MONSTER_SFX: Record<string, Partial<Record<MonsterSfxKind, string>>> = {
   undeadOx: { attack: "UndeadOxATT001.mp3", cast: "UndeadOxCast001.mp3", walk: "UndeadOxWalk001.mp3", hit: "UndeadOxHit001.mp3", death: "UndeadOxDeath001.mp3" },
   wardog2: { attack: "WarDog2ATT001.mp3", walk: "WarDog2Walk001.mp3", death: "WarDog2Death001.mp3" },
@@ -241,6 +242,9 @@ const MONSTER_SFX: Record<string, Partial<Record<MonsterSfxKind, string>>> = {
   // Jacaré: each clip is its sheet's own 3 s window of the video (work/jacare/build.py); idle has none.
   jacare: { attack: "JacareATT001.mp3", attack2: "JacareSpecial001.mp3", walk: "JacareWalk001.mp3", hit: "JacareHit001.mp3", death: "JacareDeath001.mp3" },
   "militia-v2": { attack: "FootmanLameSword.mp3", walk: "FootSteps1.mp3", hit: "HitreactArmor.mp3", death: "DeadArmor.mp3" },
+  // Salazar V2: the sounds supplied with his sheets (Attachments/Salazar), file names kept. Cast is
+  // for damage spells, heal for every other spell (heals, Bless, Create Food and Water, ...).
+  salazar: { attack: "Blunt2.mp3", cast: "ElecticCasting01-Balanced-High.mp3", heal: "Healing01-Balanced-High.mp3", walk: "SalazarWalk-Balanced-High.mp3" },
 };
 for (const cues of Object.values(MONSTER_SFX)) for (const file of Object.values(cues)) preloadExclusiveSfx(file);
 
@@ -345,6 +349,10 @@ export const sfxPlay = {
   arrowRelease: (neera = false) => { if (!neera) playSfxFileExclusive("ShortArrowsRelease.mp3", 0.55); },
   magicAttack: () => playSfxFileExclusive("Spellcast01.mp3", 0.55),
   heal: () => playSfxFileExclusive("Spellcast01.mp3", 0.55),
+  /** The caster's own healing cue (MONSTER_SFX "heal") when it has one, else the generic heal. */
+  healBy: (sprite: string | undefined) => {
+    if (!sfxPlay.monster(sprite, "heal")) sfxPlay.heal();
+  },
   stun: () => {},
   miss: () => {},
   chest: () => {},

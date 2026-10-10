@@ -1191,6 +1191,10 @@ export interface GameArt {
   /** Left-facing counterpart to `casts`, for the sprites that have one cut. Falls back to
    * `casts` (mirrored via the regular flip) for every sprite without one. */
   castsLeft: Partial<Record<SpriteId, HTMLImageElement[]>>;
+  /** Healing sheet (heal-*.png): played instead of `casts` for every spell that deals no
+   * damage (heals, Bless, Cure Disease, Create Food and Water, ...). A sprite without one
+   * keeps its regular cast pose for those, same as before this existed. */
+  castsHeal: Partial<Record<SpriteId, HTMLImageElement[]>>;
   /** A distinct pose for the defender's own counter-attack stages (counterLunge/Hit/
    * Recover), for the few sprites that have one cut — falls back to `attacks` (the same
    * swing used for a normal attack) for every sprite without one, same as it always did

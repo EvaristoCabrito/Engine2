@@ -10,7 +10,7 @@ const CELL = SQ3 * R;
 
 export interface Box { w: number; h: number; /** how far the feet sit above the card's bottom edge */ foot: number }
 
-const ATTACKING: Pose[] = ['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'counter'];
+const ATTACKING: Pose[] = ['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'heal', 'counter'];
 
 /** Ember's on-screen box for this unit in this pose (frame index matters for one Malrec frame). */
 export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, natH: number): Box {
@@ -27,6 +27,8 @@ export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, nat
     const k = (CELL * 1.53) / neeraV2Px[pose]!;
     return { w: natW * k, h: natH * k, foot: 0 };
   }
+  // Salazar V2: one shared 416x613 canvas for every sheet, idle body 480 px, feet 8 px up
+  if (sprite === 'salazar') { const k = (CELL * 1.53) / 480; return { w: natW * k, h: natH * k, foot: 8 * k }; }
   if (sprite === 'militia-v2') { const k = (CELL * 1.53) / 628; return { w: natW * k, h: natH * k, foot: 61 * k }; }
   if (sprite === 'apparition') { const k = (CELL * 1.53) / 597; return { w: natW * k, h: natH * k, foot: 34 * k }; }
   if (sprite === 'jacare') { const k = (CELL * 3.4) / 581; return { w: natW * k, h: natH * k, foot: 13 * k }; }
@@ -93,7 +95,8 @@ export function framePace(u: UnitDef, pose: Pose, n: number, t: number): { frame
     return { frame: x < n ? x : cycle - x, done: false };
   }
   if (pose === 'walk' || pose === 'walkLeft') {
-    const fps = long ? n / 1.5 : Math.min(n / 2, 6) * slow / 0.22;
+    // Salazar V2's walk loop plays at 2.6 s, close to his video's own pace (engine.ts SALAZAR_WALK_LOOP_SECONDS)
+    const fps = long ? n / (u.sprite === 'salazar' ? 2.6 : 1.5) : Math.min(n / 2, 6) * slow / 0.22;
     return { frame: Math.floor(t * fps) % n, done: false };
   }
   // one-shot sheets: long sheets last 3 s (Apparition's 60-frame ATT lasts 5 s); short ones ~0.8 s

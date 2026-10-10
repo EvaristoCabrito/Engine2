@@ -45,7 +45,7 @@ const LEADER_MARKER: Record<AffinityHero, { dir: string; idle: number; bust: str
   Kael: { dir: "Kael_Final/kael-final-002", idle: 36, bust: "?v=kael-final-002" },
   Neera: { dir: "neera/neera-v2-001/idle-", idle: 36, bust: "?v=neera-v2-003" },
   Voss: { dir: "voss", idle: 12, bust: "" },
-  Salazar: { dir: "salazar", idle: 12, bust: "" },
+  Salazar: { dir: "salazar-final", idle: 36, bust: "" },
   Aldric: { dir: "aldric", idle: 36, bust: "?v=aldric-final-001" },
   Malrec: { dir: "malrec", idle: 36, bust: "" },
 };
@@ -70,9 +70,9 @@ function LeaderMarker({ hero, facingLeft }: { hero: AffinityHero; facingLeft: bo
   }, [hero, sheet.idle]);
   const frameIndex = frame % frames.length;
   const sampledBounds = LEADER_FRAME_BOUNDS[hero];
-  // Neera's current sheet already has consistent body scale and a shared ground line.
-  // Use one crop for the whole animation so changing poses cannot resize or recenter her.
-  const bounds = hero === "Neera" ? (() => {
+  // Neera's and Salazar V2's sheets already have consistent body scale and a shared ground line.
+  // Use one crop for the whole animation so changing poses cannot resize or recenter them.
+  const bounds = hero === "Neera" || hero === "Salazar" ? (() => {
     const left = Math.min(...sampledBounds.map(b => b[0]));
     const top = Math.min(...sampledBounds.map(b => b[1]));
     const right = Math.max(...sampledBounds.map(b => b[0] + b[2]));

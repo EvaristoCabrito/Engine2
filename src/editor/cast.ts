@@ -14,7 +14,7 @@ import { muted, setMuted } from '../units/sounds';
 
 interface Placed { actor: UnitActor; c: number; r: number }
 
-const POSE_ORDER: Pose[] = ['idle', 'idle2', 'walk', 'attack', 'attack2', 'attackShort', 'counter', 'cast', 'hit', 'hit2', 'death', 'death2'];
+const POSE_ORDER: Pose[] = ['idle', 'idle2', 'walk', 'attack', 'attack2', 'attackShort', 'counter', 'cast', 'heal', 'hit', 'hit2', 'death', 'death2'];
 const GROUP_LABEL: Record<UnitDef['group'], string> = { hero: 'Heróis', summon: 'Invocações', monster: 'Monstros', npc: 'NPCs' };
 const GROUPS: UnitDef['group'][] = ['hero', 'summon', 'monster', 'npc'];
 

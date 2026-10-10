@@ -12,7 +12,10 @@ import manifest from './manifest.json';
 export type Pose =
   | 'idle' | 'idle2' | 'walk' | 'walkLeft'
   | 'attack' | 'attackLeft' | 'attack2' | 'attack2Left' | 'attackShort'
-  | 'cast' | 'castLeft' | 'hit' | 'hit2' | 'death' | 'death2'
+  | 'cast' | 'castLeft'
+  // a support spell's healing sheet (heal-*.png, Ember's castsHeal); a unit without one casts
+  | 'heal'
+  | 'hit' | 'hit2' | 'death' | 'death2'
   // Ember's counter cut (counter-*.png); a unit without one counters with its attack
   | 'counter'
   // Ember's up/down walk cycles (move-up-/move-down-*.png): walking away from / towards the camera
@@ -46,7 +49,7 @@ export interface UnitDef {
 const PREFIX_POSE: Record<string, Pose> = {
   '': 'idle', 'idle-': 'idle', 'idle2-': 'idle2', 'move-': 'walk', 'move-left-': 'walkLeft',
   'atk-': 'attack', 'atk-left-': 'attackLeft', 'atk2-': 'attack2', 'atk2-left-': 'attack2Left', 'atk-short-': 'attackShort',
-  'cast-': 'cast', 'cast-left-': 'castLeft', 'hit-': 'hit', 'hit2-': 'hit2', 'death-': 'death', 'death2-': 'death2',
+  'cast-': 'cast', 'cast-left-': 'castLeft', 'heal-': 'heal', 'hit-': 'hit', 'hit2-': 'hit2', 'death-': 'death', 'death2-': 'death2',
 };
 const MANIFEST = manifest as Record<string, Record<string, number>>;
 
@@ -135,7 +138,8 @@ const HAND_SET: UnitDef[] = [
     return poses;
   })(), { sprite: 'neera' }),
   unit('voss', 'Voss', 'mage', 'hero', posesIn('voss'), { sprite: 'voss' }),
-  unit('salazar', 'Salazar', 'healer', 'hero', posesIn('salazar'), { sprite: 'salazar' }),
+  // Salazar V2 (salazar-final/); the old salazar/ cut is the generic Healer's (healerRecruit)
+  unit('salazar', 'Salazar', 'healer', 'hero', posesIn('salazar-final'), { sprite: 'salazar' }),
   unit('aldric', 'Aldric', 'aldric', 'hero', posesIn('aldric'), { sprite: 'aldric' }),
   // Malrec's sliced move-left frames are deliberately unused in Ember: his walk is mirrored instead.
   unit('malrec', 'Malrec', 'conjurer', 'hero', posesIn('malrec', undefined, ['walkLeft']), { sprite: 'malrec' }),
@@ -179,7 +183,7 @@ export function frameUrl(src: PoseSrc, i: number): string {
 
 export const POSE_LABEL: Record<Pose, string> = {
   idle: 'Parado', idle2: 'Parado 2', walk: 'Andar', walkLeft: 'Andar ←', attack: 'Atacar', attackLeft: 'Atacar ←',
-  attack2: 'Especial', attack2Left: 'Especial ←', attackShort: 'Mão secundária', cast: 'Conjurar', castLeft: 'Conjurar ←',
+  attack2: 'Especial', attack2Left: 'Especial ←', attackShort: 'Mão secundária', cast: 'Conjurar', castLeft: 'Conjurar ←', heal: 'Curar',
   hit: 'Dano', hit2: 'Dano 2', death: 'Morte', death2: 'Morte 2', counter: 'Contra-ataque',
   walkUp: 'Andar ↑', walkDown: 'Andar ↓', walkBack: 'Andar (costas)', walkFront: 'Andar (frente)', walkSide: 'Andar (lado)',
 };

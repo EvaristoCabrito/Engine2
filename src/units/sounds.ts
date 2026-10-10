@@ -1,7 +1,7 @@
 // Pose sounds, from Ember's audio.ts (files copied to /game/SoundFX; sound effects are kept apart from music).
 import type { Pose, UnitDef } from './catalog';
 
-type Kind = 'attack' | 'attack2' | 'cast' | 'walk' | 'hit' | 'death' | 'death2';
+type Kind = 'attack' | 'attack2' | 'cast' | 'heal' | 'walk' | 'hit' | 'death' | 'death2';
 
 const MONSTER_SFX: Record<string, Partial<Record<Kind, string>>> = {
   undeadOx: { attack: 'UndeadOxATT001.mp3', cast: 'UndeadOxCast001.mp3', walk: 'UndeadOxWalk001.mp3', hit: 'UndeadOxHit001.mp3', death: 'UndeadOxDeath001.mp3' },
@@ -24,6 +24,7 @@ const MONSTER_SFX: Record<string, Partial<Record<Kind, string>>> = {
   'plague-bearing-cattle': { attack: 'PlagueCattleATT001.mp3', cast: 'PlagueCattleCast001.mp3', walk: 'PlagueCattleWalk001.mp3', death: 'PlagueCattleDeath001.mp3' },
   'minor-horror-001': { attack: 'MinorHorrorATT001.mp3', cast: 'MinorHorrorCasting001.mp3', walk: 'MinorHorrorWalk001.mp3' },
   // Ember picks CultistV2WalkLeft/Right by direction; Engine2 has one walk cue per unit for now
+  salazar: { attack: 'Blunt2.mp3', cast: 'ElecticCasting01-Balanced-High.mp3', heal: 'Healing01-Balanced-High.mp3', walk: 'SalazarWalk-Balanced-High.mp3' },
   'cultist-v2': { attack: 'CultistV2Attack.mp3', cast: 'CultistV2Spellcast.mp3', walk: 'CultistV2WalkRight.mp3' },
 };
 
@@ -33,13 +34,12 @@ const HERO_SFX: Record<string, Partial<Record<Kind, [string, number?]>>> = {
   neera: { attack: ['NeeraBowRelease.mp3'], attack2: ['NeeraBowRelease.mp3'], cast: ['Spellcast01.mp3'] },
   aldric: { attack: ['ATT01Blunt.mp3'], cast: ['ATT01Blunt.mp3'] },
   voss: { attack: ['Spellcast01.mp3'], cast: ['Spellcast01.mp3'] },
-  salazar: { attack: ['Spellcast01.mp3'], cast: ['Spellcast01.mp3'] },
   malrec: { attack: ['ATT01Blunt.mp3'], cast: ['Spellcast01.mp3'] },
 };
 
 const KIND: Partial<Record<Pose, Kind>> = {
   attack: 'attack', attackLeft: 'attack', attackShort: 'attack', attack2: 'attack2', attack2Left: 'attack2',
-  cast: 'cast', castLeft: 'cast', counter: 'attack', walk: 'walk', walkLeft: 'walk', walkUp: 'walk', walkDown: 'walk', hit: 'hit', hit2: 'hit', death: 'death', death2: 'death2',
+  cast: 'cast', castLeft: 'cast', heal: 'heal', counter: 'attack', walk: 'walk', walkLeft: 'walk', walkUp: 'walk', walkDown: 'walk', hit: 'hit', hit2: 'hit', death: 'death', death2: 'death2',
 };
 
 const playing = new Map<string, HTMLAudioElement>();

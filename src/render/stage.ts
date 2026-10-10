@@ -105,7 +105,8 @@ export class Stage {
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     this.mist = new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
     this.composer.addPass(this.mist);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.55, 0.9);
+    // gentle: bright fires and spells glow a little, they don't flare (0.3 / 0.9 was too much)
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.18, 0.5, 0.95);
     this.composer.addPass(this.bloom);
     for (let i = 0; i < 2; i++) for (const d of [[1, 0], [0, 1]]) {
       const p = new ShaderPass(TiltShiftShader);

@@ -45,7 +45,7 @@ const ART_POSES: [string, Pose][] = [
   ["idles", "idle"], ["sprites", "idle"], ["idles2", "idle2"],
   ["walks", "walk"], ["walksLeft", "walkLeft"], ["walks2", "walk"], ["walksLeft2", "walkLeft"], ["walksUp", "walkUp"], ["walksDown", "walkDown"],
   ["attacks", "attack"], ["attacksLeft", "attackLeft"], ["attacks2", "attack2"], ["attacks2Left", "attack2Left"], ["attacksShort", "attackShort"],
-  ["casts", "cast"], ["castsLeft", "castLeft"], ["counters", "counter"], ["countersLeft", "counter"],
+  ["casts", "cast"], ["castsLeft", "castLeft"], ["castsHeal", "heal"], ["counters", "counter"], ["countersLeft", "counter"],
   ["deaths", "death"], ["deaths2", "death2"], ["hits", "hit"], ["hits2", "hit2"],
 ];
 

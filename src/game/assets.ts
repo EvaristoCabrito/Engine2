@@ -118,7 +118,7 @@ const HERO_PORTRAIT: Partial<Record<string, string>> = {
   kaelFinal: "/game/portraits/kael-final-face-001.jpg?v=1",
   neera: "/game/portraits/NeeraProperSide-profile.jpg",
   voss: "/game/portraits/voss.png",
-  salazar: "/game/portraits/salazar.png",
+  salazar: "/game/portraits/salazar-v2-face.jpg",
   aldric: "/game/portraits/aldric-profile-001.jpg?v=3",
   defaultLancer: "/game/portraits/aldric-profile-001.jpg?v=3",
   sandoval: "/game/portraits/sandoval-001.jpg?v=1",
@@ -169,7 +169,7 @@ SPRITES.push(...ENCOUNTER_NPC_IDS);
 // taken against the whole expected total instead — the count the last full load actually made
 // (remembered in localStorage), or ART_TOTAL_FALLBACK (measured) on a first-ever visit.
 const ART_TOTAL_KEY = "ember.artLoadTotal";
-const ART_TOTAL_FALLBACK = 984;
+const ART_TOTAL_FALLBACK = 1184;
 function rememberedArtTotal(): number {
   try {
     const n = Number(localStorage.getItem(ART_TOTAL_KEY));
@@ -219,7 +219,7 @@ function releaseLoad(): void {
 
 function spriteFrameSrc(id: SpriteId, frame: string, cacheBust = ""): string {
   // Conjurer's active art is kept as a complete, source-preserved serial. Talk drives idle; the former Idle sheet drives casting.
-  const directory = id === "minor-horror-001" ? "minor-horror-003" : id === "big-blue-ox-002" ? "big-blue-ox-ai-006" : id === "conjurer" ? "conjurer/conjurer-complete-003" : id === "sandoval" ? "sandoval/sandoval-complete-001" : id === "kaelFinal" ? "Kael_Final/kael-final-002" : id === "kaelEarly" ? "kael" : id === "defaultWarrior" ? "kael-v2" : id;
+  const directory = id === "minor-horror-001" ? "minor-horror-003" : id === "big-blue-ox-002" ? "big-blue-ox-ai-006" : id === "conjurer" ? "conjurer/conjurer-complete-003" : id === "sandoval" ? "sandoval/sandoval-complete-001" : id === "kaelFinal" ? "Kael_Final/kael-final-002" : id === "kaelEarly" ? "kael" : id === "defaultWarrior" ? "kael-v2" : id === "salazar" ? "salazar-final" : id;
   if (id === "neera" && /^(?:\d+|idle-\d+|atk-(?:left-)?\d+|atk-short-\d+|atk2-(?:left-)?\d+|move-(?:left-)?\d+)$/.test(frame)) {
     const currentFrame = /^\d+$/.test(frame) ? `idle-${frame}` : frame;
     // Every frame here was rebuilt in place from Attachments/Nerra V2 (feet on one ground line,
@@ -308,7 +308,11 @@ const ATTACK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   kaelEarly: { n: 12, bust: "?v=kael-early" },
   neera: { n: 36, bust: "?v=neera-attack-002" },
   voss: { n: 4, bust: "" },
-  salazar: { n: 4, bust: "" },
+  // Salazar V2 (Attachments/Salazar, salazar-final/): every pose rescaled onto one shared canvas,
+  // same body size and ground line. The old salazar/ cut lives on as healerRecruit (the Healer).
+  // ATT is mirrored from the supplied sheet so, as drawn, he strikes to the right like every
+  // other sprite (the renderer mirrors it for facing left).
+  salazar: { n: 36, bust: "?v=salazar-atk-002" },
   // Generic-enemy "alter" sprites (see the SpriteId comment in types.ts) — same file
   // shape as the hero folder they started as a copy of, since they're literally that
   // copy for now.
@@ -395,6 +399,8 @@ const CAST_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   conjurer: { n: 36, bust: "?v=conjurer-complete-003" },
   // Malrec's own cast-*.png — a copy of conjurer's same dedicated cast sequence.
   malrec: { n: 36, bust: "" },
+  // Salazar V2's Casting sheet: damage spells only. Every other spell plays HEAL_CAST_FRAMES.
+  salazar: { n: 36, bust: "" },
   // Aldric's dedicated skill pose — plays only for his spell-typed pike skills (Piercing
   // Thrust, Sweep, ...), never for a plain attack, which stays on the ATT cut.
   aldric: { n: 36, bust: "?v=aldric-final-001" },
@@ -415,6 +421,12 @@ const CAST_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   // (attackPose falls back to `attacks` for a plain melee swing); see ATTACK_FRAMES/
   // ATTACK2_FRAMES above for its two melee attack cuts.
   familiar3: { n: 36, bust: "" },
+};
+
+// Healing pose: heal-*.png, played instead of the cast pose for spells that deal no damage
+// (see GameArt.castsHeal).
+const HEAL_CAST_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
+  salazar: { n: 36, bust: "" },
 };
 
 // Familiar 3's second, distinct attack cut (atk2-*.png) — the first case of a class having
@@ -479,6 +491,8 @@ const WALK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   // regular CSS flip for left-facing movement, same as any sprite with one authored
   // direction — see the walksLeft.malrec comment below for why.
   malrec: { n: 36, bust: "?v=malrec-walk-002" },
+  // Salazar V2's Walk Right; his authored Walk Left loads as walksLeft below.
+  salazar: { n: 36, bust: "" },
   birolho3: { n: 12, bust: "" },
   // Walk Left footage only; move-*.png is its mirror, and the renderer mirrors this pool
   // for left-facing movement like any sprite with one authored direction.
@@ -588,8 +602,8 @@ const WALK2_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   familiar3: { n: 36, bust: "" },
 };
 
-type SpritePoolKey = "hits" | "hits2" | "deaths" | "deaths2" | "sprites" | "attacks" | "attacks2" | "attacksShort" | "attacksLeft" | "attacks2Left" | "casts" | "castsLeft" | "counters" | "countersLeft" | "walks" | "walksLeft" | "idles" | "idles2" | "walkDirs" | "walksUp" | "walksDown" | "walks2" | "walksLeft2";
-const SPRITE_POOL_KEYS: SpritePoolKey[] = ["hits", "hits2", "deaths", "deaths2", "sprites", "attacks", "attacks2", "attacksShort", "attacksLeft", "attacks2Left", "casts", "castsLeft", "counters", "countersLeft", "walks", "walksLeft", "idles", "idles2", "walkDirs", "walksUp", "walksDown", "walks2", "walksLeft2"];
+type SpritePoolKey = "hits" | "hits2" | "deaths" | "deaths2" | "sprites" | "attacks" | "attacks2" | "attacksShort" | "attacksLeft" | "attacks2Left" | "casts" | "castsLeft" | "castsHeal" | "counters" | "countersLeft" | "walks" | "walksLeft" | "idles" | "idles2" | "walkDirs" | "walksUp" | "walksDown" | "walks2" | "walksLeft2";
+const SPRITE_POOL_KEYS: SpritePoolKey[] = ["hits", "hits2", "deaths", "deaths2", "sprites", "attacks", "attacks2", "attacksShort", "attacksLeft", "attacks2Left", "casts", "castsLeft", "castsHeal", "counters", "countersLeft", "walks", "walksLeft", "idles", "idles2", "walkDirs", "walksUp", "walksDown", "walks2", "walksLeft2"];
 
 /** Loads every pool one sprite contributes to GameArt (idle, attack, cast, walk, ...) — the
  * same files, frame counts and cache-busts loadGameArt used to load for every sprite up front. */
@@ -603,7 +617,7 @@ async function loadSpritePools(id: SpriteId): Promise<Partial<Record<SpritePoolK
       pools[key] = value;
     }));
   };
-  const n = id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "apparition" || id === "jacare" || id === "malrec" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
+  const n = id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "apparition" || id === "jacare" || id === "malrec" || id === "salazar" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
   const cacheBust = id === "neera" ? "?v=neera-idle-001" : id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? "?v=f36" : id === "undeadOx" ? "?v=ox-36-tail2" : id === "plague-bearing-cattle" ? "?v=plague-cattle-001" : id === "minor-horror-001" ? "?v=minor-horror-003" : id === "big-blue-ox-002" ? "?v=big-blue-ox-ai-006" : id === "troll" ? "?v=11" : id === "Asherah" ? "?v=3" : id === "familiar" ? "?v=6" : id === "aldric" ? "?v=aldric-final-001" : id === "defaultLancer" ? "?v=sheet2" : id === "lancer" ? "?v=3" : id === "sandoval" ? "?v=sandoval-complete-001" : id === "kaelFinal" ? "?v=kael-final-002" : id === "kaelEarly" ? "?v=kael-early" : id === "defaultWarrior" ? "?v=kael-v2" : id === "conjurer" ? "?v=conjurer-complete-003" : id === "familiar2" ? "?v=familiar2-36" : "";
   put("sprites", cut(n, (i) => (id === "conjurer" ? `talk-${i}` : `${i}`), cacheBust));
   const atk = ATTACK_FRAMES[id];
@@ -616,6 +630,8 @@ async function loadSpritePools(id: SpriteId): Promise<Partial<Record<SpritePoolK
   const cast = CAST_FRAMES[id];
   if (cast) put("casts", cut(cast.n, (i) => (id === "conjurer" ? `${i}` : `cast-${i}`), cast.bust));
   if (cast && CAST_DIR_LEFT.includes(id)) put("castsLeft", cut(cast.n, (i) => `cast-left-${i}`, cast.bust));
+  const healCast = HEAL_CAST_FRAMES[id];
+  if (healCast) put("castsHeal", cut(healCast.n, (i) => `heal-${i}`, healCast.bust));
   const counter = COUNTER_FRAMES[id];
   if (counter) put("counters", cut(counter.n, (i) => `counter-${i}`, counter.bust));
   const hit = HIT_FRAMES[id];
@@ -639,10 +655,10 @@ async function loadSpritePools(id: SpriteId): Promise<Partial<Record<SpritePoolK
   // pool mirrored normally; only regular ATT uses this authored left-facing set.
   if (id === "neera" && atk) put("attacksLeft", cut(atk.n, (i) => `atk-left-${i}`, atk.bust));
   if (id === "neera" && walk) put("walksLeft", cut(walk.n, (i) => `move-left-${i}`, walk.bust));
-  // The Butcher, Cultist V2, Familiar 2 and Familiar 3 each have their own authored
+  // The Butcher, Cultist V2, Milícia V2, Familiar 2, Familiar 3 and Salazar V2 each have their own authored
   // left-facing walk cut (same frame count as their right-facing one) but no dedicated
   // left-facing attack cut — their attack keeps mirroring the right-facing pool.
-  if (walk && (id === "theButcher" || id === "cultist-v2" || id === "militia-v2" || id === "familiar2" || id === "familiar3")) put("walksLeft", cut(walk.n, (i) => `move-left-${i}`, walk.bust));
+  if (walk && (id === "theButcher" || id === "cultist-v2" || id === "militia-v2" || id === "familiar2" || id === "familiar3" || id === "salazar")) put("walksLeft", cut(walk.n, (i) => `move-left-${i}`, walk.bust));
   if (id === "cobalt-blue-deer" && walk) put("walksLeft", cut(walk.n, (i) => `move-${i}`, walk.bust));
   // Mordavian Puppy's WALK LEFT row has 7 frames vs its right-facing row's 6.
   if (id === "morvenian-wolf") put("walksLeft", cut(7, (i) => `move-left-${i}`, ""));
@@ -794,6 +810,7 @@ export async function loadGameArt(): Promise<GameArt> {
   const attacksShort: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   const casts: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   const castsLeft: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
+  const castsHeal: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   const counters: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   // No sprite has a dedicated left-facing counter cut yet — every counters entry mirrors
   // via the regular flip, same as attacksLeft does for a sprite absent from that table.
@@ -870,7 +887,7 @@ export async function loadGameArt(): Promise<GameArt> {
   const deaths2: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   const hits2: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
   const hits: Partial<Record<SpriteId, HTMLImageElement[]>> = {};
-  const art: GameArt = { tiles, decorations, sprites, attacks, attacks2, attacks2Left, attacksShort, attacksLeft, casts, castsLeft, counters, countersLeft, walks, walksLeft, idles, idles2, walkDirs, walksUp, walksDown, walks2, walksLeft2, deaths, deaths2, hits, hits2, impact, fireballCore, causticVenomCore, arrowCore, lightningCores, webfloor, backdrops };
+  const art: GameArt = { tiles, decorations, sprites, attacks, attacks2, attacks2Left, attacksShort, attacksLeft, casts, castsLeft, castsHeal, counters, countersLeft, walks, walksLeft, idles, idles2, walkDirs, walksUp, walksDown, walks2, walksLeft2, deaths, deaths2, hits, hits2, impact, fireballCore, causticVenomCore, arrowCore, lightningCores, webfloor, backdrops };
   await ensureSpriteArt(art, MC_SPRITES);
   try {
     localStorage.setItem(ART_TOTAL_KEY, String(artRequested));

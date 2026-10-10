@@ -398,6 +398,14 @@
   "": 12,
   "atk-": 4
  },
+ "salazar-final": {
+  "": 36,
+  "atk-": 36,
+  "cast-": 36,
+  "heal-": 36,
+  "move-": 36,
+  "move-left-": 36
+ },
  "salazar-v2": {
   "": 12,
   "atk-": 12,

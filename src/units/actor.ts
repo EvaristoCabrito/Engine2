@@ -17,10 +17,10 @@ import { CARD_RENDER_ORDER } from '../render/drawOrder';
 const LEFT_CUT: Partial<Record<Pose, Pose>> = { walk: 'walkLeft', attack: 'attackLeft', attack2: 'attack2Left', cast: 'castLeft' };
 /** Authored left-facing cuts: shown as drawn, never mirrored. */
 const LEFT_CUTS = new Set<Pose>(['walkLeft', 'attackLeft', 'attack2Left', 'castLeft']);
-const ATTACK_POSES = new Set<Pose>(['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'counter']);
+const ATTACK_POSES = new Set<Pose>(['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'heal', 'counter']);
 /** Ember's dirActionWalk: sprites with authored left/right walks; never mirrored while moving. */
-const DIR_ACTION_WALK = new Set(['aldric', 'defaultLancer', 'lancer', 'sandoval', 'theButcher', 'familiar2', 'familiar3', 'cultist-v2', 'militia-v2', 'cobalt-blue-deer', 'neera']);
-const ONE_SHOT: Pose[] = ['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'counter', 'hit', 'hit2', 'death', 'death2'];
+const DIR_ACTION_WALK = new Set(['aldric', 'defaultLancer', 'lancer', 'sandoval', 'theButcher', 'familiar2', 'familiar3', 'cultist-v2', 'militia-v2', 'salazar', 'cobalt-blue-deer', 'neera']);
+const ONE_SHOT: Pose[] = ['attack', 'attackLeft', 'attack2', 'attack2Left', 'attackShort', 'cast', 'castLeft', 'heal', 'counter', 'hit', 'hit2', 'death', 'death2'];
 /** Ember's walkPose: moving up the map ("back"), down it ("front") or along a row ("side").
  * In 3D "up the map" is away from the camera. */
 type WalkDir = 'back' | 'front' | 'side';

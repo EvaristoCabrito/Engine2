@@ -145,7 +145,8 @@ const FRAGMENT = /* glsl */ `
       }
       // spell lights can be extremely bright: the mist only ever glows within a sane range,
       // so the bloom after it never receives an overflow (it turned that into a black box)
-      light = clamp(light, vec3(0.0), vec3(4.0));
+      // (lowered on request: a fire should light the room's haze a bit, not flare)
+      light = clamp(light, vec3(0.0), vec3(2.0));
       float a = 1.0 - exp(-d * dt);
       glow += T * a * uAlbedo * light;
       T *= 1.0 - a;
@@ -298,7 +299,7 @@ export class VolumetricFogPass extends Pass {
     u.uLightCount.value = lit.length;
     lit.forEach(({ l, p }, i) => {
       u.uLightPos.value[i].copy(p);
-      u.uLightColor.value[i].copy(l.color).multiplyScalar(Math.min(l.intensity, 60) * 0.03);
+      u.uLightColor.value[i].copy(l.color).multiplyScalar(Math.min(l.intensity, 60) * 0.015);
       u.uLightRange.value[i] = Math.max(1.5, l.distance || 4) * 0.8;
     });
   }

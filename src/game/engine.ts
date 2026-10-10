@@ -4,7 +4,7 @@ import { FROST, frostPower, frostAreaTiles, frostCharges } from "./frost";
 import { drawProvokeVFX, PROVOKE_FX_DURATION } from "./gfx/ProvokeVFX";
 import { dexAccuracy, dexEscapeChance } from "./dexterity";
 import { equippedWeaponType, trainedWeaponSkills, weaponTypesForClass, weaponModifiers, isWeaponAbility } from "./weaponSkills";
-import { elementalDamage, spellElement, sumResistances } from "./resistances";
+import { elementalDamage, spellElement, sumResistances, SPELL_CLASSIFICATION } from "./resistances";
 import { staffElementalDamage, staffLifeSteal, type MageStaffMagic } from "../ember/mageStaffMagic";
 import { AFFINITY_HEROES, affinityBonus, affinityScore, changeAffinity, cleanAffinityScores, type AffinityHero } from "./affinity";
 import { tacticalGridStyleQuiet as tacticalGridStyle, GRID_MOVE, GRID_ROUTE, GRID_ALLY, GRID_ENEMY, GRID_ENEMY_TARGET, GRID_ENEMY_GLOW, GRID_OFFHAND_TARGET } from "./tacticalGrid";
@@ -493,6 +493,9 @@ type Seq =
   | { type: "cureDisease"; att: string; def: string }
   | { type: "banner"; text: string; dur: number }
   | { type: "delay"; dur: number }
+  /** The caster's healing pose only, for an effect that already resolved instantly (Create
+   * Food and Water); queued only for sprites with a healing sheet (GameArt.castsHeal). */
+  | { type: "castPose"; id: string }
   | { type: "checkEnd" };
 
 interface MoveAnim {
@@ -534,6 +537,11 @@ const HIT_ANIM_SECONDS = 3;
 const LONG_WALK_SECONDS = 1.5;
 // Give the heavy Ox time to settle into each pose; all of its clocks share this pace.
 const BIG_BLUE_OX_PACE = 0.75;
+/** Salazar V2's walk (Attachments/Salazar Left/Right.mp4): his 36-frame loop plays close to the
+ * video's own pace, and he crosses each hex slower than the 0.22 s default so his feet carry him
+ * instead of sliding. Both scale with the speed mode like everyone else's walk. */
+const SALAZAR_WALK_LOOP_SECONDS = 2.6;
+const SALAZAR_STEP_PACE = 0.22 / 0.55;
 // Sums of the supplied Minor Horror atlas JSON frame durations.
 const MINOR_HORROR_SECONDS = { idle: 3.240, attack: 2.844, cast: 3.168, walk: 3.456, death: 3.924 };
 /** Bow shots on a long sheet: normal ATT shots wait for the full sheet. Bow skills normally
@@ -663,7 +671,13 @@ type Active =
   | { type: "delay"; t: number; dur: number }
   /** Long-sheet wind-up (see startSeq): the caster/archer plays its whole cast or attack
    * sheet before the spell, skill or arrow step it precedes is allowed to start. */
-  | { type: "windup"; id: string; t: number; dur: number; pose: "cast" | "attack" | "specialAttack" };
+  | { type: "windup"; id: string; t: number; dur: number; pose: "cast" | "attack" | "specialAttack"; heal?: boolean };
+
+/** Whether an action is a spell that deals no damage — heals, Bless, Cure Disease, Create Food
+ * and Water — which plays the caster's healing sheet (GameArt.castsHeal) when it has one. */
+function isSupportCast(a: { type: string; spellKind?: SpellKind | null }): boolean {
+  return a.type === "heal" || a.type === "cureDisease" || (a.type === "spell" && !!a.spellKind && SPELL_CLASSIFICATION[a.spellKind] === "utility");
+}
 
 function pub(u: Unit, restrained: boolean, movLeft: number): UnitPublic {
   return {
@@ -2615,7 +2629,8 @@ export class BattleEngine {
         else if (step.spellKind === "tendrilSwipe") sfxPlay.carnivorousPlantAttack();
         else if (meleeSkill && caster) this.playMeleeCue(caster, false, step.spellKind);
         else if (step.spellKind !== "webOfDreams" && step.spellKind !== "bless" && !meleeSkill) {
-          if (caster?.sprite === "minor-horror-001") sfxPlay.minorHorrorCast();
+          if (isSupportCast(step) && hasMonsterSfx(caster?.sprite, "heal")) sfxPlay.healBy(caster?.sprite);
+          else if (caster?.sprite === "minor-horror-001") sfxPlay.minorHorrorCast();
           else if (caster?.sprite === "carnivorous-plant-001") sfxPlay.carnivorousPlantCast();
           else if (caster?.sprite === "sapling-001") sfxPlay.saplingCast();
           else if (caster?.sprite === "plague-bearing-cattle") sfxPlay.plagueCattleCast();
@@ -2646,7 +2661,7 @@ export class BattleEngine {
           else this.playMeleeCue(attacker, !!step.customDice, step.spellKind);
         }
       } else if (step.type === "heal" || step.type === "cureDisease") {
-        sfxPlay.heal();
+        sfxPlay.healBy(this.units.find((u) => u.id === step.att)?.sprite);
       }
     }
     // Long sheets only (LONG_SHEET_FRAMES+): a spell, skill, heal or ranged shot waits for the
@@ -2654,10 +2669,13 @@ export class BattleEngine {
     // leaves the bow only after the draw, not halfway through it. The step is put back at the
     // front of the queue and runs unchanged once the wind-up ends. Short sheets and melee
     // swings skip this entirely.
-    if ((step.type === "spell" || step.type === "heal" || step.type === "combat") && !this.woundUp.has(step) && !this.reducedMotion) {
+    // Cure Disease only winds up for a caster with a healing sheet (Salazar V2); every other
+    // sprite keeps playing it with no pose, as before.
+    const healSheetCure = step.type === "cureDisease" && !!this.art.castsHeal[this.units.find((u) => u.id === step.att)?.sprite as SpriteId];
+    if ((step.type === "spell" || step.type === "heal" || step.type === "combat" || healSheetCure) && !this.woundUp.has(step) && !this.reducedMotion) {
       const actor = this.units.find((u) => u.id === step.att);
       const target =
-        step.type === "combat" || step.type === "heal"
+        step.type === "combat" || step.type === "heal" || step.type === "cureDisease"
           ? this.units.find((u) => u.id === step.def)
           : step.ids[0]
             ? this.units.find((u) => u.id === step.ids[0])
@@ -2675,7 +2693,7 @@ export class BattleEngine {
         ? neeraArrowSkill
           ? (this.art.attacks2[actor.sprite] ?? this.art.attacks[actor.sprite])
           : pose === "cast"
-          ? (this.art.casts[actor.sprite] ?? this.art.attacks[actor.sprite])
+          ? this.castFrames(actor.sprite, isSupportCast(step))
           : actor.classId !== "bigBlueCalf" && actor.sprite !== "neera" && actor.idleAlt
             ? (this.art.attacks2[actor.sprite] ?? this.art.attacks[actor.sprite])
             : this.art.attacks[actor.sprite]
@@ -2697,7 +2715,7 @@ export class BattleEngine {
         const look = target ?? (step.type === "spell" ? step.tiles[0] : undefined);
         if (look) this.faceSpriteToward(actor.id, look.x, look.y);
         this.ensureVisible(actor.x, actor.y);
-        this.active = { type: "windup", id: actor.id, t: 0, dur: release, pose };
+        this.active = { type: "windup", id: actor.id, t: 0, dur: release, pose, heal: pose === "cast" && isSupportCast(step) };
         return;
       }
     }
@@ -2832,7 +2850,7 @@ export class BattleEngine {
         }
       }
       this.banner = step.label ?? "";
-      if (step.spellKind === "bless") sfxPlay.heal();
+      if (step.spellKind === "bless") sfxPlay.healBy(this.units.find((u) => u.id === step.att)?.sprite);
       else if (step.spellKind !== "longShot" && step.spellKind !== "multiShot" && step.spellKind !== "piercing") sfxPlay.crit();
       if(step.spellKind === "frost"){const caster=this.units.find(u=>u.id===step.att);if(caster)this.frostVfxRequests.push({origin:{x:caster.x,y:caster.y},cells:step.tiles.map(c=>({...c})),seed:Math.floor(this.time*1000)});}
       if (step.spellKind === "magicMissile") {
@@ -2899,6 +2917,8 @@ export class BattleEngine {
       this.active = { type: "cureDisease", att: step.att, def: step.def, t: 0, applied: false };
       this.banner = CURE_DISEASE.name;
       sfxPlay.ui();
+    } else if (step.type === "castPose") {
+      if (!this.reducedMotion) this.active = { type: "windup", id: step.id, t: 0, dur: LONG_ANIM_SECONDS, pose: "cast", heal: true };
     } else if (step.type === "banner") {
       this.banner = step.text;
       this.active = { type: "banner", text: step.text, t: 0, dur: step.dur };
@@ -6215,8 +6235,10 @@ export class BattleEngine {
     this.spellAim = null;
     this.mode = "locked";
     this.tip = `${CREATE_FOOD_AND_WATER.name}: fome restaurada${power.fullness > 100 ? ` (${power.fullness}%)` : ""}${gained > 0 ? `, +${gained} rações` : ""}.`;
+    // Salazar V2 plays his healing sheet for it (the effect has already resolved above).
+    if ((this.art.castsHeal[u.sprite]?.length ?? 0) >= LONG_SHEET_FRAMES) this.queue.push({ type: "castPose", id: u.id });
     this.queue.push({ type: "banner", text: CREATE_FOOD_AND_WATER.name, dur: 1.1 });
-    sfxPlay.heal();
+    sfxPlay.healBy(u.sprite);
   }
 
   startDivineWrath(): void {
@@ -10562,7 +10584,9 @@ export class BattleEngine {
   private moveStepDur(a?: MoveAnim): number {
     const walk = this.speedMode === "fast" ? 0.12 : this.speedMode === "slow" ? 0.36 : 0.22;
     // A Bull Rush charge is a burst, about 3x walking pace.
-    const ox = a && this.units.find((u) => u.id === a.id)?.classId === "bigBlueCalf";
+    const mover = a && this.units.find((u) => u.id === a.id);
+    const ox = mover?.classId === "bigBlueCalf";
+    if (mover?.sprite === "salazar" && !a?.charge) return walk / SALAZAR_STEP_PACE;
     return (a?.charge ? walk * 0.5 : walk) / (ox ? BIG_BLUE_OX_PACE : 1);
   }
 
@@ -10623,7 +10647,8 @@ export class BattleEngine {
       const dur = this.moveStepDur(a);
       return Math.floor((a.i * dur + Math.min(a.t, dur)) * n / MINOR_HORROR_SECONDS.walk) % n;
     }
-    const dur = ox ? this.moveStepDur(a) : this.speedMode === "fast" ? 0.12 : this.speedMode === "slow" ? 0.36 : 0.22;
+    const salazar = u.sprite === "salazar";
+    const dur = ox || salazar ? this.moveStepDur(a) : this.speedMode === "fast" ? 0.12 : this.speedMode === "slow" ? 0.36 : 0.22;
     const steps = a.i + Math.min(1, a.t / dur);
     // A sheet's full loop used to always take exactly 2 hexes no matter its frame count, so a
     // 36-frame sheet (Aldric, Malrec, Cultist V2, Kael Final, Conjurer, The Butcher) flipped
@@ -10631,7 +10656,7 @@ export class BattleEngine {
     // them. Capping the frames-per-hex rate at what a 12-frame sheet already gets leaves every
     // sheet at n<=12 untouched and only slows the oversized ones down to match its pace.
     const framesPerHex =
-      n >= LONG_SHEET_FRAMES ? (n / LONG_WALK_SECONDS) * (ox ? BIG_BLUE_OX_PACE : 1) * dur : Math.min(n / 2, 6) * (u.sprite === "conjurer" || u.sprite === "malrec" ? 0.9 : 1);
+      n >= LONG_SHEET_FRAMES ? (n / (salazar ? SALAZAR_WALK_LOOP_SECONDS * (dur * SALAZAR_STEP_PACE / 0.22) : LONG_WALK_SECONDS)) * (ox ? BIG_BLUE_OX_PACE : 1) * dur : Math.min(n / 2, 6) * (u.sprite === "conjurer" || u.sprite === "malrec" ? 0.9 : 1);
     return Math.floor(steps * framesPerHex) % n;
   }
 
@@ -10725,7 +10750,7 @@ export class BattleEngine {
       if (!sprite) return 1;
       if (sprite === "big-blue-ox-002") seconds /= BIG_BLUE_OX_PACE;
       if (sprite === "minor-horror-001") seconds = MINOR_HORROR_SECONDS.cast;
-      frames = this.art.casts[sprite] ?? this.art.attacks[sprite];
+      frames = this.castFrames(sprite, isSupportCast(a));
       // attackPose's castDuration.
       span = sprite === "conjurer" || sprite === "malrec" ? 0.65 : 0.4;
     } else return 1;
@@ -10761,7 +10786,7 @@ export class BattleEngine {
       if (a.id !== u.id) return null;
       const frames =
         a.pose === "cast"
-          ? (this.art.casts[u.sprite] ?? this.art.attacks[u.sprite])
+          ? this.castFrames(u.sprite, !!a.heal)
           : a.pose === "specialAttack"
             ? (this.art.attacks2[u.sprite] ?? this.art.attacks[u.sprite])
           : u.classId !== "bigBlueCalf" && u.sprite !== "neera" && u.idleAlt
@@ -10786,7 +10811,7 @@ export class BattleEngine {
     if ((a.type === "spell" || a.type === "heal") && a.att === u.id) {
       const neeraArrowSkill = u.sprite === "neera" && a.type === "spell" && (a.spellKind === "longShot" || a.spellKind === "bloodyShot" || a.spellKind === "multiShot" || a.spellKind === "piercing");
       // The Carnivorous Plant's tendril swipe is her ATT, not a cast: it plays her attack sheet.
-      const castFrames = neeraArrowSkill ? (this.art.attacks2[u.sprite] ?? this.art.attacks[u.sprite]) : a.type === "spell" && a.spellKind === "tendrilSwipe" ? this.art.attacks[u.sprite] : this.art.casts[u.sprite] ?? this.art.attacks[u.sprite];
+      const castFrames = neeraArrowSkill ? (this.art.attacks2[u.sprite] ?? this.art.attacks[u.sprite]) : a.type === "spell" && a.spellKind === "tendrilSwipe" ? this.art.attacks[u.sprite] : this.castFrames(u.sprite, isSupportCast(a));
       if (!castFrames || castFrames.length < 3) return null;
       const n = castFrames.length;
       // Familiar Titã goes back to his idle loop once his cast sheet has played, instead of
@@ -10882,7 +10907,7 @@ export class BattleEngine {
       };
     }
     const heavy = u.size >= 4 ? 1.4 : u.size === 2 ? 1.12 : 1;
-    if (u.sprite === "defaultWarrior" || u.sprite === "kaelEarly" || u.sprite === "aldric" || u.sprite === "defaultLancer" || u.sprite === "lancer" || u.sprite === "sandoval" || u.sprite === "conjurer" || u.sprite === "malrec" || u.size >= 4) {
+    if (u.sprite === "defaultWarrior" || u.sprite === "kaelEarly" || u.sprite === "aldric" || u.sprite === "defaultLancer" || u.sprite === "lancer" || u.sprite === "sandoval" || u.sprite === "conjurer" || u.sprite === "malrec" || u.sprite === "salazar" || u.size >= 4) {
       return { bob: 0, sway: 0, breath: 0 };
     }
     const bob = Math.sin(t * 1.55) * (1.15 * heavy);
@@ -10962,7 +10987,13 @@ export class BattleEngine {
       this.active &&
       (((this.active.type === "spell" || this.active.type === "heal") && this.active.att === u.id && !(this.active.type === "spell" && this.active.spellKind === "tendrilSwipe")) ||
         (this.active.type === "windup" && (this.active.pose === "cast" || this.active.pose === "specialAttack") && this.active.id === u.id));
-    const castPool = neeraArrowSkill
+    const healing =
+      !!this.active &&
+      (((this.active.type === "spell" || this.active.type === "heal") && this.active.att === u.id && isSupportCast(this.active)) ||
+        (this.active.type === "windup" && this.active.id === u.id && !!this.active.heal));
+    const castPool = healing && this.art.castsHeal[u.sprite]
+      ? this.art.castsHeal[u.sprite]
+      : neeraArrowSkill
       ? faceRight
         ? this.art.attacks2[u.sprite]
         : (this.art.attacks2Left[u.sprite] ?? this.art.attacks2[u.sprite])
@@ -11194,6 +11225,14 @@ export class BattleEngine {
       h = img.naturalHeight * jacarePerPixel;
       w = img.naturalWidth * jacarePerPixel;
     }
+    // Salazar V2: every sheet is rescaled onto one shared 416x613 canvas (salazar-final/), idle
+    // body 480 px head to feet, feet 8 px above the bottom. Same 1.53-cell human height.
+    const isSalazarV2 = u.sprite === "salazar";
+    const salazarV2PerPixel = cell * 1.53 / 480;
+    if (isSalazarV2 && img) {
+      h = img.naturalHeight * salazarV2PerPixel;
+      w = img.naturalWidth * salazarV2PerPixel;
+    }
     // The cast cut's own content also sits higher inside its canvas than idle/attack's does
     // (feet reach only ~87% of the way down vs idle's ~99%) — without this, boosting h above
     // would float the feet even further off the ground than they already subtly are. Shifts
@@ -11203,7 +11242,7 @@ export class BattleEngine {
     // — same fix, smaller correction.
     // Milícia V2's feet sit 64 px above his canvas bottom (room for the death fall); Neera V2's
     // sit 3 px above hers with no offset, so shift him down by the 61 px difference.
-    const footOffset = neeraV2Sheet ? 0 : isMiliciaV2 ? 61 * miliciaV2PerPixel : u.sprite === "apparition" ? 34 * apparitionPerPixel : u.sprite === "jacare" ? 13 * jacarePerPixel : isCultistV2Casting
+    const footOffset = neeraV2Sheet ? 0 : isMiliciaV2 ? 61 * miliciaV2PerPixel : isSalazarV2 ? 8 * salazarV2PerPixel : u.sprite === "apparition" ? 34 * apparitionPerPixel : u.sprite === "jacare" ? 13 * jacarePerPixel : isCultistV2Casting
       ? h * 0.127
       : isKaelFinalAttacking
         ? h * 0.025
@@ -11222,7 +11261,7 @@ export class BattleEngine {
     const footY = s >= 4 ? tile * 0.9 : cell * 0.42;
     // Dedicated left/right walk+attack cuts already face the enemy, so flipping
     // them would put the spear/staff on the wrong side. Idle still flips.
-    const dirActionWalk = (u.sprite === "aldric" || u.sprite === "defaultLancer" || u.sprite === "lancer" || u.sprite === "sandoval" || u.sprite === "theButcher" || u.sprite === "familiar2" || u.sprite === "familiar3" || u.sprite === "cultist-v2" || u.sprite === "militia-v2" || u.sprite === "cobalt-blue-deer" || u.sprite === "neera") && moving;
+    const dirActionWalk = (u.sprite === "aldric" || u.sprite === "defaultLancer" || u.sprite === "lancer" || u.sprite === "sandoval" || u.sprite === "theButcher" || u.sprite === "familiar2" || u.sprite === "familiar3" || u.sprite === "cultist-v2" || u.sprite === "militia-v2" || u.sprite === "salazar" || u.sprite === "cobalt-blue-deer" || u.sprite === "neera") && moving;
     // Suppress mirroring only when the frame actually came from an authored left cut.
     // Having a left ATT cut must not suppress the mirror of casts, counters or off-hand art.
     const dirActionAttack = atk != null && !!frames && (
@@ -11267,10 +11306,17 @@ export class BattleEngine {
       u.sprite === "lancer" ||
       u.sprite === "sandoval" ||
       u.sprite === "conjurer" ||
-      u.sprite === "malrec";
+      u.sprite === "malrec" ||
+      u.sprite === "salazar";
     const scaleX = noBreathScale ? flip : flip * (1 - breath * 0.22);
     const scaleY = noBreathScale ? 1 : 1 + breath;
     return { img, w, h, footY, bob, sway, breath, lift, scaleX, scaleY, footOffset };
+  }
+
+  /** The cast-pose frames for this sprite: its healing sheet for a spell that deals no damage
+   * (when it has one), else its cast sheet, else its attack swing. */
+  private castFrames(sprite: SpriteId, heal: boolean): HTMLImageElement[] | undefined {
+    return (heal ? this.art.castsHeal[sprite] : undefined) ?? this.art.casts[sprite] ?? this.art.attacks[sprite];
   }
 
   /** A monster's own attack cue (audio.ts MONSTER_SFX). When this swing plays its second attack
