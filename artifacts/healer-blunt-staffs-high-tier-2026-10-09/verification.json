@@ -1,0 +1,229 @@
+{
+  "rendered": [
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-01-freixo.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-02-carvalho.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-03-bronze.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-04-aco.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-05-ebano.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-06-ferro-gravado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-10-carvalho-blindado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-07-prata.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-11-ferro-rivetado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-12-bronze-martelado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-08-aco-negro.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-13-aco-canelado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-14-ebano-encouracado.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-09-mestre.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-15-prata-forjada.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-16-aco-damasco.png",
+      "width": 1254,
+      "height": 1254
+    },
+    {
+      "src": "/game/icons/weapons/bastao-curandeiro-17-mestre-relicario.png",
+      "width": 1254,
+      "height": 1254
+    }
+  ],
+  "alpha": [
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-01-freixo.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1466000,
+      "zeroAlphaPercent": 93.23,
+      "visiblePixels": 94304
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-02-carvalho.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1467272,
+      "zeroAlphaPercent": 93.31,
+      "visiblePixels": 89736
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-03-bronze.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1480176,
+      "zeroAlphaPercent": 94.13,
+      "visiblePixels": 80507
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-04-aco.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1432037,
+      "zeroAlphaPercent": 91.07,
+      "visiblePixels": 126707
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-05-ebano.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1455862,
+      "zeroAlphaPercent": 92.58,
+      "visiblePixels": 103218
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-06-ferro-gravado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1478038,
+      "zeroAlphaPercent": 93.99,
+      "visiblePixels": 81873
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-10-carvalho-blindado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1421838,
+      "zeroAlphaPercent": 90.42,
+      "visiblePixels": 136974
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-07-prata.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1466246,
+      "zeroAlphaPercent": 93.24,
+      "visiblePixels": 93041
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-11-ferro-rivetado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1428911,
+      "zeroAlphaPercent": 90.87,
+      "visiblePixels": 125738
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-12-bronze-martelado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1426290,
+      "zeroAlphaPercent": 90.7,
+      "visiblePixels": 133013
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-08-aco-negro.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1457991,
+      "zeroAlphaPercent": 92.72,
+      "visiblePixels": 100158
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-13-aco-canelado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1416596,
+      "zeroAlphaPercent": 90.08,
+      "visiblePixels": 143025
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-14-ebano-encouracado.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1409749,
+      "zeroAlphaPercent": 89.65,
+      "visiblePixels": 147635
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-09-mestre.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1457176,
+      "zeroAlphaPercent": 92.67,
+      "visiblePixels": 101214
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-15-prata-forjada.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1410613,
+      "zeroAlphaPercent": 89.7,
+      "visiblePixels": 145731
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-16-aco-damasco.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1426607,
+      "zeroAlphaPercent": 90.72,
+      "visiblePixels": 133942
+    },
+    {
+      "file": "/game/icons/weapons/bastao-curandeiro-17-mestre-relicario.png",
+      "width": 1254,
+      "height": 1254,
+      "zeroAlphaPixels": 1407564,
+      "zeroAlphaPercent": 89.51,
+      "visiblePixels": 151440
+    }
+  ],
+  "errors": [],
+  "noServerStarted": true
+}

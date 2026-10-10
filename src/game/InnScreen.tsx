@@ -13,6 +13,7 @@ import { fullness, INN_MEAL_PRICE } from "./hunger";
 import { HungerBar } from "./HungerBar";
 import { questProgress, questStatus, questsFor } from "./quests";
 import { useGamePreferences } from "./gamePreferences";
+import { weaponMagicSummary } from "./data";
 
 const BAG_ICON = pouchIcon(null);
 export const HEALER_CAST_PRICE = 5;
@@ -1190,8 +1191,9 @@ function SmithPanel({
                       <span className="flex-1 text-sm min-w-0">
                         {w.name}
                         <span className="block text-[11px] text-muted tabular-nums">
-                          {weaponDiceLabel(w.id)} · {weaponRangeLabel(w.id)} · {w.price} Gold
+                          {w.recommendedLevel != null && `Nv. ${w.recommendedLevel} · `}{weaponDiceLabel(w.id)} · {weaponRangeLabel(w.id)} · {w.price} Gold
                         </span>
+                        {w.magic && <span className="block text-[11px] text-muted">{weaponMagicSummary(w)}</span>}
                         <span className="block text-[10px] uppercase tracking-wide text-muted">Mão principal</span>
                         {w.bonusClass && isPlayableClassForDisplay(w.bonusClass) && (
                           <span

@@ -5,6 +5,7 @@ import { drawProvokeVFX, PROVOKE_FX_DURATION } from "./gfx/ProvokeVFX";
 import { dexAccuracy, dexEscapeChance } from "./dexterity";
 import { equippedWeaponType, trainedWeaponSkills, weaponTypesForClass, weaponModifiers, isWeaponAbility } from "./weaponSkills";
 import { elementalDamage, spellElement, sumResistances } from "./resistances";
+import { staffElementalDamage, staffLifeSteal, type MageStaffMagic } from "../ember/mageStaffMagic";
 import { AFFINITY_HEROES, affinityBonus, affinityScore, changeAffinity, cleanAffinityScores, type AffinityHero } from "./affinity";
 import { tacticalGridStyleQuiet as tacticalGridStyle, GRID_MOVE, GRID_ROUTE, GRID_ALLY, GRID_ENEMY, GRID_ENEMY_TARGET, GRID_ENEMY_GLOW, GRID_OFFHAND_TARGET } from "./tacticalGrid";
 import { isHexGroundVariant, requestSpriteArt } from "./assets";
@@ -911,7 +912,9 @@ function spawnUnit(spawn: Mission["playerSpawns"][number], side: Unit["side"], i
   const diseased = side === "player" && roster?.heroDiseases?.[spawn.name] === true;
   const poisoned = side === "player" && !!roster?.heroPoisons?.[spawn.name];
   const diseaseKeep = diseased ? 1 - DISEASE.statPenalty : 1;
-  const weapon = side === "player" ? (roster?.weapons?.[spawn.name] ?? { id: starterWeaponFor(classId), enh: 0 }) : null;
+  let weapon = side === "player" ? (roster?.weapons?.[spawn.name] ?? { id: starterWeaponFor(classId), enh: 0 }) : null;
+  // Preserve owned items in old saves; only incompatible live wielding uses the class starter.
+  if (weapon?.id && !WEAPONS[weapon.id]?.usableBy.includes(classId)) weapon = { id: starterWeaponFor(classId), enh: 0 };
   // Range is a weapon property (D&D-weapon-style), not a class stat — falls back to the
   // class baseline only when there's no equipped weapon to read it from (e.g. enemies).
   const weaponDef = weapon?.id ? WEAPONS[weapon.id] : null;
@@ -923,7 +926,7 @@ function spawnUnit(spawn: Mission["playerSpawns"][number], side: Unit["side"], i
   const gear: Partial<Record<EquipSlot, string>> = side === "player" ? { ...(roster?.equipment?.[spawn.name] ?? {}) } : {};
   // Worn gear contributes to every core combat stat, not just DEF — kept in sync with
   // reapplyGear below, which redoes this same math after a slot changes mid-battle.
-  const gearBonus = gearStatBonus(Object.values(gear));
+  const gearBonus = gearStatBonus(Object.values(gear), weapon?.id, classId);
   const hpCap = roster?.hp[spawn.name];
   const maxHp = Math.round((st.hp + point("hp") + gearBonus.hp) * hungerKeep);
   const hp = hpCap != null && hpCap > 0 ? Math.min(maxHp, hpCap) : maxHp;
@@ -2220,7 +2223,16 @@ export class BattleEngine {
         unit.weaponSkills = trainedWeaponSkills(this.heroSkills, unit.name, unit.classId); unit.healingSkill = skillValue(this.heroSkills, unit.name, "healing");
       }
       if (!saved.resistances && unit.side === "player" && !unit.summoned) {
-        unit.resistances = sumResistances(CLASSES[unit.classId]?.resistances, gearStatBonus(Object.values(unit.gear)).resistances, skillResistances(this.heroSkills, unit.name));
+        unit.resistances = sumResistances(CLASSES[unit.classId]?.resistances, gearStatBonus(Object.values(unit.gear), unit.weaponId, unit.classId).resistances, skillResistances(this.heroSkills, unit.name));
+      }
+      const staff = unit.weaponId ? WEAPONS[unit.weaponId] : undefined;
+      if (staff?.magic && unit.side === "player" && !unit.summoned) {
+        if (!staff.usableBy.includes(unit.classId)) {
+          unit.weaponId = starterWeaponFor(unit.classId); unit.weaponEnh = 0;
+          const starter = unit.weaponId ? WEAPONS[unit.weaponId] : undefined;
+          unit.minRange = starter?.minRange ?? 1; unit.maxRange = starter?.maxRange ?? 1;
+        }
+        this.reapplyGear(unit);
       }
       return unit;
     });
@@ -3074,6 +3086,7 @@ export class BattleEngine {
           : rollDamage(this.affinityUnit(actor), this.affinityUnit(target), attTile, defTile, this.rng, !(a.stage === "hit" && a.spellKind === "shieldBash"));
         if (target.side === "enemy" && !(a.stage === "hit" && a.spellKind === "shieldBash")) this.trainWeapon(actor, equippedWeaponType(actor, !!dice), target.level);
         const usesArcane = arcaneBolt && !this.offHandStrike(a) && (a.stage === "counterHit" || !a.spellKind);
+        const usesStaffElement = !!this.staffMagic(actor) && !dice && (a.stage === "counterHit" || !a.spellKind);
         if (!hit.landed) {
           this.spawnMiss(target);
           this.pushLog(`${actor.name} atacou ${target.name}: Missed`);
@@ -3120,12 +3133,16 @@ export class BattleEngine {
             target.sleepTurns = 0;
           }
           hit.dmg = Math.max(1, Math.floor(hit.dmg * this.zoneDamageMul(target)));
-          if (usesArcane) {
-            hit.dmg = Math.floor(elementalDamage(hit.dmg, target.resistances?.arcane ?? 0, this.affinityUnit(actor).mag));
-            this.trainResistance(target, "arcane", actor.level);
+          if (usesArcane || usesStaffElement) {
+            const magic = !dice ? this.staffMagic(actor) : undefined;
+            const element = magic?.attackElement ?? "arcane";
+            hit.dmg = Math.floor(elementalDamage(staffElementalDamage(hit.dmg, magic, element), target.resistances?.[element] ?? 0, this.affinityUnit(actor).mag));
+            this.trainResistance(target, element, actor.level);
           }
           if (a.stage === "hit" && a.spellKind && hit.dmg > 0) this.adjustAffinity(actor, target, -1);
+          const actualStaffDamage = Math.min(target.hp, hit.dmg);
           target.hp = Math.max(0, target.hp - hit.dmg);
+          if (target.side !== actor.side && !dice) this.staffDrain(actor, actualStaffDamage);
           this.noteDamageEnmity(actor, target, hit.dmg, "weapon");
           target.flash = 1;
           target.hitAt = this.time;
@@ -3557,9 +3574,11 @@ export class BattleEngine {
         }
         dmg = Math.max(1, Math.floor(dmg * this.zoneDamageMul(foe)));
         const element = spellElement(a.spellKind);
-        if (element) dmg = Math.floor(elementalDamage(dmg, foe.resistances?.[element] ?? 0, this.affinityUnit(att).mag));
+        if (element) dmg = Math.floor(elementalDamage(staffElementalDamage(dmg, this.staffMagic(att), element), foe.resistances?.[element] ?? 0, this.affinityUnit(att).mag));
         if (dmg > 0 && a.spellKind) this.adjustAffinity(att, foe, -1);
+        const actualStaffDamage = Math.min(foe.hp, dmg);
         foe.hp = Math.max(0, foe.hp - dmg);
+        if (element && foe.side !== att.side) this.staffDrain(att, actualStaffDamage);
         if (a.spellKind === "turnUndead" && foe.hp > 0) {
           foe.fearTurns = Math.max(foe.fearTurns ?? 0, TURN_UNDEAD.fearTurns);
           foe.fearSourceId = att.id;
@@ -4201,8 +4220,11 @@ export class BattleEngine {
         });
         if (!u.alive || !isStandingInZone) continue;
         const base = Math.floor(Math.floor(zone.casterMag / 2) * zone.damageMul) + rollDice(zone.damageDice, zone.damageFaces, 0, this.rng);
-        const dmg = Math.floor(elementalDamage(base, u.resistances?.ice ?? 0, zone.casterMag));
+        const zoneCaster = this.units.find(candidate => candidate.id === zone.casterId);
+        const dmg = Math.floor(elementalDamage(staffElementalDamage(base, zoneCaster ? this.staffMagic(zoneCaster) : undefined, "ice"), u.resistances?.ice ?? 0, zone.casterMag));
+        const actualStaffDamage = Math.min(u.hp, dmg);
         u.hp = Math.max(0, u.hp - dmg);
+        if (zoneCaster && zoneCaster.side !== u.side) this.staffDrain(zoneCaster, actualStaffDamage);
         u.flash = 1;
         u.hitAt = this.time;
         if (dmg > 0) this.spawnHit(u, dmg, false);
@@ -4220,6 +4242,7 @@ export class BattleEngine {
     // paladin's own turn opens at or below the "badly wounded" line with a tier-3 use still
     // banked, it heals itself and spends the use. classId-gated explicitly, since tierUses
     // hands out tier-3 slots to every class, not just paladin.
+    if (u.alive) this.restoreStaffHp(u, Math.min(this.staffMagic(u)?.regeneration ?? 0, u.maxHp - u.hp));
     if (u.alive && u.classId === "paladin" && u.hp / u.maxHp <= SECOND_WIND.badlyWoundedPct && this.tierRemaining(u, "secondWind") > 0) {
       this.spendTier(u, "secondWind");
       const heal = Math.min(u.maxHp - u.hp, Math.floor(secondWindPct(u.level) * u.dex));
@@ -4284,6 +4307,25 @@ export class BattleEngine {
 
   private healingPower(actor: Unit, base: number): number {
     return healingAmount(base, skillValue(this.heroSkills, actor.name, "healing"));
+  }
+
+  private staffMagic(unit: Unit): MageStaffMagic | undefined {
+    const weapon = unit.weaponId ? WEAPONS[unit.weaponId] : undefined;
+    return weapon?.usableBy.includes(unit.classId) ? weapon.magic : undefined;
+  }
+
+  private restoreStaffHp(unit: Unit, amount: number): void {
+    if (!unit.alive || amount <= 0) return;
+    const heal = Math.min(unit.maxHp - unit.hp, Math.floor(amount));
+    if (heal <= 0) return;
+    unit.hp += heal;
+    unit.healGlow = 1; unit.healGlowKind = "holyMinor";
+    this.emitParticle({ x: unit.drawX, y: unit.drawY - 0.35, vx: 0, vy: -0.18, life: 0, max: 1.4, size: 1, color: "#c5dfa6", text: `+${heal}`, kind: "text", frame: 0 });
+    this.pushLog(`${unit.name}: ${WEAPONS[unit.weaponId!]!.name} recuperou ${heal} HP.`);
+  }
+
+  private staffDrain(unit: Unit, actualDamage: number): void {
+    this.restoreStaffHp(unit, staffLifeSteal(actualDamage, unit.maxHp - unit.hp, this.staffMagic(unit)));
   }
 
   private trainHealing(actor: Unit): void {
@@ -8159,7 +8201,7 @@ export class BattleEngine {
    * stay in sync. */
   private reapplyGear(u: Unit): void {
     const base = statsFor(u.classId, u.level);
-    const bonus = gearStatBonus(Object.values(u.gear));
+    const bonus = gearStatBonus(Object.values(u.gear), u.weaponId, u.classId);
     if (u.side === "player" && !u.summoned) u.weaponSkills = trainedWeaponSkills(this.heroSkills, u.name, u.classId);
     // Re-applied fresh every time rather than mutated once (unlike crippled) — see
     // Unit.hungerPenaltyPct's own doc comment.
@@ -8208,7 +8250,7 @@ export class BattleEngine {
       return true;
     }
     const def = WEAPONS[weaponId];
-    if (!def) return false;
+    if (!def || !def.usableBy.includes(u.classId)) return false;
 
     for (const other of this.units) {
       if (other !== u && other.side === "player" && other.weaponId === weaponId) {

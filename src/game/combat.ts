@@ -3,6 +3,8 @@ import { equippedWeaponType, weaponModifiers } from "./weaponSkills.ts";
 import { EQUIPMENT, isProjectile, rollDice, TERRAIN, WEAPONS } from "./data.ts";
 import { canHitFrom, hexDist, hexNeighbors } from "./pathfinding.ts";
 import type { Forecast, TerrainId, Unit } from "./types";
+import { elementalDamage } from "./resistances.ts";
+import { staffElementalDamage } from "../ember/mageStaffMagic.ts";
 
 /** Two adjacent hexes behind the defender's board heading, independent of camera rotation. */
 export function isRearAttack(attacker: Unit, defender: Unit): boolean {
@@ -125,7 +127,12 @@ export function previewDamage(
     : definition ? definition.dice * (definition.faces + 1) / 2 * mastery.damage + definition.bonus + attacker.weaponEnh : 0;
   const hitChance = useWeaponSkill ? dexAccuracy(mastery.accuracy + (rear ? 10 : 0), defender.dex ?? 0) : 100;
   const raw = powerOf(attacker) + weapon + b.atk - protOf(attacker, defender) - b.def;
-  const dmg = Math.max(1, Math.floor(Math.max(1, raw) * (offHand ? 1 : weaponClassBonusMul(attacker)) * (rear ? 1.1 : 1)));
+  let dmg = Math.max(1, Math.floor(Math.max(1, raw) * (offHand ? 1 : weaponClassBonusMul(attacker)) * (rear ? 1.1 : 1)));
+  const magic = !offHand && definition?.usableBy.includes(attacker.classId) ? definition.magic : undefined;
+  if (magic && useWeaponSkill) {
+    const element = magic.attackElement ?? "arcane";
+    dmg = Math.floor(elementalDamage(staffElementalDamage(dmg, magic, element), defender.resistances?.[element] ?? 0, attacker.mag));
+  }
   return { dmg, hitChance };
 }
 

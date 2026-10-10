@@ -979,6 +979,10 @@ export interface UnitPublic {
 }
 
 export interface WeaponDef {
+  /** Name-specific passive magic on the earlier mage staff family. */
+  magic?: import("../ember/mageStaffMagic").MageStaffMagic;
+  /** Suggested campaign level for an authored weapon series; does not restrict equipping. */
+  recommendedLevel?: number;
   id: string;
   weaponType: WeaponType;
   name: string;

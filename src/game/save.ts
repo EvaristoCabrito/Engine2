@@ -572,7 +572,7 @@ function starterEquipment(): { weapons: Record<string, number>; equipped: Record
   const equipped: Record<string, string> = {};
   const equipment: Record<string, Partial<Record<EquipSlot, string>>> = {};
   for (const hero of HEROES) {
-    const id = hero === "Neera" ? "arco-composto" : hero === "Salazar" ? "cajado-da-galhada" : starterWeaponFor(HERO_BASE_CLASS[hero]);
+    const id = hero === "Neera" ? "arco-composto" : starterWeaponFor(HERO_BASE_CLASS[hero]);
     if (!id) continue;
     weapons[id] = 0;
     equipped[hero] = id;
@@ -706,6 +706,16 @@ function migrateRecord(raw: Record<string, unknown>, muted: boolean): SaveData {
   const weapons = cleanWeapons(rawWeapons);
   const equipped = cleanEquipped(raw.equipped, weapons);
   const equipment = cleanEquipment(rawEquipment);
+  // The earlier ornate Healer staffs are now mage-only. Retain the original owned item
+  // and its enhancement, and give an incompatible wearer their free class starter.
+  const staffPromotions = cleanPromotions(raw.promotions);
+  for (const [hero, weaponId] of Object.entries(equipped)) {
+    const weapon = WEAPONS[weaponId];
+    const classId = staffPromotions[hero] ?? ({ ...HERO_BASE_CLASS, ...LATE_HERO_BASE_CLASS } as Record<string, ClassId>)[hero];
+    if (!weapon?.magic || !classId || weapon.usableBy.includes(classId)) continue;
+    const starter = starterWeaponFor(classId);
+    if (starter) { weapons[starter] = weapons[starter] ?? 0; equipped[hero] = starter; }
+  }
   // v17 removes an accidentally seeded Besta Leve from untouched new-game saves, including
   // saves that were already migrated by v15 before the cleanup covered the current version.
   // It is found or bought during play, never granted as starting equipment.
@@ -726,7 +736,7 @@ function migrateRecord(raw: Record<string, unknown>, muted: boolean): SaveData {
   // class's free starter weapon, same as a brand new save already does.
   for (const hero of HEROES) {
     if (equipped[hero]) continue;
-    const id = hero === "Salazar" ? "cajado-da-galhada" : starterWeaponFor(HERO_BASE_CLASS[hero]);
+    const id = starterWeaponFor(HERO_BASE_CLASS[hero]);
     if (!id) continue;
     weapons[id] = weapons[id] ?? 0;
     equipped[hero] = id;

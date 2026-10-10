@@ -8,6 +8,8 @@ import type { Bag, ClassDef, ClassId, DecorationDef, DecorationPlacement, Equipm
 // `node --test` reach anything that imports this file — the fog tests included.
 // Vite and TypeScript both accept it, so it costs nothing in the app build.
 import musicManifest from "./music-manifest.json" with { type: "json" };
+import { MAGE_STAFF_MAGIC } from "./mageStaffMagic.ts";
+import { HEALER_BLUNT_STAFF_WEAPONS } from "./healerBluntStaffs.ts";
 
 /**
  * Board size limits, enforced by the editor's `resize` (see GameApp's map editor).
@@ -3003,7 +3005,8 @@ const RANGED_MASTERWORK: RangeSpec = { minRange: 2, maxRange: 5, ranged: true };
 // a pure stat-twin of the first lap — a small price premium comes with it.
 function wpn(weaponType: WeaponType, id: string, name: string, usableBy: ClassId[], rung: number, range: RangeSpec = MELEE, bonusClass?: ClassId, extraBonus = 0): WeaponDef {
   const r = WEAPON_RUNGS[rung - 1]!;
-  return { id, weaponType, name, usableBy, dice: r.dice, faces: r.faces, bonus: r.bonus + extraBonus, price: r.price + extraBonus * 60, minRange: range.minRange, maxRange: range.maxRange, ranged: range.ranged, twoHanded: range.twoHanded, bonusClass };
+  const magic = MAGE_STAFF_MAGIC[id];
+  return { id, weaponType, name, usableBy: magic ? ARCANE_ALL : usableBy, dice: r.dice, faces: r.faces, bonus: r.bonus + extraBonus, price: r.price + extraBonus * 60, minRange: range.minRange, maxRange: range.maxRange, ranged: range.ranged, twoHanded: range.twoHanded, bonusClass, magic };
 }
 
 const ARCANE_MAGE_TRIO: ClassId[] = ["mage", "voss", "elementalist", "warlock"];
@@ -3055,7 +3058,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   "cajado-do-arcano-puro": wpn("staff", "cajado-do-arcano-puro", "Cajado do Arcano Puro", ARCANE_ALL, 8, REACH, "sorcerer", 1),
   "cajado-da-praga": wpn("staff", "cajado-da-praga", "Cajado da Praga", ARCANE_ALL, 9, REACH, "necromancer", 1),
 
-  // Curandeiro / Bispo / Clérigo — cajados de cura, pool compartilhado.
+  // Earlier ornate healer staffs are now mage-only through MAGE_STAFF_MAGIC in wpn.
   // Progressão contígua 1D4→2D12, sem pular tier — cada rung do 1 ao 9 tem um cajado.
   "cajado-da-renovacao": wpn("staff", "cajado-da-renovacao", "Cajado da Renovação", HEAL_TRIO, 2, MELEE, undefined, 1),
   "cajado-da-esperanca": wpn("staff", "cajado-da-esperanca", "Cajado da Esperança", HEAL_TRIO, 2),
@@ -3176,6 +3179,7 @@ export const WEAPONS: Record<string, WeaponDef> = {
   "espada-do-peregrino-caido": wpn("sword", "espada-do-peregrino-caido", "Espada do Peregrino Caído", WARRIOR_TRIO, 4, MELEE, undefined, 2),
   "espada-do-coracao-sangrento": wpn("sword", "espada-do-coracao-sangrento", "Espada do Coração Sangrento", WARRIOR_TRIO, 5, MELEE, undefined, 2),
   "espada-serrilhada": wpn("sword", "espada-serrilhada", "Espada Serrilhada", WARRIOR_TRIO, 6, MELEE, undefined, 2),
+  ...HEALER_BLUNT_STAFF_WEAPONS,
 };
 
 export function weaponIcon(id: string): string {
@@ -3652,8 +3656,13 @@ export function equipmentTypeSlotName(item: EquipmentDef): string {
  *
  * EquipmentDef already carries hp/atk/mag/def/dex/mov, and every one of them is applied to
  * combat (see spawnUnit and reapplyGear in engine.ts). */
-export function gearStatBonus(itemIds: readonly (string | null | undefined)[]): { hp: number; atk: number; mag: number; def: number; dex: number; mov: number; resistances: Resistances } {
+export function gearStatBonus(itemIds: readonly (string | null | undefined)[], weaponId?: string | null, classId?: ClassId): { hp: number; atk: number; mag: number; def: number; dex: number; mov: number; resistances: Resistances } {
   const total = { hp: 0, atk: 0, mag: 0, def: 0, dex: 0, mov: 0, resistances: {} as Resistances };
+  const weapon = weaponId ? WEAPONS[weaponId] : undefined;
+  const magic = weapon && (!classId || weapon.usableBy.includes(classId)) ? weapon.magic : undefined;
+  total.mag += magic?.magBonus ?? 0;
+  total.dex += magic?.dexBonus ?? 0;
+  total.resistances = sumResistances(total.resistances, magic?.resistances);
   for (const id of itemIds) {
     if (!id) continue;
     const it = EQUIPMENT[id];
@@ -3705,6 +3714,9 @@ export function equipmentTooltip(it: EquipmentDef): string {
 
 export function weaponTooltip(w: WeaponDef, enh = 0): string {
   const lines = [`${w.name}${enh > 0 ? ` +${enh}` : ""}`, `${weaponDiceLabel(w.id)} · ${weaponRangeLabel(w.id)}`, "Espaço: Mão principal"];
+  const magic = weaponMagicSummary(w);
+  if (magic) lines.push(magic);
+  if (w.recommendedLevel != null) lines.push(`Nível recomendado: ${w.recommendedLevel}`);
   if (w.twoHanded) lines.push("Duas mãos");
   if (w.ranged) lines.push("À distância");
   const usableByPlayable = w.usableBy?.filter(isPlayableClassForDisplay) ?? [];
@@ -3714,6 +3726,25 @@ export function weaponTooltip(w: WeaponDef, enh = 0): string {
   if (w.bonusClass && isPlayableClassForDisplay(w.bonusClass)) lines.push(`+10% dano · ${CLASSES[w.bonusClass]?.name ?? w.bonusClass}`);
   if (w.price) lines.push(`${w.price} Gold`);
   return lines.join("\n");
+}
+
+/** Actual equipped passives, shared by the blacksmith, inventory and battle tooltips. */
+export function weaponMagicSummary(w: WeaponDef): string {
+  const magic = w.magic;
+  if (!magic) return "";
+  const parts: string[] = [];
+  if (magic.attackElement) parts.push(`Ataque ${RESISTANCE_LABELS[magic.attackElement]}`);
+  if (magic.magBonus) parts.push(`+${magic.magBonus} MAG`);
+  if (magic.dexBonus) parts.push(`+${magic.dexBonus} DEX`);
+  if (magic.regeneration) parts.push(`Regeneração: ${magic.regeneration} HP/turno`);
+  if (magic.lifeStealPct) parts.push(`Dreno: ${magic.lifeStealPct}% do dano em HP`);
+  for (const element of RESISTANCE_ELEMENTS) {
+    const resistance = magic.resistances?.[element] ?? 0;
+    const damage = magic.elementalBonusPct?.[element] ?? 0;
+    if (resistance) parts.push(`+${resistance}% ${RESISTANCE_LABELS[element]} Resist`);
+    if (damage) parts.push(`+${damage}% dano ${RESISTANCE_LABELS[element]}`);
+  }
+  return parts.join(" · ");
 }
 
 export function potionTooltip(kind: PotionId): string {

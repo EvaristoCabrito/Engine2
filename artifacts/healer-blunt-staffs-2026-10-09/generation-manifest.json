@@ -1,0 +1,65 @@
+{
+  "tool": "built-in image_gen",
+  "transparent_background": true,
+  "referenceImages": [
+    "C:/Users/evari/Downloads/gHjsZ.jpg",
+    "C:/Users/evari/Downloads/grok-image-a403750e-a2cd-4285-8ffe-e8acd1aec524.jpg",
+    "C:/Users/evari/Downloads/Xr3Lu.jpg"
+  ],
+  "entries": [
+    {
+      "tier": 1,
+      "id": "bastao-curandeiro-01-freixo",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-4612239b-0fa1-43d3-b8b5-f4d3e23b18b5.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic RPG inventory weapon icon with true RGBA alpha transparency. Create ONE isolated beginner Healer blunt quarterstaff, an unadorned straight weathered dark brown ash wood shaft, rounded blunt flat endcaps, sparse aged iron collars at each end and two slim collars around a simple worn brown leather middle grip. Match gritty realistic medieval workmanship and restrained natural dark wood and aged metal as in the healer staff references. No person or hand, no scenery, no floor, no cast shadow, no glow, no lettering, no checkerboard baked into the image. Full staff entirely visible, centered on a square transparent canvas, angled diagonally from lower left to upper right so it occupies about 84 percent of canvas diagonal, enough thickness to read in an inventory thumbnail. Staff has symmetrical cylindrical blunt ends, not a mace, spear or magical orb. Sharp real photographic texture, diffuse natural studio light from upper left. This is the simplest entry-level staff in a consistent level 1 to 30 family."
+    },
+    {
+      "tier": 2,
+      "id": "bastao-curandeiro-02-carvalho",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-4b297e22-628c-4e36-8ffc-a3af53ee1203.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, straight cylindrical full length visible, rounded blunt ends, diagonal lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal, no floor, shadows, text, hands, people, magical glow or background. Actual true alpha transparency, no baked checkerboard. Real photography of hand-forged weathered metal and dark natural wood, restrained browns and aged metal, soft studio light upper left, crisp realistic microtexture matching gritty photographic healer references. Both ends must be blunt cylindrical caps, no orb, spear, spikes or axe. Consistent slim long staff silhouette and central grip, about 180cm long and 4cm thick. Tier 2 of 9, staff of reinforced oak: dark brown oak shaft, worn brown leather central grip, blunt iron endcaps, four heavy aged iron ferrule bands on each half near the ends. Plain functional craftsmanship, a modest step above a simple wooden beginner staff."
+    },
+    {
+      "tier": 3,
+      "id": "bastao-curandeiro-03-bronze",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-945113d4-c3ac-4f2a-9a8f-98766ab6bfff.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, straight cylindrical full length visible, rounded blunt ends, diagonal lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal, no floor, shadows, text, hands, people, magical glow or background. Actual true alpha transparency, no baked checkerboard. Real photography of hand-forged weathered metal and dark natural wood, restrained browns and aged metal, soft studio light upper left, crisp realistic microtexture matching gritty photographic healer references. Both ends must be blunt cylindrical caps, no orb, spear, spikes or axe. Consistent slim long staff silhouette and central grip, about 180cm long and 4cm thick. Tier 3 of 9, bronze-bound healer staff: rich dark walnut shaft, aged bronze blunt endcaps and six bronze ferrule rings distributed along the shaft, tightly braided worn leather center grip. Restrained patinated bronze, no bright gold; stronger crafted equipment with still much exposed wood."
+    },
+    {
+      "tier": 4,
+      "id": "bastao-curandeiro-04-aco",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-ccccae61-1cbc-4ccf-b05b-c4edb0379667.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, straight cylindrical full length visible, rounded blunt ends, diagonal lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal, no floor, shadows, text, hands, people, magical glow or background. Actual true alpha transparency, no baked checkerboard. Real photography of hand-forged weathered metal and dark natural wood, restrained browns and aged metal, soft studio light upper left, crisp realistic microtexture matching gritty photographic healer references. Both ends must be blunt cylindrical caps, no orb, spear, spikes or axe. Consistent slim long staff silhouette and central grip, about 180cm long and 4cm thick. Tier 4 of 9, steel-bound healer staff: dark dense wood, iron-gray forged steel strips reinforcing both halves, broad rounded steel endcaps, paired ring collars, leather grip at middle. Wood remains visible between reinforcement strips. Functional blunt quarterstaff, no sharp edge."
+    },
+    {
+      "tier": 5,
+      "id": "bastao-curandeiro-05-ebano",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-0fa07a11-c2ed-4b08-95bc-f852c74f2f98.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, long straight cylindrical staff, full length visible with rounded blunt cylindrical ends, diagonal from lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal. True alpha transparency, no floor, cast shadow, text, hands, person, scenery, glow, checkerboard or backdrop. Match photographic gritty healer staffs: real dark wood grain, worn brown leather grip, hand-forged aged metal, restrained brown and iron-gray colors. Soft natural studio light upper left, sharp realistic textures, not illustration or cartoon. No mace head, orb, spear, gem or spikes. Slim long symmetrical silhouette, approximately 180cm long and 4cm thick. Tier 5 of 9, ebony-bound blunt staff: dark brown almost black ebony wood shaft, long iron ferrules sleeving each end, modest engraved rings along the exposed dark wood, a central tightly wrapped aged brown leather grip and rounded iron blunt endcaps. A sturdy crafted weapon with a visibly denser finish than earlier oak staffs."
+    },
+    {
+      "tier": 6,
+      "id": "bastao-curandeiro-06-ferro-gravado",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-0b8d8d4f-2185-4dca-8388-78e2f98203e0.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, long straight cylindrical staff, full length visible with rounded blunt cylindrical ends, diagonal from lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal. True alpha transparency, no floor, cast shadow, text, hands, person, scenery, glow, checkerboard or backdrop. Match photographic gritty healer staffs: real dark wood grain, worn brown leather grip, hand-forged aged metal, restrained brown and iron-gray colors. Soft natural studio light upper left, sharp realistic textures, not illustration or cartoon. No mace head, orb, spear, gem or spikes. Slim long symmetrical silhouette, approximately 180cm long and 4cm thick. Tier 6 of 9, engraved iron blunt staff: most of the dark wood shaft sheathed in patterned aged iron sleeves with shallow hammered scrollwork, alternating iron and aged bronze narrow ring bands distributed from end to end, only small wood gaps and a restrained brown leather central grip. Rounded blunt ferrule ends. Match the ornate metal-banded quarterstaff in the healer reference, real functional medieval metalwork."
+    },
+    {
+      "tier": 7,
+      "id": "bastao-curandeiro-07-prata",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-816c4ea1-0177-41bd-8366-30919b8e3fad.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, long straight cylindrical staff, full length visible with rounded blunt cylindrical ends, diagonal from lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal. True alpha transparency, no floor, cast shadow, text, hands, person, scenery, glow, checkerboard or backdrop. Match photographic gritty healer staffs: real dark wood grain, worn brown leather grip, hand-forged aged metal, restrained brown and iron-gray colors. Soft natural studio light upper left, sharp realistic textures, not illustration or cartoon. No mace head, orb, spear, gem or spikes. Slim long symmetrical silhouette, approximately 180cm long and 4cm thick. Tier 7 of 9, aged silver-bound blunt staff: dark walnut core tightly sheathed in engraved iron segments separated by tarnished silver ring collars, slightly broad solid silver-gray blunt endcaps bearing subtle real embossed vine detail, worn dark brown leather middle grip. The silver is aged darkened metal with soft natural highlights, not shiny chrome. Real heavy craftsmanship, restrained photographic finish."
+    },
+    {
+      "tier": 8,
+      "id": "bastao-curandeiro-08-aco-negro",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-86b49062-36be-4522-8464-efc1370bab8b.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, full long cylindrical staff visible with rounded blunt ends, diagonal lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal. True alpha transparency, no floor, cast shadow, text, hands, person, scenery, glow or checkerboard. Gritty real photographic craftsmanship: weathered dark wood and aged metal, leather, restrained iron-gray/brown/bronze, soft natural studio light upper left. Match the healer reference's long thin metal-banded quarterstaff, approximately 180cm long and 4cm thick. NO illustration, cartoon, painted or stylized finish. No mace head, spear, gems, orb or sharp spikes. Tier 8 of 9, dark steel blunt staff: long straight shaft almost entirely sleeved in darkened patterned steel, fine engraved intertwined vine scrollwork on metal sections, repeated raised aged bronze narrow collars dividing the sheath into segments, dark brown braided leather middle grip, solid reinforced cylindrical rounded caps. Heavy functional medieval blacksmith craftsmanship, subtle wear and metal texture, no bright decoration."
+    },
+    {
+      "tier": 9,
+      "id": "bastao-curandeiro-09-mestre",
+      "source": "C:\\Users\\evari\\.codex\\generated_images\\01a122a7-da6f-7e53-aa34-600a906cf712\\exec-82965959-74c7-4f33-9e31-ab6e877d7960.png",
+      "prompt": "Use case: product-mockup. Asset type: photorealistic medieval Healer blunt quarterstaff inventory icon. ONE staff only, full long cylindrical staff visible with rounded blunt ends, diagonal lower left to upper right, centered on square transparent RGBA canvas, occupies 84% of diagonal. True alpha transparency, no floor, cast shadow, text, hands, person, scenery, glow or checkerboard. Gritty real photographic craftsmanship: weathered dark wood and aged metal, leather, restrained iron-gray/brown/bronze, soft natural studio light upper left. Match the healer reference's long thin metal-banded quarterstaff, approximately 180cm long and 4cm thick. NO illustration, cartoon, painted or stylized finish. No mace head, spear, gems, orb or sharp spikes. Tier 9 of 9, level 30 master healer blunt quarterstaff, close to the highly ringed fully metal-banded staff in the healer reference: entire shaft sheathed in worn dark iron and aged bronze engraved spiral segments, many closely repeated narrow bronze collar rings covering both halves, exceptionally fine hammered vines and spiral scrollwork, short dark leather grip seamlessly inset at center, both blunt cylindrical endcaps reinforced with embossed metal, same slim continuous staff silhouette. Highest quality craftsmanship but visibly used, understated metal finish, photorealistic actual material and matching reference lighting."
+    }
+  ]
+}
