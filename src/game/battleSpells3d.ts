@@ -144,9 +144,12 @@ export class BattleSpells3D {
     for (const [requests, sweep] of [[engine.varreduraVfxRequests, true], [engine.cleaveVfxRequests, false]] as const) {
       for (const request of requests.splice(0)) {
         const caster = engine.units.find(u => u.id === request.casterId); if (!caster) continue;
-        const targets = request.targetIds.flatMap(id => { const unit = engine.units.find(u => u.id === id); return unit ? [{ id, position: this.unit(unit, 0.04) }] : []; });
-        if (!targets.length) targets.push(...request.tiles.map(c => ({ id: `tile-${c.x}-${c.y}`, position: this.at(c) })));
-        this.transient.push(sweep ? new VarreduraVFX(root, this.unit(caster, 0.04), targets, 1) : new CleaveSweepVFX(root, this.unit(caster, 0.04), targets, 1));
+        // Ember's z here was only depth for its top-down camera; in 3D the Cleave blade swings at
+        // weapon height through its targets, while Varredura's shockwave runs along the ground.
+        const height = sweep ? 0.04 : 0.7;
+        const targets = request.targetIds.flatMap(id => { const unit = engine.units.find(u => u.id === id); return unit ? [{ id, position: this.unit(unit, height) }] : []; });
+        if (!targets.length) targets.push(...request.tiles.map(c => ({ id: `tile-${c.x}-${c.y}`, position: this.at(c, height) })));
+        this.transient.push(sweep ? new VarreduraVFX(root, this.unit(caster, height), targets, 1) : new CleaveSweepVFX(root, this.unit(caster, height), targets, 1));
       }
     }
     for (let i = this.transient.length - 1; i >= 0; i--) { const fx = this.transient[i]!; fx.update(dt); if (fx.finished) { fx.dispose(); this.transient.splice(i, 1); } }
