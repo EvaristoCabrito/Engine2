@@ -197,12 +197,8 @@ export const DEFAULT_AMBIENT_INTENSITY = 1.4;
 const INDOOR_SUN_INTENSITY = 0.35;
 const INDOOR_AMBIENT_INTENSITY = 0.65;
 
-/** MILESTONE 4 — real post-processing (UnrealBloomPass on the actual rendered scene, via
- * EffectComposer), not a CSS/canvas filter pretending to be one. Matches the user's own tuned
- * "O Vau" setup (vau016.json), the standard daytime default — see DEFAULT_SUN_INTENSITY's
- * comment. Bloom now applies to the whole scene (see render()'s own comment), not just wisp
- * embers, so a high intensity CAN wash out bright ground art too — that's expected now. */
-export const DEFAULT_BLOOM_INTENSITY = 0.9;
+/** Restrained default for full-scene bloom. Individual maps can still keep their authored value. */
+export const DEFAULT_BLOOM_INTENSITY = 0.16;
 
 /** An overlay fill with its alpha scaled by `fade`, quantized to 0.02 so the per-fill material
  * cache (overlayMaterialFor) only ever sees a small, bounded set of fade steps. */
@@ -212,7 +208,7 @@ function fadedFill(fill: string, fade: number): string {
   const a = (m[4] !== undefined ? Number(m[4]) : 1) * fade;
   return `rgba(${m[1]},${m[2]},${m[3]},${(Math.round(a * 50) / 50).toFixed(2)})`;
 }
-const BLOOM_RADIUS = 0.4;
+const BLOOM_RADIUS = 0.3;
 /** Full-scene bloom (see render()'s own comment) needs a threshold well above the old
  * selective-only 0.2 — that value only ever had to separate wisp embers from a pass that was
  * otherwise pure black. Against the REAL rendered scene, 0.2 would catch huge swaths of
@@ -3850,10 +3846,15 @@ export class ThreeBattleRenderer {
     // the bloom buffer show the ground behind it, which the mix pass then added over the house,
     // making the whole building look see-through. Black still adds no bloom of its own.
     const blacked: { mesh: THREE.Mesh; material: THREE.Material | THREE.Material[] }[] = [];
+    const boostedHalos: { mesh: THREE.Mesh; color: THREE.Color; opacity: number }[] = [];
     for (const entry of this.decorEntries) {
       if (entry.halo?.visible) {
-        entry.halo.visible = false;
-        hidden.push(entry.halo);
+        const material = entry.halo.material as THREE.MeshBasicMaterial;
+        boostedHalos.push({ mesh: entry.halo, color: material.color.clone(), opacity: material.opacity });
+        // Let the actual flame halo pass the highlight threshold; only the bloom buffer is
+        // boosted. The normal battle render keeps the original warm, soft halo unchanged.
+        material.color.multiplyScalar(2);
+        material.opacity = 1;
       }
       if (!entry.light || !entry.mesh.visible) continue;
       if (entry.fogCut) {
@@ -3879,6 +3880,11 @@ export class ThreeBattleRenderer {
       for (const mesh of mutedOverlays) mesh.visible = true;
       for (const mesh of hidden) mesh.visible = true;
       for (const b of blacked) b.mesh.material = b.material;
+      for (const { mesh, color, opacity } of boostedHalos) {
+        const material = mesh.material as THREE.MeshBasicMaterial;
+        material.color.copy(color);
+        material.opacity = opacity;
+      }
       this.pointLights.forEach((pl, i) => (pl.intensity = intensities[i]!));
       this.bounceLights.forEach((bl, i) => (bl.intensity = bounceIntensities[i]!));
     }

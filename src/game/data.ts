@@ -249,6 +249,9 @@ WILDS_DECORATIONS["wilds-lantern-signpost"] = {
   ...WILDS_DECORATIONS["wilds-lantern-signpost"]!,
   aboveTacticalOverlays: true,
 };
+for (const id of ["wilds-ivy-statue"]) {
+  WILDS_DECORATIONS[id] = { ...WILDS_DECORATIONS[id]!, artScale: 2 };
+}
 
 // Large cages, frames and the iron-maiden group from the upper reference band get
 // a two-hex footprint; smaller torture tools deliberately remain one hex.
@@ -463,8 +466,8 @@ const NEW_DECOR_2026: Record<string, DecorationDef> = {
   "wilds-altar-sarcophagus": { id: "wilds-altar-sarcophagus", name: "Sarcófago Ornamentado", footprint: DECO_PAIR },
   "wilds-broken-column": { id: "wilds-broken-column", name: "Coluna Derrubada", footprint: DECO_PAIR },
   "wilds-temple-door": { id: "wilds-temple-door", name: "Portal do Templo", footprint: DECO_PAIR },
-  "wilds-fallen-king": { id: "wilds-fallen-king", name: "Estátua de Rei Caído", footprint: DECO_PAIR },
-  "wilds-knight-statue": { id: "wilds-knight-statue", name: "Estátua de Cavaleiro", footprint: DECO_ONE },
+  "wilds-fallen-king": { id: "wilds-fallen-king", name: "Estátua de Rei Caído", footprint: DECO_PAIR, artScale: 2 },
+  "wilds-knight-statue": { id: "wilds-knight-statue", name: "Estátua de Cavaleiro", footprint: DECO_ONE, artScale: 2 },
   "wilds-ivy-archway": { id: "wilds-ivy-archway", name: "Arco em Ruínas", footprint: DECO_PAIR },
   "wilds-incense-burner": { id: "wilds-incense-burner", name: "Incensário Antigo", footprint: DECO_ONE },
   "wilds-fountain": { id: "wilds-fountain", name: "Fonte de Pedra Ornamentada", footprint: DECO_PAIR },
@@ -522,7 +525,7 @@ const NEW_DECOR_2026: Record<string, DecorationDef> = {
   // Graveyard, Cave, Inn, Winter Woods, and City sheets. Source alpha is preserved; every
   // prop remains its own manually placed 2D decoration.
   "dungeon-sarcophagus": { id: "dungeon-sarcophagus", name: "Sarcófago de Pedra", footprint: DECO_PAIR },
-  "dungeon-penitent-statue": { id: "dungeon-penitent-statue", name: "Estátua Penitente", footprint: DECO_ONE, heightScale: 1.35 },
+  "dungeon-penitent-statue": { id: "dungeon-penitent-statue", name: "Estátua Penitente", footprint: DECO_ONE, heightScale: 1.35, artScale: 2 },
   "dungeon-funerary-urn": { id: "dungeon-funerary-urn", name: "Urna Funerária", footprint: DECO_ONE, heightScale: 1.25 },
   "dungeon-tomb-relief": { id: "dungeon-tomb-relief", name: "Laje Tumular Ornamentada", footprint: DECO_ONE },
   "dungeon-bones": { id: "dungeon-bones", name: "Ossos Antigos", footprint: DECO_PAIR },
