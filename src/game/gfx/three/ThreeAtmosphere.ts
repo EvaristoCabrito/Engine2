@@ -1427,9 +1427,8 @@ class ParticleField {
     });
 
     const mesh = new THREE.InstancedMesh(geo, material, count);
-    // The vertex shaders above compute world position from aBase/uTime directly, never from
-    // mesh.matrixWorld — so the auto bounding-sphere Three would cull against (a tiny box around
-    // the local PlaneGeometry origin) is meaningless here and would cull the whole field.
+    // Anchors and drift live in custom attributes, outside the PlaneGeometry's bounds.
+    // Three's automatic bounding sphere therefore cannot enclose the particle field.
     mesh.frustumCulled = false;
     mesh.renderOrder = this.kind === "ember" ? 14 : 13;
     // instanceMatrix is never read by our custom vertex shaders (no <project_vertex> chunk, no

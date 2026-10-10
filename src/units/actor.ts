@@ -203,7 +203,9 @@ export class UnitActor {
     const box = unitBox(this.def, this.shown, frame, f.natW, f.natH);
     const cw = f.crop.w / f.natW, ch = f.crop.h / f.natH, u0 = f.crop.x / f.natW, vBottom = 1 - (f.crop.y + f.crop.h) / f.natH;
     this.card.scale.set(box.w * cw, box.h * ch, 1);
-    this.card.position.set(box.w * (u0 + cw / 2 - 0.5), box.h * vBottom - box.foot, 0);
+    // a centerBody sheet: shift each frame back by its body's drift, so she stays on her hex
+    const drift = f.bodyShift ? (f.bodyShift[frame] ?? 0) * (box.w * cw) / f.crop.w : 0;
+    this.card.position.set(box.w * (u0 + cw / 2 - 0.5) - drift, box.h * vBottom - box.foot, 0);
 
     // In battle the engine moves the unit (no path of its own) while the pose is 'walk': keep the
     // walk cut matching its current facing, as Ember picks it every frame, so a unit that turns

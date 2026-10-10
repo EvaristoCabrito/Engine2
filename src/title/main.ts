@@ -8,10 +8,6 @@ import { getGamePreferences, setGamePreferences } from '../game/gamePreferences'
 import { artProgress, loadGameArt, subscribeArtProgress } from '../game/assets';
 import type { SaveBank } from '../ember/types';
 
-/** The game's loading screen art and its permanent cache (game.html and MapLoadingOverlay read the same). */
-const LOADING_ART_URL = '/game/ui/LoadingSCreen.jpg?v=2';
-const LOADING_ART_CACHE = 'ember-loading-art-v1';
-
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const titleScreen = $('title-screen'), devControls = $('dev-controls');
 const saveSlotsScreen = $('save-slots-screen');
@@ -399,18 +395,13 @@ async function loadTitleResources(): Promise<void> {
     image.src = '/game/title/title-bg.jpg';
     if (image.complete) resolve();
   });
-  // The game's loading screen art, stored during this first loading bar in a named Cache Storage
-  // cache (not the browser's HTTP cache, which evicts at will), so it never leaves: game.html and
-  // every in-game loading screen take it from there, complete, at once.
-  const bootArt = (async () => {
-    try {
-      const cache = await caches.open(LOADING_ART_CACHE);
-      if (!(await cache.match(LOADING_ART_URL))) await cache.add(LOADING_ART_URL);
-    } catch {
-      // no Cache Storage (e.g. a private window): at least warm the normal cache
-      await new Promise<void>((resolve) => { const image = new Image(); image.onload = image.onerror = () => resolve(); image.src = LOADING_ART_URL; });
-    }
-  })();
+  // game.html's boot loading screen art, cached here so it shows at once when the game opens.
+  const bootArt = new Promise<void>((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => { void image.decode().then(resolve, reject); };
+    image.onerror = () => reject(new Error('Unable to preload the castle loading screen.'));
+    image.src = '/game/ui/LoadingSCreen.jpg?v=2';
+  });
   await Promise.all([background, bootArt, loadGameArt().catch(() => undefined)]);
   unsubscribe();
   setProgress(100);

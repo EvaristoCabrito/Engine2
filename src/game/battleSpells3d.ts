@@ -1,7 +1,7 @@
 // OG Ember's spell systems and combat callbacks, with only the world-coordinate boundary
 // changed for Engine2's XZ terrain. Never route gameplay through the preview's substitute FX.
 import * as THREE from "three";
-import type { BattleEngine, MagicMissileV2VfxRequest } from "./engine";
+import { ZOOM_RADII, type BattleEngine, type MagicMissileV2VfxRequest } from "./engine";
 import type { DioramaView } from "../editor/ember/dioramaView";
 import { EmberVfxAdapter } from "../vfx/adapter";
 import { FireballVFX } from "../vfx/legacy/three/FireballVFX";
@@ -36,6 +36,9 @@ export class BattleSpells3D {
     const root = this.adapter.root;
     this.fireball = new FireballVFX(root, this.camera);
     this.venom = new CausticVenomVFX(root);
+    // Ember's top-down camera arced these up the screen (+y, which is map-north here) and sized
+    // their arc/speed in canvas pixels; in 3D they arc up (+z) and one hex is Ember's 34 px.
+    for (const fx of [this.fireball, this.venom]) { fx.up.set(0, 0, 1); fx.pixel = 1 / ZOOM_RADII[1]!; }
     this.bless = new BlessVFX(root); this.bless.setSettings(getActiveBlessVfxSettings());
     this.phantasm = new PhantasmalForceVFX(root); this.phantasm.setSettings(getActivePhantasmalForceSettings());
     this.missile = new MagicMissileV2VFX(root); this.missile.setSettings(getActiveMagicMissileV2Settings());

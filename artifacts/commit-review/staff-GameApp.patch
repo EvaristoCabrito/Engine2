@@ -1,0 +1,31 @@
+diff --git a/src/game/GameApp.tsx b/src/game/GameApp.tsx
+index 84f9985c..91aa49cd 100644
+--- a/src/game/GameApp.tsx
++++ b/src/game/GameApp.tsx
+@@ -163,6 +163,8 @@ function clearEditorResume(): void {
+  * potions and lockpicks stay in the individual bags. */
+ function equipSharedWeapon(save: SaveData, hero: string, weaponId: string): SaveData | null {
+   if (save.weapons[weaponId] == null) return null;
++  const classId = save.promotions[hero] ?? MAP_STATUS_CLASS[hero];
++  if (!classId || !WEAPONS[weaponId]?.usableBy.includes(classId)) return null;
+   const equipped = { ...save.equipped };
+   for (const [owner, id] of Object.entries(equipped)) {
+     if (owner !== hero && id === weaponId) delete equipped[owner];
+@@ -257,7 +259,7 @@ function discardBagItem(save: SaveData, hero: string, kind: keyof Bag): SaveData
+ function heroMaxHp(save: SaveData, hero: string): number {
+   const classId = save.promotions[hero] ?? MAP_STATUS_CLASS[hero] ?? "swordsman";
+   const stats = statsFor(classId, save.levels[hero] ?? 1);
+-  const gearBonus = gearStatBonus(Object.values(save.equipment[hero] ?? {}));
++  const gearBonus = gearStatBonus(Object.values(save.equipment[hero] ?? {}), save.equipped[hero], classId);
+   const hungerKeep = 1 - hungerPenaltyFor(save.hungerStreak);
+   return Math.round((stats.hp + gearBonus.hp) * hungerKeep);
+ }
+@@ -840,7 +842,7 @@ function mapStatusUnit(save: SaveData, hero: string): UnitPublic {
+   const level = save.levels[hero] ?? 1;
+   const stats = statsFor(classId, level);
+   const gear = save.equipment[hero] ?? {};
+-  const gearBonus = gearStatBonus(Object.values(gear));
++  const gearBonus = gearStatBonus(Object.values(gear), save.equipped[hero], classId);
+   const emptySpells = { tier1: 0, tier2: 0, tier3: 0, tier4: 0, tier5: 0, tier6: 0, tier7: 0, tier8: 0, tier9: 0, tier10: 0 };
+   // Same source the battle roster reads (see startBattle's hungerPenaltyPct) — this used to
+   // be hardcoded to "never hungry" here, so the RPG map's own status sheet could never show

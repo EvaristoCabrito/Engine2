@@ -200,6 +200,22 @@ export class Stage {
     this.camera.updateProjectionMatrix();
   }
 
+  /** Compile spell/actor materials while loading, including currently hidden effects. */
+  async prepareMaterials(): Promise<void> {
+    const parked = this.parkHiddenLights();
+    this.balanceLightCount();
+    try {
+      this.scene.traverse(object => {
+        const materials = (object as THREE.Mesh).material;
+        if (!materials) return;
+        for (const material of Array.isArray(materials) ? materials : [materials]) {
+          for (const value of Object.values(material)) if ((value as THREE.Texture)?.isTexture) this.renderer.initTexture(value as THREE.Texture);
+        }
+      });
+      await this.renderer.compileAsync(this.scene, this.camera);
+    } finally { this.restoreParkedLights(parked); }
+  }
+
   private frame(): void {
     const dt = Math.min(this.clock.getDelta(), 0.05), t = this.clock.elapsedTime;
     for (const h of this.frameHooks) h(dt, t);

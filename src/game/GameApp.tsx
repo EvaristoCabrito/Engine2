@@ -922,7 +922,7 @@ export function GameApp() {
   const startOnMap = startMode === "map";
   const startNewCampaign = startMode === "new";
   const [resumeEditorDraft] = useState<MapDraft | null>(() => (typeof window === "undefined" ? null : readEditorResume()));
-  const [screen, setScreen] = useState<ScreenId>(() => (startNewCampaign ? "boot" : startOnMap ? "overworldMap" : resumeEditorDraft ? "mapEditor" : "title"));
+  const [screen, setScreen] = useState<ScreenId>(() => (startNewCampaign ? "boot" : startOnMap ? "overworldMap" : startMode === "test" ? "testMenu" : startMode === "continue" ? "battle" : resumeEditorDraft ? "mapEditor" : "title"));
   const loadingCurtain = useLoadingCurtain(screen);
   // Up from the instant a battle is requested until BattleCanvas reports "ember:battle-ready"
   // (art loaded, first frame drawn, every spell shader compiled and linked), so all of that
@@ -1135,8 +1135,11 @@ export function GameApp() {
     setLastGrowth(null);
     setLastLoot([]);
     if (rec.battle && rec.pendingMission && missionById(rec.pendingMission)) {
+      // Resume belongs to gameplay immediately, including the wait for base art.
+      // Leaving the previous screen here exposed the title menu between loading overlays.
       resumeBattleRef.current = rec.battle;
       setMissionId(rec.pendingMission);
+      setScreen("battle");
       return;
     }
     if (rec.pendingMission && missionById(rec.pendingMission)) {
@@ -1302,11 +1305,11 @@ export function GameApp() {
       const sourceMission = override ?? missionById(id);
       const resolved = sourceMission ? routeWispCrossing(sourceMission, testMode ? [] : save.completed) : undefined;
       if (!resolved) return;
-      // A fight saved on an older version of this map (the editor has saved it since, or the
-      // save predates map fingerprints) is not resumed: its snapshot would paint the old board
-      // over the new map. The battle starts fresh on the map as it is now.
+      // A recorded fingerprint mismatch means the authored map changed. Resuming that
+      // snapshot would paint the old board over the edited map, so start on the current map.
+      // Older snapshots have no fingerprint; absence is not evidence that the map changed.
       const mapKey = missionMapKey(sourceMission!);
-      if (resume && resume.mapKey !== mapKey) resume = undefined;
+      if (resume?.mapKey && resume.mapKey !== mapKey) resume = undefined;
       const load = ++battleLoadRef.current;
       setBattleLoading(true);
       battleAssetProgress.current = {
@@ -2166,7 +2169,7 @@ export function GameApp() {
   return (
     <main className="relative h-dvh min-h-0 bg-bg text-fg overflow-hidden">
       <LoadingCurtain
-        visible={loadingCurtain || battleLoading}
+        visible={screen !== "title" && screen !== "boot" && (loadingCurtain || battleLoading || (screen === "battle" && !engine))}
         progress={battleLoading || screen === "battle" ? Math.floor((battleLoadingProgress.loaded / Math.max(1, battleLoadingProgress.total)) * 100) : null}
         status={battleLoading || screen === "battle" ? `Preparando batalha · ${battleLoadingProgress.loaded}/${battleLoadingProgress.total} recursos` : undefined}
       />

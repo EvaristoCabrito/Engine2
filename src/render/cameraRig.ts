@@ -55,6 +55,12 @@ export class CameraRig {
   private panRight = new THREE.Vector3();
   private panUp = new THREE.Vector3();
 
+  /** While a cinematic shot owns the camera (cinematicCamera.ts) the player's camera input
+   * doesn't move it: any attempt calls `onCameraInput` instead (the director skips the shot and
+   * restores the player's view). Clicks still reach the game. */
+  inputLocked = false;
+  onCameraInput: () => void = () => {};
+
   /** A short left click (not a pan): the tool acts on it. */
   onClick: (ev: PointerEvent) => void = () => {};
   /** When true, a left drag that starts moving before the 0.5 s hold arms the pan is a tool stroke
@@ -70,7 +76,7 @@ export class CameraRig {
     el.addEventListener('pointerup', e => this.pointerUp(e));
     el.addEventListener('pointercancel', () => this.endPan());
     window.addEventListener('keydown', this.onKey);
-    el.addEventListener('wheel', e => { e.preventDefault(); this.dist = THREE.MathUtils.clamp(this.dist * Math.pow(1.12, Math.sign(e.deltaY)), this.minDist, this.maxDist); this.apply(); }, { passive: false });
+    el.addEventListener('wheel', e => { e.preventDefault(); if (this.inputLocked) { this.onCameraInput(); return; } this.dist = THREE.MathUtils.clamp(this.dist * Math.pow(1.12, Math.sign(e.deltaY)), this.minDist, this.maxDist); this.apply(); }, { passive: false });
     this.apply();
   }
 
@@ -129,9 +135,12 @@ export class CameraRig {
     this.last = { x: e.clientX, y: e.clientY };
     if (e.button === 0) {
       clearTimeout(this.holdTimer);
-      this.holdTimer = window.setTimeout(() => { this.panning = true; document.documentElement.classList.add('engine2-grabbing'); }, HOLD_MS);
+      this.holdTimer = window.setTimeout(() => {
+        if (this.inputLocked) { this.onCameraInput(); return; }
+        this.panning = true; document.documentElement.classList.add('engine2-grabbing');
+      }, HOLD_MS);
     } else if (e.button === 2 && this.mode === 'free' && !this.flat) {
-      this.turning = true;
+      if (this.inputLocked) this.onCameraInput(); else this.turning = true;
     }
   }
 
@@ -187,6 +196,7 @@ export class CameraRig {
     const direction = directions[e.key];
     if (!direction) return;
     e.preventDefault();
+    if (this.inputLocked) { this.onCameraInput(); return; }
     const step = e.shiftKey ? 120 : 48;
     this.panBy(direction[0] * step, direction[1] * step);
   }

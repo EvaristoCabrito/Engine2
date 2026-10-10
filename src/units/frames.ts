@@ -18,6 +18,9 @@ export interface PoseFrames {
   crop: { x: number; y: number; w: number; h: number };
   bytes: number;
   lastUsed: number;
+  /** centerBody poses: per frame, how far (pixels of the prepared frame) the body sits right of
+   * where it is in frame 1 — measured from the opaque legs and torso, not the weapon. */
+  bodyShift?: number[];
 }
 
 type Prepared = Record<string, { n: number; natW: number; natH: number; x: number; y: number; w: number; h: number }>;
@@ -65,6 +68,24 @@ async function bitmap(url: string): Promise<ImageBitmap> {
   return createImageBitmap(await res.blob(), { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
 }
 
+/** Body centre per frame: median x of opaque pixels in the bottom quarter of the frame (the
+ * legs — arms, a swung weapon and a flaring cape sit higher and would skew it), relative to
+ * frame 1. Bitmaps are flipped (flipY), so the bottom is the top rows here. */
+function measureBodyShift(bitmaps: ImageBitmap[]): number[] {
+  const centre = (bm: ImageBitmap): number => {
+    const c = new OffscreenCanvas(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true })!;
+    g.drawImage(bm, 0, 0);
+    const rows = Math.floor(bm.height * 0.25), d = g.getImageData(0, 0, bm.width, rows).data;
+    const xs: number[] = [];
+    for (let y = 0; y < rows; y += 2) for (let x = 0; x < bm.width; x++) if (d[(y * bm.width + x) * 4 + 3] > 100) xs.push(x);
+    if (!xs.length) return bm.width / 2;
+    xs.sort((a, b) => a - b);
+    return xs[xs.length >> 1];
+  };
+  const centres = bitmaps.map(centre);
+  return centres.map(x => x - centres[0]);
+}
+
 export function loadPose(src: PoseSrc, keep: Set<string> = new Set()): Promise<PoseFrames> {
   const key = `${src.dir}|${src.prefix}`;
   const have = live.get(key);
@@ -76,6 +97,7 @@ export function loadPose(src: PoseSrc, keep: Set<string> = new Set()): Promise<P
       const base = info ? `/game/sprites-e2/${src.dir}/${src.prefix}` : `/game/sprites/${src.dir}/${src.prefix}`;
       const bitmaps = await Promise.all(Array.from({ length: src.n }, (_, i) => bitmap(src.still ? `${base}.png` : `${base}${i + 1}.png`)));
       const w = bitmaps[0].width, h = bitmaps[0].height;
+      const bodyShift = src.centerBody ? measureBodyShift(bitmaps) : undefined;
       const bytes = Math.round(w * h * 4 * 1.34) * src.n; // RGBA + mip chain
       evictFor(bytes, new Set([...keep, key]));
       const textures = bitmaps.map(bm => {
@@ -93,7 +115,7 @@ export function loadPose(src: PoseSrc, keep: Set<string> = new Set()): Promise<P
         key, textures, n: src.n,
         natW: info?.natW ?? w, natH: info?.natH ?? h,
         crop: info ? { x: info.x, y: info.y, w: info.w, h: info.h } : { x: 0, y: 0, w, h },
-        bytes, lastUsed: performance.now(),
+        bytes, lastUsed: performance.now(), bodyShift,
       };
       live.set(key, pose);
       usedBytes += bytes;

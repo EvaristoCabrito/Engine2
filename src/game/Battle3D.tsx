@@ -31,6 +31,9 @@ import { BattleVignettes } from "./BattleVignettes";
 import { moonlightFor } from "./moonPhase";
 import { ArrowFx3D } from "./battleProjectiles3d";
 import { BattleHud3D } from "./battleHud3d";
+import { BattleCinematics } from "./battleCinematics";
+import { CinematicDirector } from "../render/cinematicCamera";
+import * as THREE from "three";
 import { BattleSpells3D } from "./battleSpells3d";
 import { BattleSpellOverlay3D } from "./battleSpellOverlay3d";
 
@@ -76,7 +79,10 @@ export function Battle3D({
     // Ember's loading curtain lifts on "ember:battle-ready": sent once the board and its
     // decorations are in the scene and a frame has been drawn.
     void view.setMission({ ...(engine.mission as unknown as Mission), playerSpawns: [], enemySpawns: [], neutralSpawns: [] })
-      .then(() => {
+      .then(async () => {
+        // Compile the preserved spell materials and upload existing textures before the
+        // gameplay loading screen lifts; a first cast must not initialize GPU state mid-frame.
+        await view.stage.prepareMaterials();
         // camera testing: zoom from right up against a unit to far beyond the whole board
         view.rig.minDist = 1;
         view.rig.maxDist = Math.max(view.rig.maxDist * 4, 400);
@@ -186,7 +192,7 @@ export function Battle3D({
     // cursor, so the player still sees which hex a click goes to.
     const gridMarks = (): GridMark[] => {
       const marks: GridMark[] = [];
-      const add = (x: number, y: number, color: string, rOut: number, rIn?: number) => marks.push({ x, y, color, rOut, rIn });
+      const add = (x: number, y: number, color: string, rOut: number, rIn?: number, flat = false) => marks.push({ x, y, color, rOut, rIn, flat });
       const border = (r: number) => r * BORDER_INNER; // Ember's buildHexBorder(0.47) of a 0.5 hex
       if (!engine.mission.hub && !engine.mission.explore) {
         const fade = (e.overlayFade as number | undefined) ?? 1;
@@ -219,8 +225,8 @@ export function Battle3D({
       const cur = (e.hover ?? e.cursor) as { x: number; y: number } | null;
       if (cur && tileAt(engine.tiles, engine.cols, cur.x, cur.y) !== "void" && e.explored(cur.x, cur.y)) {
         const blocked = !TERRAIN[tileAt(engine.tiles, engine.cols, cur.x, cur.y)].passable;
-        add(cur.x, cur.y, "rgba(8,12,16,0.95)", 0.985, border(0.985));
-        add(cur.x, cur.y, blocked ? "rgba(231,133,115,0.95)" : "rgba(220,226,235,1)", 0.94, border(0.94));
+        add(cur.x, cur.y, "rgba(8,12,16,0.95)", 0.985, border(0.985), true);
+        add(cur.x, cur.y, blocked ? "rgba(231,133,115,0.95)" : "rgba(220,226,235,1)", 0.94, border(0.94), true);
       }
       return marks;
     };
@@ -233,6 +239,8 @@ export function Battle3D({
     let camTilt = e.cameraTilt as number, camSide = e.cameraTiltSide as number;
     let leavingFlat = false; // the HUD animates back to 0/0 on the way out of Tática: skip those steps
     const followCameraButtons = () => {
+      // a camera button while a cinematic shot runs: the player's view comes back first
+      if (cinematics.director.active && (e.tacticsCamera !== view.rig.flat || e.cameraTilt !== camTilt || e.cameraTiltSide !== camSide)) cinematics.director.skip();
       const flat = !!e.tacticsCamera;
       const tilt = e.cameraTilt as number, side = e.cameraTiltSide as number;
       if (flat !== view.rig.flat) {
@@ -255,12 +263,22 @@ export function Battle3D({
 
     const atmosphere = new BattleAtmosphere3D(view, engine);
     const arrows = new ArrowFx3D(view, engine);
+    // cinematic camera (stage 1): takes the camera for a shot and gives the player's exact view back
+    const cinematics = new BattleCinematics(engine, new CinematicDirector(view.rig, view.stage.camera, () => view.surfaces, view.groundAt), (unitId) => {
+      const actor = actors.get(unitId)?.actor;
+      const u = (engine.units as Unit[]).find(x => x.id === unitId);
+      if (!actor || !u?.alive || !actor.mesh.visible) return null;
+      const feet = actor.mesh.position.clone();
+      return [feet, actor.pickMesh.localToWorld(new THREE.Vector3(0, 1, 0))];
+    });
     const spells = new BattleSpells3D(view, engine);
     const spellOverlay = new BattleSpellOverlay3D(spellArtRef.current!, spellFxRef.current!, view, engine);
     const unitHud = new BattleHud3D(hudRef.current!, view, engine);
     // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
     const w = window as Window & { __emberEngine?: BattleEngine };
     w.__emberEngine = engine;
+    // QA handle for the camera (player rig + cinematic director), same idea as __emberEngine
+    (window as Window & { __emberCamera?: unknown }).__emberCamera = { rig: view.rig, director: cinematics.director, camera: view.stage.camera, actors };
     // tonight's moon lights night battles by its phase (Mission.moonPhase, set by the campaign);
     // a time of day changed live (QA, later the battle's own clock) re-lights the scene too
     let moon: string | undefined, tod: string | undefined;
@@ -287,6 +305,8 @@ export function Battle3D({
       lastTick = now;
       if (!pausedRef.current) while (real > 1e-4) { const step = Math.min(0.05, real); engine.tick(step); real -= step; }
       syncUnits();
+      // the cinematic camera moves first, so cards, effects and the HUD all face/project onto this frame's view
+      cinematics.director.update(dt);
       const yaw = view.rig.facingYaw;
       for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt, view.flatTop);
       view.setGrid(gridMarks());
@@ -333,6 +353,8 @@ export function Battle3D({
     };
     const onKey = (ev: KeyboardEvent) => {
       if ((ev.target as HTMLElement | null)?.closest("input, textarea, select")) return;
+      // C skips a cinematic shot (the engine already uses Escape and Space); the action plays on
+      if (ev.code === "KeyC" && cinematics.director.active) { cinematics.director.skip(); return; }
       if (pausedRef.current) return;
       engine.keyDown(ev.code);
     };
@@ -349,9 +371,11 @@ export function Battle3D({
       for (const { actor } of actors.values()) actor.dispose();
       atmosphere.dispose();
       arrows.dispose();
+      cinematics.dispose();
       spells.dispose();
       spellOverlay.dispose();
       if (w.__emberEngine === engine) delete w.__emberEngine;
+      delete (window as Window & { __emberCamera?: unknown }).__emberCamera;
       view.dispose();
     };
   }, [engine]);

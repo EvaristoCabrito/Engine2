@@ -100,6 +100,10 @@ export class CausticVenomVFX {
   private readonly chargeDuration = 0.38;
   private readonly impactDuration = 1.85;
   private flightArc = 0;
+  /** Which way the flight arcs and the smoke rises. Ember's top-down camera used screen up (+y). */
+  readonly up = new THREE.Vector3(0, 1, 0);
+  /** World units per pixel of Ember's battle canvas (1 there); scales its pixel-sized constants. */
+  pixel = 1;
   private disposed = false;
 
   constructor(private readonly scene: THREE.Object3D) {
@@ -125,7 +129,7 @@ export class CausticVenomVFX {
     this.start.copy(options.origin);
     this.target.copy(options.target);
     this.worldScale = Math.max(1, options.worldScale);
-    this.travelDuration = THREE.MathUtils.clamp(this.start.distanceTo(this.target) / 235, 0.7, 1.65);
+    this.travelDuration = THREE.MathUtils.clamp(this.start.distanceTo(this.target) / (235 * this.pixel), 0.7, 1.65);
     this.elapsed = 0;
     this.phase = "charge";
     this.root.visible = true;
@@ -277,7 +281,7 @@ export class CausticVenomVFX {
     const span = this.pathStart.distanceTo(this.pathEnd);
     const side = new THREE.Vector3(-(this.pathEnd.y - this.pathStart.y), this.pathEnd.x - this.pathStart.x, 0).normalize();
     if (side.lengthSq() > 0.1) p.addScaledVector(side, Math.sin(t * Math.PI) * Math.min(this.worldScale * 0.1, span * 0.025));
-    p.y += Math.sin(t * Math.PI) * this.flightArc;
+    p.addScaledVector(this.up, Math.sin(t * Math.PI) * this.flightArc);
     p.z += Math.sin(t * Math.PI) * this.worldScale * 0.16;
     return p;
   }
@@ -318,9 +322,9 @@ export class CausticVenomVFX {
         const radius = this.worldScale * (0.045 + (puffIndex % 2) * 0.055);
         puff.position.set(
           center.x + Math.cos(angle) * radius,
-          center.y + puffIndex * this.worldScale * 0.13 + Math.sin(angle) * radius,
+          center.y + Math.sin(angle) * radius,
           center.z + this.worldScale * (0.18 + puffIndex * 0.085),
-        );
+        ).addScaledVector(this.up, puffIndex * this.worldScale * 0.13);
         const size = this.worldScale * (puffIndex === 0 ? 0.37 : 0.275 + (puffIndex % 3) * 0.025);
         puff.scale.set(size, size * (1.1 + (puffIndex % 2) * 0.16), size * (0.72 + (puffIndex % 3) * 0.09));
         puff.rotation.set(angle * 0.45, angle * 0.3, angle);

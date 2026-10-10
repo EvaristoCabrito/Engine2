@@ -1,6 +1,5 @@
 import "@/styles.css";
 import { createRoot } from "react-dom/client";
-import { releaseLoading } from "./MapLoadingOverlay";
 import { GameApp } from "./GameApp";
 
 const root = document.getElementById("app");
@@ -16,15 +15,13 @@ try { editorResume = !!sessionStorage.getItem("ember:editor-resume"); } catch { 
 if (nav?.type === "reload" && !editorResume) window.location.replace("/");
 else {
   createRoot(root).render(<GameApp />);
-  // The loading screen (game.html's, the only one) covers the code load; once the app has
-  // painted, the page's own request ends. If a map or battle is loading by then, the same screen
-  // simply stays up with their bar (MapLoadingOverlay.tsx) — never a second screen on top.
-  if (document.getElementById("boot-loading")) {
+  // game.html's boot loading screen covers the code load; fade it once the app has painted.
+  const boot = document.getElementById("boot-loading");
+  if (boot) {
     requestAnimationFrame(() => requestAnimationFrame(() => {
-      // Remember how many files this load needed, so the next one's bar measures against it.
+      // Remember how many files this boot needed, so the next boot's bar measures against it.
       try { localStorage.setItem("ember.bootFileTotal", String(performance.getEntriesByType("resource").length)); } catch { /* storage blocked */ }
-      (window as Window & { __bootProgress?: (pct: number) => void }).__bootProgress?.(100);
-      releaseLoading("page");
+      (window as Window & { __finishBoot?: () => void }).__finishBoot?.();
     }));
   }
 }

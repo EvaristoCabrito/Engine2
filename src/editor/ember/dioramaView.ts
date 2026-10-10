@@ -301,7 +301,7 @@ export class DioramaView {
   private readonly gridMats = new Map<string, THREE.MeshBasicMaterial>();
 
   /** Ember's battle grid marks (movement wash, edges, targets, route, turn marker, cursor): hex
-   * fills (rIn absent) and hex borders in exact rgba colours, draped on the ground. Later marks
+   * fills (rIn absent) and hex borders in exact rgba colours, level on each tile. Later marks
    * sit on top of earlier ones. Rebuilt only when the marks change. */
   setGrid(marks: GridMark[]): void {
     const key = marks.map(m => `${m.x},${m.y},${m.color},${m.rOut},${m.rIn ?? 0},${m.flat ? 1 : 0}`).join(';');

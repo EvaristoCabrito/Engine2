@@ -36,7 +36,10 @@ export class FireballVFX {
   private readonly target = new THREE.Vector3();
   private readonly position = new THREE.Vector3();
   private readonly screenRight = new THREE.Vector3(1, 0, 0);
-  private readonly screenUp = new THREE.Vector3(0, -1, 0);
+  /** Which way the flight arcs. Ember's top-down camera arced it up the screen; a 3D host sets real up. */
+  readonly up = new THREE.Vector3(0, -1, 0);
+  /** World units per pixel of Ember's battle canvas (1 there); scales its pixel-sized constants. */
+  pixel = 1;
   private disposed = false;
 
   constructor(
@@ -96,7 +99,7 @@ export class FireballVFX {
     const distance = this.start.distanceTo(this.target);
     // Long, readable spell travel. The previous 0.34–1.2s window made Fireball feel rushed
     // across a tactical board before its flame surface could be seen.
-    this.travelDuration = THREE.MathUtils.clamp(distance / 260, 1.25, 2.5);
+    this.travelDuration = THREE.MathUtils.clamp(distance / (260 * this.pixel), 1.25, 2.5);
     this.elapsed = 0;
     this.phase = "travel";
     this.completedImpact = false;
@@ -157,8 +160,8 @@ export class FireballVFX {
     const progress = this.travelDuration > 0 ? this.elapsed / this.travelDuration : 1;
     const eased = progress * progress * (3 - 2 * progress);
     this.position.lerpVectors(this.start, this.target, eased);
-    const arc = Math.sin(Math.PI * progress) * Math.max(15, this.start.distanceTo(this.target) * 0.12);
-    this.position.addScaledVector(this.screenUp, arc);
+    const arc = Math.sin(Math.PI * progress) * Math.max(15 * this.pixel, this.start.distanceTo(this.target) * 0.12);
+    this.position.addScaledVector(this.up, arc);
     this.projectile.group.position.copy(this.position);
     this.projectile.update(this.elapsed);
     this.projectile.light.intensity = 8 * 4.9 * this.worldScale * this.worldScale * (0.94 + Math.sin(this.elapsed * 7.2) * 0.06);

@@ -7,72 +7,69 @@
     <title>Ember Ashes — Campanha</title>
     <!-- Dark from the first paint: the app's CSS only arrives with the JS, so without this the
          page flashes white while opening (e.g. Test mode from the title). -->
+    <link rel="preload" as="image" href="/game/ui/LoadingSCreen.jpg?v=2" />
     <style>
       html, body { margin: 0; background: #111; color-scheme: dark; }
       /* Ember's loading screen (same art and geometry as LoadingArt in MapLoadingOverlay.tsx),
          shown while the game code loads; main.tsx removes it once the app has painted. */
       #boot-loading { position: fixed; inset: 0; z-index: 100; overflow: hidden; background: #151311; transition: opacity .25s ease; }
       #boot-loading.is-leaving { opacity: 0; }
-      /* art, bar and text appear together, only once the complete art is ready (no low-res stand-in) */
-      #boot-loading.is-ready .art { visibility: visible; }
-      #boot-loading .art { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 2128 / 912)); aspect-ratio: 2128 / 912; transform: translate(-50%, -50%); background: var(--boot-art) center / 100% 100% no-repeat; visibility: hidden; }
+      #boot-loading .art { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 2128 / 912)); aspect-ratio: 2128 / 912; transform: translate(-50%, -50%); background: url(/game/ui/LoadingSCreen.jpg?v=2) center / 100% 100% no-repeat; }
       #boot-loading .bar { position: absolute; left: 35.34%; top: 86.29%; width: 28.67%; height: 2.63%; border-radius: 2px; overflow: hidden; }
       #boot-fill { width: 0; height: 100%; background: linear-gradient(90deg, #713718, #e1a541, #fff0a2); transition: width .1s linear; }
       #boot-loading p { position: absolute; left: 42.43%; top: 92.32%; width: 14.1%; height: 4.28%; margin: 0; display: grid; place-items: center; text-align: center; text-transform: uppercase; color: #eee0c8; filter: drop-shadow(0 1px 2px #000); font: calc(max(100vh, 100vw * 912 / 2128) * 0.0125)/1.15 system-ui, sans-serif; letter-spacing: .08em; }
     </style>
   </head>
   <body>
-    <div id="boot-loading" aria-live="polite" aria-label="Preparando a tela…">
+    <div id="boot-loading" hidden aria-live="polite" aria-label="Preparando a tela…">
       <div class="art">
+        <!-- Full-resolution art is loaded and decoded during title boot. -->
         <div class="bar" role="progressbar" aria-label="Preparando a tela" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="boot-fill"></div></div>
         <p id="boot-status">Preparando a tela…</p>
       </div>
     </div>
     <script>
-      // The complete loading art, from the permanent cache the title screen filled during its own
-      // loading bar (fetched and stored now if the game was opened without the title). Kept as one
-      // decoded object URL for the whole session: MapLoadingOverlay reuses it (window.__loadingArtUrl).
-      (function () {
-        var URL_ = '/game/ui/LoadingSCreen.jpg?v=2', CACHE = 'ember-loading-art-v1';
-        var boot = document.getElementById('boot-loading');
-        function show(src) {
-          var img = new Image();
-          function done() {
-            window.__loadingArtUrl = src;
-            if (!boot) return;
-            boot.style.setProperty('--boot-art', 'url("' + src + '")');
-            boot.classList.add('is-ready');
-          }
-          img.onload = function () { (img.decode ? img.decode() : Promise.resolve()).then(done, done); };
-          img.onerror = function () { if (boot) boot.classList.add('is-ready'); };
-          img.src = src;
-        }
-        window.__loadingArt = (window.caches ? caches.open(CACHE).then(function (cache) {
-          return cache.match(URL_).then(function (hit) {
-            if (hit) return hit;
-            return fetch(URL_).then(function (res) { if (res.ok) cache.put(URL_, res.clone()); return res; });
-          });
-        }).then(function (res) { return res.blob(); }).then(function (blob) { return URL.createObjectURL(blob); })
-          : Promise.reject()).catch(function () { return URL_; }).then(function (src) { show(src); return src; });
-      })();
       // Real progress only: files received so far against the count the last full boot needed
       // (remembered by main.tsx), or BOOT_TOTAL_FALLBACK (measured: 250) on a first visit. Held
       // below 100% until the app has actually painted; main.tsx then sets 100 and fades it.
       (function () {
         var BOOT_TOTAL_FALLBACK = 250, expected = BOOT_TOTAL_FALLBACK, seen = 0, peak = 0;
         try { var n = Number(localStorage.getItem('ember.bootFileTotal')); if (n > 0) expected = n; } catch (e) {}
+        var boot = document.getElementById('boot-loading');
+        // Preloading the castle during boot must never display it over the title/opening.
+        var start = new URLSearchParams(window.location.search).get('start');
+        var navigation = performance.getEntriesByType('navigation')[0];
+        var editorResume = false;
+        try { editorResume = !!sessionStorage.getItem('ember:editor-resume'); } catch (e) {}
+        var gameplayEntry = start === 'continue' || start === 'map' || start === 'test' || editorResume;
+        boot.hidden = !gameplayEntry || (navigation && navigation.type === 'reload' && !editorResume);
         var fill = document.getElementById('boot-fill'), status = document.getElementById('boot-status'), bar = fill.parentNode;
+        var observer = null, finished = false;
         window.__bootProgress = function (pct) {
+          if (finished) return;
           peak = Math.max(peak, pct);
           fill.style.width = peak + '%';
           bar.setAttribute('aria-valuenow', String(Math.round(peak)));
           status.textContent = 'Preparando a tela · ' + Math.round(peak) + '%';
         };
+        // Boot is a one-way lifecycle. Gameplay owns its React loading overlays.
+        window.__finishBoot = function () {
+          if (finished) return;
+          window.__bootProgress(100);
+          finished = true;
+          if (observer) observer.disconnect();
+          delete window.__bootProgress;
+          delete window.__finishBoot;
+          boot.classList.add('is-leaving');
+          window.setTimeout(function () { boot.remove(); }, 260);
+        };
         if (!('PerformanceObserver' in window)) return;
-        new PerformanceObserver(function (list) {
+        observer = new PerformanceObserver(function (list) {
+          if (finished) return;
           seen += list.getEntries().length;
           if (document.getElementById('boot-loading')) window.__bootProgress(Math.min(97, (seen / expected) * 100));
-        }).observe({ type: 'resource', buffered: true });
+        });
+        observer.observe({ type: 'resource', buffered: true });
       })();
     </script>
     <div id="app"></div>

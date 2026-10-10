@@ -21,7 +21,12 @@ export type Pose =
   | 'walkBack' | 'walkFront' | 'walkSide';
 
 /** Frames are `${prefix}1.png`…`${prefix}${n}.png`; a `still` is the single file `${prefix}.png`. */
-export interface PoseSrc { dir: string; prefix: string; n: number; still?: boolean }
+export interface PoseSrc {
+  dir: string; prefix: string; n: number; still?: boolean;
+  /** Keep the body on the hex centre in every frame: the drawing's body drifts sideways inside
+   * its canvas (Neera's dagger swing slides ~0.2 hex), so each frame is shifted back by it. */
+  centerBody?: boolean;
+}
 export type Footprint = readonly { dx: number; dy: number }[];
 
 export interface UnitDef {
@@ -123,7 +128,12 @@ const NPC_CLASSES = new Set<string>([...ENCOUNTER_NPC_IDS, 'beberrao', 'breadLad
 const HAND_SET: UnitDef[] = [
   // Heroes: Ember pins each to its own sprite (HERO_SPRITE_BY_NAME) whatever their class.
   unit('kael', 'Kael', 'swordsman', 'hero', posesIn('Kael_Final/kael-final-002'), { sprite: 'kaelFinal' }),
-  unit('neera', 'Neera', 'archer', 'hero', { ...posesIn('neera/neera-v2-001'), ...posesIn('neera', ['cast']) }, { sprite: 'neera' }),
+  unit('neera', 'Neera', 'archer', 'hero', (() => {
+    const poses = { ...posesIn('neera/neera-v2-001'), ...posesIn('neera', ['cast']) };
+    // her off-hand dagger sheet drifts sideways mid-swing: hold her body on her hex
+    if (poses.attackShort) poses.attackShort = { ...poses.attackShort, centerBody: true };
+    return poses;
+  })(), { sprite: 'neera' }),
   unit('voss', 'Voss', 'mage', 'hero', posesIn('voss'), { sprite: 'voss' }),
   unit('salazar', 'Salazar', 'healer', 'hero', posesIn('salazar'), { sprite: 'salazar' }),
   unit('aldric', 'Aldric', 'aldric', 'hero', posesIn('aldric'), { sprite: 'aldric' }),

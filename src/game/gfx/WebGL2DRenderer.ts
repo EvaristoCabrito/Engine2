@@ -22,6 +22,17 @@
  */
 import { createProgram, bindAttrib } from "./glutil";
 
+const OVERLAY_ALPHA = `
+uniform int u_overlayMode; // 0 = legacy canvas, 1 = source-over overlay, 2 = additive overlay
+vec4 compositeColor(vec3 rgb, float alpha) {
+  if (u_overlayMode == 0) return vec4(rgb, alpha);
+  vec3 radiance = rgb * alpha;
+  // Black additive pixels emit no light and must contribute no canvas opacity.
+  float coverage = u_overlayMode == 2 ? clamp(max(max(radiance.r, radiance.g), radiance.b), 0.0, 1.0) : alpha;
+  return vec4(radiance, coverage);
+}
+`;
+
 const VERT_LOCAL = `#version 300 es
 precision highp float;
 layout(location = 0) in vec2 a_pos;
@@ -55,6 +66,7 @@ uniform vec4 u_color;
 uniform sampler2D u_gradTex;
 uniform vec4 u_gradP; // linear: p0.xy, p1.xy | radial: center.xy, r0, r1
 uniform float u_alpha;
+${OVERLAY_ALPHA}
 out vec4 FragColor;
 void main() {
   vec4 c;
@@ -70,7 +82,7 @@ void main() {
     float t = (d - u_gradP.z) / max(u_gradP.w - u_gradP.z, 1e-6);
     c = texture(u_gradTex, vec2(clamp(t, 0.0, 1.0), 0.5));
   }
-  FragColor = vec4(c.rgb, c.a * u_alpha);
+  FragColor = compositeColor(c.rgb, c.a * u_alpha);
 }
 `;
 
@@ -79,6 +91,7 @@ precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform float u_alpha;
+${OVERLAY_ALPHA}
 uniform float u_brightness;
 uniform int u_tintMode; // 0 = normal texture color, 1 = flat tint using texture's alpha
 uniform vec3 u_tint;
@@ -86,7 +99,7 @@ out vec4 FragColor;
 void main() {
   vec4 t = texture(u_tex, v_uv);
   vec3 rgb = u_tintMode == 1 ? u_tint : t.rgb * u_brightness;
-  FragColor = vec4(rgb, t.a * u_alpha);
+  FragColor = compositeColor(rgb, t.a * u_alpha);
 }
 `;
 
@@ -106,6 +119,7 @@ precision highp float;
 in vec2 v_uv;
 uniform sampler2D u_tex;
 uniform float u_alpha;
+${OVERLAY_ALPHA}
 uniform float u_brightness;
 uniform vec2 u_lightDir; // normalized, screen-space (x right, y down), points TOWARD the light
 uniform float u_lightStrength; // 0 = identical to plain drawImage, ~0.3-0.5 is a tasteful amount
@@ -154,7 +168,7 @@ void main() {
   float ao = smoothstep(0.82, 1.0, v_uv.y);
   finalRgb *= mix(1.0, 0.62, ao * u_lightStrength);
 
-  FragColor = vec4(finalRgb, t.a * u_alpha);
+  FragColor = compositeColor(finalRgb, t.a * u_alpha);
 }
 `;
 
@@ -462,7 +476,7 @@ export class WebGL2DRenderer {
     this.lightDirY = dy / len;
   }
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, private readonly transparentOverlay = false) {
     const gl = canvas.getContext("webgl2", { antialias: true, alpha: true, stencil: true });
     if (!gl) throw new Error("WebGL2 context failed");
 
@@ -512,8 +526,14 @@ export class WebGL2DRenderer {
   }
 
   dispose(): void {
-    // This renderer owns an independent overlay context, including its cached art textures.
-    this.gl.getExtension("WEBGL_lose_context")?.loseContext();
+    // React can reuse this canvas after an effect remount. Release resources without
+    // permanently losing the canvas context, which prevents the next renderer compiling.
+    const gl = this.gl;
+    for (const tex of this.textureCache.values()) gl.deleteTexture(tex);
+    for (const entry of this.textTextureCache.values()) gl.deleteTexture(entry.tex);
+    this.textureCache.clear(); this.textTextureCache.clear();
+    gl.deleteBuffer(this.polyBuf); gl.deleteBuffer(this.quadBuf);
+    gl.deleteProgram(this.progFill); gl.deleteProgram(this.progTex); gl.deleteProgram(this.progTexLit);
   }
 
   setSize(w: number, h: number) {
@@ -618,6 +638,10 @@ export class WebGL2DRenderer {
 
   private applyBlend() {
     const gl = this.gl;
+    if (this.transparentOverlay) {
+      gl.blendFunc(gl.ONE, this.globalCompositeOperation === "lighter" ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
+      return;
+    }
     if (this.globalCompositeOperation === "lighter") gl.blendFunc(gl.SRC_ALPHA, gl.ONE);
     else gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
@@ -637,6 +661,7 @@ export class WebGL2DRenderer {
     const gl = this.gl;
     this.applyBlend();
     gl.useProgram(this.progFill);
+    gl.uniform1i(gl.getUniformLocation(this.progFill, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     bindAttrib(gl, this.polyBuf, 0, 2);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(verts), gl.DYNAMIC_DRAW);
     const u = tint ? { mode: 0, color: [tint[0], tint[1], tint[2], tint[3]] as Rgba, gradTex: null, gradP: [0, 0, 0, 0] as [number, number, number, number] } : this.styleToFillUniforms(style);
@@ -680,6 +705,7 @@ export class WebGL2DRenderer {
     gl.stencilFunc(gl.ALWAYS, 1, 0x01);
     gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT);
     gl.useProgram(this.progFill);
+    gl.uniform1i(gl.getUniformLocation(this.progFill, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     bindAttrib(gl, this.polyBuf, 0, 2);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fan), gl.DYNAMIC_DRAW);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.progFill, "u_matrix"), false, this.matrix);
@@ -788,6 +814,7 @@ export class WebGL2DRenderer {
       fan.push(x0, y0, x1, y1, x2, y2);
     }
     gl.useProgram(this.progFill);
+    gl.uniform1i(gl.getUniformLocation(this.progFill, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     bindAttrib(gl, this.polyBuf, 0, 2);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fan), gl.DYNAMIC_DRAW);
     gl.uniformMatrix4fv(gl.getUniformLocation(this.progFill, "u_matrix"), false, this.matrix);
@@ -810,6 +837,7 @@ export class WebGL2DRenderer {
     const savedMatrix = new Float32Array(this.matrix);
     this.matrix = new Float32Array(this.activeClip.matrix);
     gl.useProgram(this.progFill);
+    gl.uniform1i(gl.getUniformLocation(this.progFill, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     gl.colorMask(false, false, false, false);
     gl.stencilMask(0x02);
     gl.stencilFunc(gl.ALWAYS, 0, 0x02);
@@ -942,6 +970,7 @@ export class WebGL2DRenderer {
     const gl = this.gl;
     this.applyBlend();
     gl.useProgram(this.progTex);
+    gl.uniform1i(gl.getUniformLocation(this.progTex, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     bindAttrib(gl, this.quadBuf, 0, 2);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -970,6 +999,7 @@ export class WebGL2DRenderer {
     const gl = this.gl;
     this.applyBlend();
     gl.useProgram(this.progTexLit);
+    gl.uniform1i(gl.getUniformLocation(this.progTexLit, "u_overlayMode"), this.transparentOverlay ? (this.globalCompositeOperation === "lighter" ? 2 : 1) : 0);
     bindAttrib(gl, this.quadBuf, 0, 2);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, tex);

@@ -4637,7 +4637,8 @@ export class BattleEngine {
     slot.toY = toY;
     slot.t = 0;
     slot.travel = kind === "longShot" ? ARROW_TRAVEL : kind === "webOfDreams" ? WEB_SHOT_TRAVEL : kind === "fantomForce" ? FANTOM_FORCE_TRAVEL : kind === "phantasmalForce" ? PHANTASMAL_FORCE_TRAVEL : kind === "magicMissile" || kind === "fireball" || kind === "causticVenom" || kind === "minorVenom" ? SPELL_TRAVEL : MISSILE_TRAVEL;
-    slot.max = slot.travel + MISSILE_AFTERGLOW;
+    // The legacy Magic Missile ends on impact; its trail must not linger past the hit.
+    slot.max = slot.travel + (kind === "magicMissile" ? 0 : MISSILE_AFTERGLOW);
     // Phantom System uses the original purple 2D bolt; only Phantasmal Force is a blue apparition.
     slot.hue = kind === "fireball" ? 22 : kind === "causticVenom" || kind === "minorVenom" ? 104 : kind === "longShot" ? 205 : kind === "arcaneBolt" ? 2 : kind === "webOfDreams" ? 276 : kind === "phantasmalForce" ? 202 : 268;
     slot.neeraArrow = kind === "longShot" && this.units.some((u) => u.alive && u.sprite === "neera" && u.x === Math.round(fromX) && u.y === Math.round(fromY));
@@ -5979,7 +5980,6 @@ export class BattleEngine {
     this.mode = "locked";
     this.tip = `Warp: dois portais abertos por ${this.warpGate.roundsLeft} rodadas. Aliados e inimigos de tamanho humano podem atravessar ao alcançá-los.`;
     this.queue.push({ type: "spell", att: unit.id, tiles: [source, destination], ids: [], label: WARP.name, spellKind: "warp" });
-    sfxPlay.summonFamiliar();
   }
 
   startSummonFamiliar(): void {
@@ -12356,670 +12356,20 @@ export class BattleEngine {
 
     }
 
-    if (this.particleLive) {
-      const dmgCell = tile * Math.sqrt(3);
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      for (const p of this.particles) {
-        if (!p.live || p.kind === "text") continue;
-        const { cx, cy } = this.hexCenter(Math.round(p.x), Math.round(p.y));
-        const px = cx;
-        const py = cy - tile * 0.2;
-        ctx.globalAlpha = 1 - p.life / p.max;
-        if (p.kind === "impact") {
-          const img = this.art.impact[Math.min(3, Math.floor(p.frame))];
-          if (img) ctx.drawImage(img, px - tile * 0.45, py - tile * 0.45, tile * 0.9, tile * 0.9);
-        } else {
-          ctx.fillStyle = p.color;
-          ctx.fillRect(px, py, p.size, p.size);
-        }
-      }
-      for (const p of this.particles) {
-        if (skipFloatingText || !p.live || p.kind !== "text" || !p.text) continue;
-        const { cx, cy } = this.hexCenter(Math.round(p.x), Math.round(p.y));
-        const fade = 0.4;
-        const a = p.life < p.max - fade ? 1 : Math.max(0, 1 - (p.life - (p.max - fade)) / fade);
-        ctx.globalAlpha = a;
-        const fontPx = Math.max(16, Math.round(dmgCell * 0.42));
-        ctx.font = `800 ${fontPx}px Figtree, sans-serif`;
-        ctx.lineJoin = "round";
-        ctx.lineWidth = Math.max(4, fontPx * 0.22);
-        ctx.strokeStyle = "rgba(12,11,10,0.92)";
-        ctx.fillStyle = p.color;
-        ctx.strokeText(p.text, cx, cy - dmgCell * 0.85 - p.life * 16);
-        ctx.fillText(p.text, cx, cy - dmgCell * 0.85 - p.life * 16);
-      }
-      ctx.globalAlpha = 1;
-    }
+    this.drawParticleFx(ctx, tile, skipFloatingText);
 
-    if (this.levelUpFxLive) {
-      for (const s of this.levelUpFx) {
-        if (!s.live) continue;
-        const unit = this.units.find((u) => u.id === s.unitId);
-        if (!unit) continue;
-        const { cx, cy } = this.hexCenter(Math.round(unit.x), Math.round(unit.y));
-        const x = cx + s.dx;
-        const y = cy + s.dy;
-        const k = s.life / s.max;
-        if (s.kind === "ring") {
-          const r = s.refCell * (0.15 + k * 1.25);
-          ctx.globalAlpha = Math.max(0, 1 - k) * 0.85;
-          ctx.strokeStyle = `hsl(${s.hue}, 95%, 68%)`;
-          ctx.lineWidth = Math.max(1.5, s.refCell * 0.05 * (1 - k));
-          ctx.beginPath();
-          ctx.arc(x, y, r, 0, Math.PI * 2);
-          ctx.stroke();
-          if (k < 0.3) {
-            const flash = ctx.createRadialGradient(x, y, 0, x, y, s.refCell * 0.5);
-            flash.addColorStop(0, `rgba(255,250,220,${0.6 * (1 - k / 0.3)})`);
-            flash.addColorStop(1, "rgba(255,250,220,0)");
-            ctx.fillStyle = flash;
-            ctx.globalAlpha = 1;
-            ctx.beginPath();
-            ctx.arc(x, y, s.refCell * 0.5, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          continue;
-        }
-        if (s.kind === "label") {
-          if (skipFloatingText) continue;
-          const tileNow = this.layout.tile;
-          const cellNow = tileNow * Math.sqrt(3);
-          const us = unitSize(unit);
-          const boss = unit.classId === "captain";
-          const isBig = unit.footprintOffsets === FOOTPRINT_TYPE_8 || unit.footprintOffsets === FOOTPRINT_TYPE_7;
-          const hh = cellNow * (us >= 4 ? 3.35 : us === 2 ? 1.72 : boss ? 1.44 : 1.42) * 1.2 * (isBig ? 0.75 : 1);
-          const footY = us >= 4 ? tileNow * 0.9 : cellNow * 0.42;
-          const { cx: upx, cy: upy } = this.unitPixel(unit);
-          const labelFade = k < 0.12 ? k / 0.12 : k > 0.75 ? Math.max(0, 1 - (k - 0.75) / 0.25) : 1;
-          const pop = k < 0.12 ? 1.35 - 0.35 * (k / 0.12) : 1;
-          ctx.save();
-          ctx.globalAlpha = labelFade;
-          ctx.translate(upx + s.dx, upy + footY - hh + s.dy);
-          ctx.scale(pop, pop);
-          ctx.textAlign = "center";
-          ctx.textBaseline = "bottom";
-          ctx.font = `900 ${Math.round(s.size)}px Figtree, sans-serif`;
-          ctx.shadowColor = `hsla(${s.hue}, 100%, 65%, 0.95)`;
-          ctx.shadowBlur = s.size * 0.9;
-          ctx.lineJoin = "round";
-          ctx.lineWidth = Math.max(4, s.size * 0.16);
-          ctx.strokeStyle = "rgba(24,16,4,0.9)";
-          ctx.strokeText(s.text ?? "", 0, 0);
-          ctx.fillStyle = `hsl(${s.hue}, 100%, 74%)`;
-          ctx.fillText(s.text ?? "", 0, 0);
-          ctx.shadowBlur = s.size * 1.6;
-          ctx.fillText(s.text ?? "", 0, 0);
-          ctx.restore();
-          continue;
-        }
-        const fade = k < 0.15 ? k / 0.15 : k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
-        ctx.globalAlpha = fade;
-        const size = s.size * (1 - k * 0.35);
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(s.rot);
-        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 2.2);
-        glow.addColorStop(0, `hsla(${s.hue}, 100%, 82%, 0.9)`);
-        glow.addColorStop(1, `hsla(${s.hue}, 100%, 60%, 0)`);
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, 0, size * 2.2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `hsl(${s.hue}, 95%, 78%)`;
-        ctx.beginPath();
-        for (let i = 0; i < 8; i++) {
-          const ang = (Math.PI / 4) * i;
-          const r = i % 2 === 0 ? size : size * 0.35;
-          const px = Math.cos(ang) * r;
-          const py = Math.sin(ang) * r;
-          if (i === 0) ctx.moveTo(px, py);
-          else ctx.lineTo(px, py);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-      ctx.globalAlpha = 1;
-    }
+    this.drawLevelUpFx(ctx, tile, skipFloatingText);
 
-    if (this.fireballBurstFxLive) {
-      for (const burst of this.fireballBurstFx) {
-        if (!burst.live) continue;
-        const { cx, cy } = this.hexCenter(burst.x, burst.y);
-        const k = burst.t / burst.max;
-        const fade = Math.max(0, 1 - k);
-        const venom = burst.kind === "causticVenom";
-        const radius = tile * (0.34 + k * 0.72);
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        const glow = ctx.createRadialGradient(cx, cy - tile * 0.1, 0, cx, cy - tile * 0.1, radius);
-        glow.addColorStop(0, venom ? `rgba(232,255,175,${0.84 * fade})` : `rgba(255,248,194,${0.9 * fade})`);
-        glow.addColorStop(0.22, venom ? `rgba(159,242,45,${0.76 * fade})` : `rgba(255,174,35,${0.78 * fade})`);
-        glow.addColorStop(0.62, venom ? `rgba(25,150,54,${0.45 * fade})` : `rgba(236,62,12,${0.42 * fade})`);
-        glow.addColorStop(1, venom ? "rgba(4,72,30,0)" : "rgba(128,18,0,0)");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(cx, cy - tile * 0.1, radius, 0, Math.PI * 2);
-        ctx.fill();
-        if (venom) {
-          // Caustic Venom dissipates as heavy green smoke, rather than borrowing Fireball's
-          // flame tongues. The curling paths remain confined to the struck hexes.
-          ctx.lineCap = "round";
-          for (let i = 0; i < 8; i += 1) {
-            const pair = i % 4;
-            const angle = burst.seed + pair * (Math.PI / 2) + (i >= 4 ? Math.PI : 0);
-            const drift = tile * (0.14 + pair * 0.035 + k * 0.2);
-            const startX = cx + Math.cos(angle) * drift * 0.45;
-            const startY = cy + Math.sin(angle) * drift * 0.22;
-            const endX = cx + Math.cos(angle) * drift;
-            const endY = cy - tile * (0.16 + k * (0.36 + (pair % 2) * 0.08));
-            ctx.strokeStyle = pair % 3 === 0 ? `rgba(190,255,126,${0.54 * fade})` : `rgba(47,188,82,${0.48 * fade})`;
-            ctx.lineWidth = tile * (0.07 + (pair % 2) * 0.026) * (0.85 + k * 0.4);
-            ctx.shadowColor = "rgba(71,235,94,0.72)";
-            ctx.shadowBlur = tile * 0.16;
-            ctx.beginPath();
-            ctx.moveTo(startX, startY);
-            ctx.quadraticCurveTo(cx + Math.cos(angle) * drift * 0.72, cy - tile * (0.1 + k * 0.24), endX, endY);
-            ctx.stroke();
-          }
-        } else {
-          // Fireball keeps its existing rising tongues and embers.
-          for (let i = 0; i < 7; i += 1) {
-            const angle = burst.seed + i * 2.41 + k * 5.2;
-            const spread = tile * (0.18 + (i % 3) * 0.1) * (0.75 + k * 0.35);
-            const px = cx + Math.cos(angle) * spread;
-            const py = cy - tile * (0.08 + k * 0.28) + Math.sin(angle) * spread * 0.45;
-            const r = tile * (0.055 + (i % 2) * 0.025) * fade;
-            ctx.shadowColor = "rgba(255,106,12,0.95)";
-            ctx.shadowBlur = tile * 0.22;
-            ctx.fillStyle = i % 3 === 0 ? `rgba(255,239,150,${fade})` : `rgba(255,93,8,${0.85 * fade})`;
-            ctx.beginPath();
-            ctx.arc(px, py, Math.max(1, r), 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-        ctx.restore();
-      }
-    }
-    if (this.missileFxLive) {
-      for (const m of this.missileFx) {
-        if (!m.live) continue;
-        // The integrated Three.js fireball is the only projectile visual when its renderer is
-        // active; never layer the legacy Canvas sprite over the original 3D tavern fireball.
-        if (m.kind === "fireball" && this.fireballVfxAvailable && !this.reducedMotion) continue;
-        if (m.kind === "causticVenom" && this.causticVenomVfxAvailable && !this.reducedMotion) continue;
-        const from = this.hexCenter(m.fromX, m.fromY);
-        const to = this.hexCenter(m.toX, m.toY);
-        const dxT = to.cx - from.cx;
-        const dyT = to.cy - from.cy;
-        const dist = Math.hypot(dxT, dyT) || 1;
-        const nx = -dyT / dist;
-        const ny = dxT / dist;
-        const along = (k: number) => {
-          const wave = Math.sin(k * Math.PI * 2.4 + m.seed) * tile * 0.16 * (1 - k * 0.6);
-          return { x: from.cx + dxT * k + nx * wave, y: from.cy - tile * 0.3 + dyT * k + ny * wave };
-        };
-        // kHead: the bolt's own position, 0-1, frozen at 1 once it lands. afterglow: 0 while
-        // still flying, ramping to 1 as the lingering trail fades out after arrival.
-        const kHead = Math.min(1, m.t / m.travel);
-        const afterglow = Math.max(0, (m.t - m.travel) / MISSILE_AFTERGLOW);
-        const physicalArrow = m.kind === "longShot";
-        if (physicalArrow) {
-          // All of Neera's arrow attacks share a restrained blood-red wake and a brief
-          // impact sparkle; the arrow itself keeps the approved projectile art.
-          const head = { x: from.cx + dxT * kHead, y: from.cy - tile * 0.3 + dyT * kHead };
-          const flightAngle = Math.atan2(dyT, dxT);
-          ctx.save();
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = (1 - afterglow) * (m.neeraArrow ? 0.42 : 0.24);
-          ctx.strokeStyle = m.neeraArrow ? "rgba(220,38,54,0.82)" : "rgba(215,222,226,0.74)";
-          ctx.lineWidth = Math.max(1, tile * (m.neeraArrow ? 0.018 : 0.012));
-          for (let ring = 1; ring <= 2; ring += 1) {
-            const bk = Math.max(0, kHead - ring * 0.1);
-            const back = { x: from.cx + dxT * bk, y: from.cy - tile * 0.3 + dyT * bk };
-            if (m.neeraArrow) {
-              ctx.beginPath();
-              ctx.ellipse(back.x, back.y, tile * (0.10 + ring * 0.035), tile * (0.027 + ring * 0.01), flightAngle, 0, Math.PI * 2);
-              ctx.stroke();
-            } else {
-              ctx.beginPath();
-              ctx.ellipse(back.x, back.y, tile * (0.09 + ring * 0.035), tile * (0.024 + ring * 0.01), flightAngle, 0, Math.PI * 2);
-              ctx.stroke();
-            }
-          }
-          if (m.neeraArrow && afterglow < 1) {
-            // A few ember-red motes follow the arrow during flight and flare outward on impact.
-            for (let spark = 0; spark < 5; spark += 1) {
-              const trail = spark * 0.055;
-              const k = Math.max(0, kHead - trail);
-              const x = from.cx + dxT * k;
-              const y = from.cy - tile * 0.3 + dyT * k;
-              const phase = m.seed + spark * 2.4 + this.time * 5;
-              const spread = tile * (0.025 + spark * 0.012);
-              ctx.fillStyle = `rgba(255,${58 + spark * 14},${48 + spark * 8},${(1 - afterglow) * (0.85 - spark * 0.11)})`;
-              ctx.beginPath();
-              ctx.arc(x + Math.cos(phase) * spread, y + Math.sin(phase) * spread, tile * (0.018 + (spark % 2) * 0.008), 0, Math.PI * 2);
-              ctx.fill();
-            }
-            if (kHead >= 1) {
-              ctx.globalAlpha = (1 - afterglow) * 0.8;
-              ctx.strokeStyle = "rgba(255,75,62,0.9)";
-              ctx.lineWidth = Math.max(1, tile * 0.016);
-              for (let ray = 0; ray < 7; ray += 1) {
-                const a = m.seed + ray * (Math.PI * 2 / 7);
-                ctx.beginPath();
-                ctx.moveTo(head.x + Math.cos(a) * tile * 0.035, head.y + Math.sin(a) * tile * 0.035);
-                ctx.lineTo(head.x + Math.cos(a) * tile * (0.12 + afterglow * 0.12), head.y + Math.sin(a) * tile * (0.12 + afterglow * 0.12));
-                ctx.stroke();
-              }
-            }
-          }
-          ctx.restore();
-          ctx.save();
-          ctx.translate(head.x, head.y);
-          // The supplied source points northeast (-45°); rotate from that intrinsic direction to the flight angle.
-          ctx.rotate(flightAngle + Math.PI / 4);
-          ctx.globalCompositeOperation = "source-over";
-          ctx.globalAlpha = 1 - afterglow;
-          // 25% larger (was 1.08) so the arrow reads over the hex grid.
-          ctx.drawImage(this.art.arrowCore, -tile * 0.675, -tile * 0.675, tile * 1.35, tile * 1.35);
-          ctx.restore();
-          continue;
-        }
+    this.drawFireballBurstFx(ctx, tile);
+    this.drawMissileFx(ctx, tile);
 
-        // Dreaming Web's shot is now the WebGL "webShot" beam (see BattleEngine.webShotBeam /
-        // BattleCanvas) — this MissileFx entry still exists purely as the timing clock that
-        // drives it (fromX/Y, toX/Y, t, travel), so it's kept alive and aged like any other
-        // missile, it just draws nothing of its own here.
-        if (m.kind === "webOfDreams") continue;
-
-        if (m.kind === "phantasmalForce") {
-          // A translucent attacker races along the cast path rather than behaving like a
-          // coloured projectile: skull, streaming lower body and two reaching claws make the
-          // hit read as a brief hostile apparition on the victim's hex.
-          const head = along(kHead);
-          const fade = 1 - afterglow;
-          const pulse = 0.9 + 0.1 * Math.sin(this.time * 15 + m.seed);
-          const reachAngle = Math.atan2(dyT, dxT);
-          ctx.save();
-          ctx.translate(head.x, head.y);
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = fade;
-          ctx.shadowColor = "rgba(64,196,255,0.95)";
-          ctx.shadowBlur = tile * 0.38;
-
-          // The tapering, ragged body remains upright so the figure reads at a glance even
-          // when it is flying sideways across the battlefield.
-          const body = ctx.createLinearGradient(0, -tile * 0.35, 0, tile * 0.58);
-          body.addColorStop(0, "rgba(188,246,255,0.80)");
-          body.addColorStop(0.34, "rgba(43,165,255,0.55)");
-          body.addColorStop(1, "rgba(19,82,222,0)");
-          ctx.fillStyle = body;
-          ctx.beginPath();
-          ctx.moveTo(-tile * 0.20 * pulse, -tile * 0.08);
-          ctx.quadraticCurveTo(-tile * 0.34, tile * 0.22, -tile * 0.17, tile * 0.57);
-          ctx.quadraticCurveTo(0, tile * 0.38, tile * 0.08, tile * 0.62);
-          ctx.quadraticCurveTo(tile * 0.24, tile * 0.24, tile * 0.20 * pulse, -tile * 0.08);
-          ctx.closePath();
-          ctx.fill();
-
-          // Pale face and hollow eyes give the effect a figure-like presence without needing
-          // a separate sprite sheet.
-          ctx.shadowBlur = tile * 0.18;
-          ctx.fillStyle = "rgba(180,242,255,0.92)";
-          ctx.beginPath();
-          ctx.ellipse(0, -tile * 0.24, tile * 0.16, tile * 0.19, 0, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "rgba(9,45,118,0.92)";
-          for (const eye of [-1, 1]) {
-            ctx.beginPath();
-            ctx.ellipse(eye * tile * 0.058, -tile * 0.25, tile * 0.034, tile * 0.045, 0, 0, Math.PI * 2);
-            ctx.fill();
-          }
-
-          // Two long spectral arms aim into the direction of travel; their three-fingered
-          // tips close on impact.
-          ctx.rotate(reachAngle);
-          ctx.strokeStyle = "rgba(127,225,255,0.86)";
-          ctx.lineCap = "round";
-          ctx.lineWidth = tile * 0.07;
-          for (const side of [-1, 1]) {
-            ctx.beginPath();
-            ctx.moveTo(0, side * tile * 0.04);
-            ctx.quadraticCurveTo(tile * 0.20, side * tile * 0.20, tile * 0.39, side * tile * 0.13);
-            ctx.stroke();
-            for (let claw = -1; claw <= 1; claw += 1) {
-              ctx.beginPath();
-              ctx.moveTo(tile * 0.35, side * tile * 0.13);
-              ctx.lineTo(tile * 0.49, side * tile * (0.13 + claw * 0.07));
-              ctx.stroke();
-            }
-          }
-          if (kHead >= 1) {
-            ctx.strokeStyle = `rgba(212,251,255,${0.9 * fade})`;
-            ctx.lineWidth = tile * 0.035;
-            for (const side of [-1, 1]) {
-              ctx.beginPath();
-              ctx.arc(tile * 0.48, side * tile * 0.10, tile * (0.16 + afterglow * 0.28), side < 0 ? -1.9 : 1.9, side < 0 ? -0.35 : 0.35);
-              ctx.stroke();
-            }
-          }
-          ctx.restore();
-          continue;
-        }
-
-        const minorArcaneBolt = m.kind === "arcaneBolt";
-
-        if (minorArcaneBolt) {
-          // Mage basic attack: two thin arcane pressure waves, then a runic impact at the target.
-          const head = along(kHead);
-          const angle = Math.atan2(dyT, dxT);
-          ctx.save();
-          ctx.globalCompositeOperation = "lighter";
-          ctx.globalAlpha = 1 - afterglow;
-          ctx.strokeStyle = "rgba(202,92,255,0.72)";
-          ctx.lineWidth = Math.max(1, tile * 0.017);
-          for (let ring = 1; ring <= 2; ring += 1) {
-            const back = along(Math.max(0, kHead - ring * 0.1));
-            ctx.beginPath();
-            ctx.ellipse(back.x, back.y, tile * (0.09 + ring * 0.035), tile * (0.025 + ring * 0.012), angle + Math.PI / 4, 0, Math.PI * 2);
-            ctx.stroke();
-          }
-          ctx.fillStyle = "rgba(244,150,255,0.92)";
-          ctx.beginPath(); ctx.arc(head.x, head.y, tile * 0.035, 0, Math.PI * 2); ctx.fill();
-          if (kHead >= 1) {
-            ctx.strokeStyle = "rgba(255,110,220,0.88)";
-            ctx.lineWidth = Math.max(1, tile * 0.014);
-            for (let ray = 0; ray < 8; ray += 1) {
-              const a = m.seed + ray * Math.PI / 4;
-              const inner = tile * 0.05;
-              const outer = tile * (0.12 + 0.09 * afterglow);
-              ctx.beginPath();
-              ctx.moveTo(head.x + Math.cos(a) * inner, head.y + Math.sin(a) * inner * 0.55);
-              ctx.lineTo(head.x + Math.cos(a) * outer, head.y + Math.sin(a) * outer * 0.55);
-              ctx.stroke();
-            }
-          }
-          ctx.restore();
-          continue;
-        }
-
-        // The light trace it leaves behind: a single stroke along the whole path already
-        // flown, distinct from the comet below (which only ever hugs the head) — this is
-        // what stays visible on the ground after the bolt has passed through.
-        if (kHead > 0.02) {
-          const steps = 16;
-          ctx.beginPath();
-          for (let i = 0; i <= steps; i++) {
-            const p = along((i / steps) * kHead);
-            if (i === 0) ctx.moveTo(p.x, p.y);
-            else ctx.lineTo(p.x, p.y);
-          }
-          const traceFade = (1 - afterglow) * (physicalArrow ? 0.13 : minorArcaneBolt ? 0.44 : 0.55);
-          ctx.lineCap = "round";
-          ctx.lineJoin = "round";
-          ctx.lineWidth = tile * (physicalArrow ? 0.018 : minorArcaneBolt ? 0.028 : 0.05);
-          ctx.strokeStyle = physicalArrow ? `rgba(218,224,226,${traceFade})` : `hsla(${m.hue}, 90%, 74%, ${traceFade})`;
-          ctx.shadowColor = physicalArrow ? `rgba(218,224,226,${traceFade})` : `hsla(${m.hue}, 95%, 70%, ${traceFade})`;
-          ctx.shadowBlur = tile * (physicalArrow ? 0.1 : 0.4);
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-        }
-
-        if (afterglow < 1) {
-          // A bigger, punchier comet trail right behind the head.
-          const cometCount = minorArcaneBolt ? 11 : 7;
-          for (let i = cometCount; i >= 0; i--) {
-            const tk = Math.max(0, kHead - i * 0.05);
-            const p = along(tk);
-            const fade = (1 - i / 8) * (1 - afterglow);
-            const r = tile * (physicalArrow ? (0.045 - i * 0.004) : (minorArcaneBolt ? 0.64 : 1) * (0.16 - i * 0.016));
-            if (r <= 0) continue;
-            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
-            g.addColorStop(0, physicalArrow ? `rgba(228,232,234,${fade * 0.18})` : `hsla(${m.hue}, 95%, 86%, ${fade})`);
-            g.addColorStop(0.35, physicalArrow ? `rgba(150,158,162,${fade * 0.08})` : `hsla(${m.hue}, 92%, 68%, ${fade * 0.75})`);
-            g.addColorStop(1, physicalArrow ? `rgba(120,130,136,0)` : `hsla(${m.hue}, 90%, 55%, 0)`);
-            ctx.fillStyle = g;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          const head = along(kHead);
-          // A big soft aura around the head, well beyond the core, for real glow.
-          const auraFade = 1 - afterglow;
-          const aura = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, tile * (physicalArrow ? 0.16 : minorArcaneBolt ? 0.34 : 0.55));
-          aura.addColorStop(0, physicalArrow ? `rgba(230,234,236,${0.1 * auraFade})` : `hsla(${m.hue}, 100%, 85%, ${(minorArcaneBolt ? 0.34 : 0.55) * auraFade})`);
-          aura.addColorStop(1, physicalArrow ? `rgba(180,188,192,0)` : `hsla(${m.hue}, 100%, 60%, 0)`);
-          ctx.fillStyle = aura;
-          ctx.beginPath();
-          ctx.arc(head.x, head.y, tile * (physicalArrow ? 0.16 : minorArcaneBolt ? 0.34 : 0.55), 0, Math.PI * 2);
-          ctx.fill();
-          if (minorArcaneBolt) {
-            // Basic mage attack: a compact scarlet lance, deliberately unlike Magic Missile.
-            ctx.save();
-            ctx.globalCompositeOperation = "lighter";
-            ctx.globalAlpha = auraFade;
-            const core = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, tile * 0.18);
-            core.addColorStop(0, "rgba(255,242,200,0.98)");
-            core.addColorStop(0.22, "rgba(255,104,58,0.9)");
-            core.addColorStop(0.62, "rgba(182,20,27,0.35)");
-            core.addColorStop(1, "rgba(110,0,8,0)");
-            ctx.fillStyle = core;
-            ctx.beginPath(); ctx.arc(head.x, head.y, tile * 0.18, 0, Math.PI * 2); ctx.fill();
-            ctx.strokeStyle = "rgba(255,96,55,0.72)";
-            ctx.lineWidth = Math.max(1, tile * 0.018);
-            for (let spark = 0; spark < 12; spark += 1) {
-              const a = m.seed + spark * 2.399 + this.time * (2.2 + spark * 0.09);
-              const radius = tile * (0.12 + ((spark * 7) % 6) * 0.018);
-              const x = head.x + Math.cos(a) * radius;
-              const y = head.y + Math.sin(a) * radius * 0.55;
-              ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(a) * tile * 0.065, y - Math.sin(a) * tile * 0.04); ctx.stroke();
-            }
-            ctx.restore();
-          }
-          const projectileCore = m.kind === "fireball" ? this.art.fireballCore : m.kind === "causticVenom" || m.kind === "minorVenom" ? this.art.causticVenomCore : null;
-          if (m.kind === "longShot" && this.art.arrowCore) {
-            // One shared approved arrow asset for normal shots, Multi Shot, Long Shot and Piercing Shot.
-            const angle = Math.atan2(dyT, dxT);
-            ctx.save();
-            ctx.translate(head.x, head.y);
-            ctx.rotate(angle);
-            ctx.globalCompositeOperation = "source-over";
-            ctx.globalAlpha = auraFade;
-            ctx.drawImage(this.art.arrowCore, -tile * 0.56, -tile * 0.22, tile * 1.12, tile * 0.44);
-            ctx.restore();
-          }
-          if (projectileCore) {
-            // v2 art: a real alpha-cutout comet (dense ball toward the source's own
-            // bottom-right corner, wispy tail trailing to the top-left), drawn with normal
-            // alpha compositing now that it has actual transparency instead of the old v1's
-            // flattened black background (which only ever worked via additive blending).
-            const img = projectileCore;
-            const flightAngle = Math.atan2(dyT, dxT);
-            // The art's ball-and-tail sit on its own fixed diagonal (45°, bottom-right) —
-            // rotating by the difference between that and the shot's actual flight angle
-            // points the ball at the target regardless of cast direction, the same
-            // orient-to-travel-direction treatment as Dreaming Web's shot (see
-            // BattleEngine.webShotBeam).
-            const pulse = 1 + 0.05 * Math.sin(this.time * 13 + m.seed);
-            const w = tile * 1.9 * pulse;
-            const h = (w * img.naturalHeight) / img.naturalWidth;
-            ctx.save();
-            ctx.translate(head.x, head.y);
-            ctx.rotate(flightAngle - Math.PI / 4);
-            ctx.globalCompositeOperation = "source-over";
-            ctx.globalAlpha = auraFade;
-            ctx.drawImage(img, -w / 2, -h / 2, w, h);
-            ctx.restore();
-          }
-          ctx.fillStyle = `rgba(255,255,255,${(physicalArrow ? 0 : 0.95) * auraFade})`;
-          ctx.beginPath();
-          ctx.arc(head.x, head.y, tile * (minorArcaneBolt ? 0.05 : 0.085), 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    if (this.lightningFxLive) {
-      for (const l of this.lightningFx) {
-        if (!l.live) continue;
-        const t3 = l.power === "t3";
-        const raio = l.power === "raio";
-        const divine = l.power === "divine";
-        const divineSplash = l.power === "divineSplash";
-        const { cx, cy } = this.hexCenter(l.x, l.y);
-        const topY = t3 ? -tile * 0.2 : cy - tile * (raio || divine ? LIGHTNING_RAIO_FALL_HEIGHT : divineSplash ? 1.1 : LIGHTNING_FALL_HEIGHT);
-        const k = l.t / l.max;
-        const reveal = Math.min(1, l.t / (t3 ? 0.07 : raio || divine ? 0.1 : divineSplash ? 0.045 : 0.06));
-        const hold = t3 ? 0.32 : raio || divine ? 0.28 : 0.35;
-        const fade = k < hold ? 1 : Math.max(0, 1 - (k - hold) / (1 - hold));
-        if (fade <= 0) continue;
-
-        ctx.save();
-        ctx.globalCompositeOperation = "lighter";
-        const pulse = t3 || divine || divineSplash ? 0.82 + 0.18 * Math.abs(Math.sin(l.t * 52 + l.hue)) : 1;
-        // Real strikes restrike down the same channel two or three times in a fraction of a
-        // second — a hard strobe rather than a smooth fade.
-        const strobe = l.t < 0.05 ? 1 : l.t < 0.08 ? 0.22 : l.t < 0.14 ? 1 : l.t < 0.17 ? 0.35 : l.t < 0.21 ? 0.95 : 0.8;
-        const glow = fade * pulse * strobe;
-
-        // Seeded from the shape rolled at emit time, so the channel holds one fixed shape for
-        // the whole strike instead of re-rolling every frame.
-        const makeRng = (s: number) => () => {
-          s = (s + 0x6d2b79f5) >>> 0;
-          let r = Math.imul(s ^ (s >>> 15), 1 | s);
-          r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
-          return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
-        };
-        const baseSeed = (Math.floor(l.hue * 1000) ^ Math.floor((l.segs[0] ?? 0) * 1e6) ^ (l.branches.length * 7919)) >>> 0;
-        const rnd = makeRng(baseSeed);
-        const minSeg = tile * 0.08;
-        // Midpoint displacement: each halving adds a smaller kink, which is what gives
-        // lightning its fractal, crackling edge instead of a few straight zigzags.
-        const zig = (ax: number, ay: number, bx: number, by: number, rough: number, r: () => number) => {
-          const out = [{ x: ax, y: ay }];
-          const rec = (x0: number, y0: number, x1: number, y1: number, d: number) => {
-            const dx = x1 - x0;
-            const dy = y1 - y0;
-            const len = Math.hypot(dx, dy);
-            if (len < minSeg) {
-              out.push({ x: x1, y: y1 });
-              return;
-            }
-            const off = (r() - 0.5) * d;
-            const mx = (x0 + x1) / 2 - (dy / len) * off;
-            const my = (y0 + y1) / 2 + (dx / len) * off;
-            rec(x0, y0, mx, my, d * 0.55);
-            rec(mx, my, x1, y1, d * 0.55);
-          };
-          rec(ax, ay, bx, by, Math.hypot(bx - ax, by - ay) * rough);
-          return out;
-        };
-
-        const main = zig(cx + (rnd() - 0.5) * tile * (t3 ? 0.5 : 1.1), topY, cx, cy, t3 ? 0.14 : 0.2, rnd);
-        const mainShown = Math.max(2, Math.ceil(main.length * reveal));
-
-        // Forks: every one is generated (keeps the shape stable) but only drawn once the
-        // descending leader has passed its split point.
-        const forks: { pts: { x: number; y: number }[]; shown: number; w: number; a: number }[] = [];
-        for (const b of l.branches) {
-          const idx = Math.min(main.length - 2, Math.floor(b.at * main.length));
-          const start = main[idx]!;
-          const ang = Math.PI / 2 + b.side * (0.35 + rnd() * 0.55);
-          const len = Math.max(tile * 0.6, (cy - start.y) * (0.3 + rnd() * 0.35));
-          const pts = zig(start.x, start.y, start.x + Math.cos(ang) * len, start.y + Math.sin(ang) * len, 0.3, rnd);
-          const forkReveal = Math.max(0, Math.min(1, (reveal - b.at) / (1 - b.at + 0.001)));
-          const shown = idx < mainShown ? Math.ceil(pts.length * forkReveal) : 0;
-          forks.push({ pts, shown, w: 0.55, a: 0.8 });
-          if (rnd() < 0.65) {
-            const sIdx = Math.floor(pts.length * (0.3 + rnd() * 0.4));
-            const s = pts[sIdx]!;
-            const sAng = ang + b.side * (0.3 + rnd() * 0.5);
-            const sLen = len * (0.3 + rnd() * 0.25);
-            const sub = zig(s.x, s.y, s.x + Math.cos(sAng) * sLen, s.y + Math.sin(sAng) * sLen, 0.32, rnd);
-            forks.push({ pts: sub, shown: shown > sIdx ? Math.ceil(sub.length * Math.min(1, (shown - sIdx) / Math.max(1, pts.length - sIdx))) : 0, w: 0.32, a: 0.55 });
-          }
-        }
-
-        // Three passes per channel: a tight coloured glow, a pale inner sheath and a thin
-        // white-hot core — the core stays hairline-thin, which is what reads as electricity.
-        const mainW = t3 ? 2.2 : divine ? 1.8 : raio ? 1.5 : divineSplash ? 0.85 : 1;
-        const drawChannel = (pts: { x: number; y: number }[], shown: number, w: number, a: number) => {
-          if (shown < 2) return;
-          ctx.beginPath();
-          ctx.moveTo(pts[0]!.x, pts[0]!.y);
-          for (let i = 1; i < shown; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
-          ctx.lineJoin = "round";
-          ctx.lineCap = "round";
-          ctx.shadowColor = `hsla(${l.hue}, 100%, 66%, ${Math.min(1, a * glow)})`;
-          ctx.shadowBlur = tile * 0.45 * w;
-          ctx.strokeStyle = `hsla(${l.hue}, 100%, 64%, ${0.42 * a * glow})`;
-          ctx.lineWidth = tile * 0.085 * w;
-          ctx.stroke();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = `hsla(${l.hue}, 100%, 86%, ${0.8 * a * glow})`;
-          ctx.lineWidth = tile * 0.032 * w;
-          ctx.stroke();
-          ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, a * glow)})`;
-          ctx.lineWidth = Math.max(1, tile * 0.014 * w);
-          ctx.stroke();
-        };
-        for (const f of forks) drawChannel(f.pts, f.shown, mainW * f.w, f.a);
-        drawChannel(main, mainShown, mainW, 1);
-
-        // Ground discharge: short arcs crawling out from the impact, re-rolled fast so they
-        // crackle while the bolt is connected.
-        if (mainShown >= main.length && k < 0.5) {
-          const crackle = makeRng((baseSeed ^ (Math.floor(l.t * 40) * 2654435761)) >>> 0);
-          const arcs = t3 ? 6 : raio || divine ? 5 : 3;
-          const reachT = tile * (t3 ? 1.3 : divine ? 1.15 : raio ? 0.9 : divineSplash ? 0.42 : 0.6);
-          for (let i = 0; i < arcs; i++) {
-            const ang = crackle() * Math.PI * 2;
-            const len = reachT * (0.45 + crackle() * 0.55);
-            const arc = zig(cx, cy, cx + Math.cos(ang) * len, cy + Math.sin(ang) * len * 0.5, 0.35, crackle);
-            drawChannel(arc, arc.length, mainW * 0.3, 0.7 * (1 - k / 0.5));
-          }
-        }
-
-        const flashDuration = t3 ? 0.62 : divine ? 0.58 : raio ? 0.55 : 0.5;
-        if (k < flashDuration) {
-          const flashFade = Math.max(0, 1 - k / flashDuration);
-          const flashR = tile * (t3 ? 2.1 : divine ? 1.7 : raio ? 1.55 : divineSplash ? 0.48 : 0.9);
-          const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
-          flash.addColorStop(0, `hsla(${l.hue}, 100%, 94%, ${(t3 ? 0.98 : divine ? 0.96 : raio ? 0.92 : divineSplash ? 0.68 : 0.7) * flashFade * pulse})`);
-          flash.addColorStop(0.32, `hsla(${l.hue}, 100%, 78%, ${(t3 ? 0.55 : divine ? 0.52 : raio ? 0.45 : divineSplash ? 0.22 : 0.3) * flashFade})`);
-          flash.addColorStop(1, `hsla(${l.hue}, 100%, 70%, 0)`);
-          ctx.fillStyle = flash;
-          ctx.beginPath();
-          ctx.arc(cx, cy, flashR, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
-      }
-      ctx.globalAlpha = 1;
-    }
+    this.drawLightningFx(ctx, tile);
 
     this.drawChargeFx(ctx, tile);
     this.drawHolyFx(ctx, tile);
-    for (const fx of this.turnUndeadFx) {
-      const cells = fx.tiles.map((p) => {
-        const { cx, cy } = this.hexCenter(p.x, p.y);
-        return { x: cx, y: cy, corners: Array.from({ length: 6 }, (_, i): [number, number] => {
-          const angle = (60 * i - 30) * Math.PI / 180;
-          return [cx + tile * Math.cos(angle), cy + tile * Math.sin(angle)];
-        }) };
-      });
-      drawTurnUndeadV4(ctx, cells, fx.t);
-    }
+    this.drawTurnUndeadFx(ctx, tile);
     this.drawBladeFx(ctx, tile);
-    for (const fx of this.provokeFx) {
-      const target = this.units.find(u => u.id === fx.unitId && u.alive);
-      if (!target || !this.targetable(target)) continue;
-      const { cx, cy } = this.hexCenter(target.x, target.y);
-      drawProvokeVFX(ctx, cx, cy - tile * 0.15, tile * 1.1, fx.t);
-    }
+    this.drawProvokeFx(ctx, tile);
 
     // Finish the ordinary ground props after the last character row, so nearer characters
     // remain in front while props closer to the camera hide characters behind them.
@@ -13488,6 +12838,692 @@ export class BattleEngine {
   /** The shared steel-swoosh visual — see BladeFx/BladeKind. Every shape here is plain
    * white-steel light (glow pass + bright core pass), the same treatment a real blade catches
    * the light with, and never fire or a magic-circle glow. */
+  /** Hit sparks and floating numbers. Split out so the 3D overlay can draw each on its own hex. */
+  private drawParticleFx(ctx: any, tile: number, skipFloatingText = false): void {
+    if (this.particleLive) {
+      const dmgCell = tile * Math.sqrt(3);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      for (const p of this.particles) {
+        if (!p.live || p.kind === "text") continue;
+        const { cx, cy } = this.hexCenter(Math.round(p.x), Math.round(p.y));
+        const px = cx;
+        const py = cy - tile * 0.2;
+        ctx.globalAlpha = 1 - p.life / p.max;
+        if (p.kind === "impact") {
+          const img = this.art.impact[Math.min(3, Math.floor(p.frame))];
+          if (img) ctx.drawImage(img, px - tile * 0.45, py - tile * 0.45, tile * 0.9, tile * 0.9);
+        } else {
+          ctx.fillStyle = p.color;
+          ctx.fillRect(px, py, p.size, p.size);
+        }
+      }
+      for (const p of this.particles) {
+        if (skipFloatingText || !p.live || p.kind !== "text" || !p.text) continue;
+        const { cx, cy } = this.hexCenter(Math.round(p.x), Math.round(p.y));
+        const fade = 0.4;
+        const a = p.life < p.max - fade ? 1 : Math.max(0, 1 - (p.life - (p.max - fade)) / fade);
+        ctx.globalAlpha = a;
+        const fontPx = Math.max(16, Math.round(dmgCell * 0.42));
+        ctx.font = `800 ${fontPx}px Figtree, sans-serif`;
+        ctx.lineJoin = "round";
+        ctx.lineWidth = Math.max(4, fontPx * 0.22);
+        ctx.strokeStyle = "rgba(12,11,10,0.92)";
+        ctx.fillStyle = p.color;
+        ctx.strokeText(p.text, cx, cy - dmgCell * 0.85 - p.life * 16);
+        ctx.fillText(p.text, cx, cy - dmgCell * 0.85 - p.life * 16);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** Level-up rings, stars and labels. Split out so the 3D overlay can draw each on its own hex. */
+  private drawLevelUpFx(ctx: any, tile: number, skipFloatingText = false): void {
+    if (this.levelUpFxLive) {
+      for (const s of this.levelUpFx) {
+        if (!s.live) continue;
+        const unit = this.units.find((u) => u.id === s.unitId);
+        if (!unit) continue;
+        const { cx, cy } = this.hexCenter(Math.round(unit.x), Math.round(unit.y));
+        const x = cx + s.dx;
+        const y = cy + s.dy;
+        const k = s.life / s.max;
+        if (s.kind === "ring") {
+          const r = s.refCell * (0.15 + k * 1.25);
+          ctx.globalAlpha = Math.max(0, 1 - k) * 0.85;
+          ctx.strokeStyle = `hsl(${s.hue}, 95%, 68%)`;
+          ctx.lineWidth = Math.max(1.5, s.refCell * 0.05 * (1 - k));
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.stroke();
+          if (k < 0.3) {
+            const flash = ctx.createRadialGradient(x, y, 0, x, y, s.refCell * 0.5);
+            flash.addColorStop(0, `rgba(255,250,220,${0.6 * (1 - k / 0.3)})`);
+            flash.addColorStop(1, "rgba(255,250,220,0)");
+            ctx.fillStyle = flash;
+            ctx.globalAlpha = 1;
+            ctx.beginPath();
+            ctx.arc(x, y, s.refCell * 0.5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          continue;
+        }
+        if (s.kind === "label") {
+          if (skipFloatingText) continue;
+          const tileNow = this.layout.tile;
+          const cellNow = tileNow * Math.sqrt(3);
+          const us = unitSize(unit);
+          const boss = unit.classId === "captain";
+          const isBig = unit.footprintOffsets === FOOTPRINT_TYPE_8 || unit.footprintOffsets === FOOTPRINT_TYPE_7;
+          const hh = cellNow * (us >= 4 ? 3.35 : us === 2 ? 1.72 : boss ? 1.44 : 1.42) * 1.2 * (isBig ? 0.75 : 1);
+          const footY = us >= 4 ? tileNow * 0.9 : cellNow * 0.42;
+          const { cx: upx, cy: upy } = this.unitPixel(unit);
+          const labelFade = k < 0.12 ? k / 0.12 : k > 0.75 ? Math.max(0, 1 - (k - 0.75) / 0.25) : 1;
+          const pop = k < 0.12 ? 1.35 - 0.35 * (k / 0.12) : 1;
+          ctx.save();
+          ctx.globalAlpha = labelFade;
+          ctx.translate(upx + s.dx, upy + footY - hh + s.dy);
+          ctx.scale(pop, pop);
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          ctx.font = `900 ${Math.round(s.size)}px Figtree, sans-serif`;
+          ctx.shadowColor = `hsla(${s.hue}, 100%, 65%, 0.95)`;
+          ctx.shadowBlur = s.size * 0.9;
+          ctx.lineJoin = "round";
+          ctx.lineWidth = Math.max(4, s.size * 0.16);
+          ctx.strokeStyle = "rgba(24,16,4,0.9)";
+          ctx.strokeText(s.text ?? "", 0, 0);
+          ctx.fillStyle = `hsl(${s.hue}, 100%, 74%)`;
+          ctx.fillText(s.text ?? "", 0, 0);
+          ctx.shadowBlur = s.size * 1.6;
+          ctx.fillText(s.text ?? "", 0, 0);
+          ctx.restore();
+          continue;
+        }
+        const fade = k < 0.15 ? k / 0.15 : k > 0.7 ? Math.max(0, 1 - (k - 0.7) / 0.3) : 1;
+        ctx.globalAlpha = fade;
+        const size = s.size * (1 - k * 0.35);
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(s.rot);
+        const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 2.2);
+        glow.addColorStop(0, `hsla(${s.hue}, 100%, 82%, 0.9)`);
+        glow.addColorStop(1, `hsla(${s.hue}, 100%, 60%, 0)`);
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, size * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `hsl(${s.hue}, 95%, 78%)`;
+        ctx.beginPath();
+        for (let i = 0; i < 8; i++) {
+          const ang = (Math.PI / 4) * i;
+          const r = i % 2 === 0 ? size : size * 0.35;
+          const px = Math.cos(ang) * r;
+          const py = Math.sin(ang) * r;
+          if (i === 0) ctx.moveTo(px, py);
+          else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** Fireball / Caustic Venom bursts. Split out so the 3D overlay can draw each on its own hex. */
+  private drawFireballBurstFx(ctx: any, tile: number): void {
+    if (this.fireballBurstFxLive) {
+      for (const burst of this.fireballBurstFx) {
+        if (!burst.live) continue;
+        const { cx, cy } = this.hexCenter(burst.x, burst.y);
+        const k = burst.t / burst.max;
+        const fade = Math.max(0, 1 - k);
+        const venom = burst.kind === "causticVenom";
+        const radius = tile * (0.34 + k * 0.72);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const glow = ctx.createRadialGradient(cx, cy - tile * 0.1, 0, cx, cy - tile * 0.1, radius);
+        glow.addColorStop(0, venom ? `rgba(232,255,175,${0.84 * fade})` : `rgba(255,248,194,${0.9 * fade})`);
+        glow.addColorStop(0.22, venom ? `rgba(159,242,45,${0.76 * fade})` : `rgba(255,174,35,${0.78 * fade})`);
+        glow.addColorStop(0.62, venom ? `rgba(25,150,54,${0.45 * fade})` : `rgba(236,62,12,${0.42 * fade})`);
+        glow.addColorStop(1, venom ? "rgba(4,72,30,0)" : "rgba(128,18,0,0)");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(cx, cy - tile * 0.1, radius, 0, Math.PI * 2);
+        ctx.fill();
+        if (venom) {
+          // Caustic Venom dissipates as heavy green smoke, rather than borrowing Fireball's
+          // flame tongues. The curling paths remain confined to the struck hexes.
+          ctx.lineCap = "round";
+          for (let i = 0; i < 8; i += 1) {
+            const pair = i % 4;
+            const angle = burst.seed + pair * (Math.PI / 2) + (i >= 4 ? Math.PI : 0);
+            const drift = tile * (0.14 + pair * 0.035 + k * 0.2);
+            const startX = cx + Math.cos(angle) * drift * 0.45;
+            const startY = cy + Math.sin(angle) * drift * 0.22;
+            const endX = cx + Math.cos(angle) * drift;
+            const endY = cy - tile * (0.16 + k * (0.36 + (pair % 2) * 0.08));
+            ctx.strokeStyle = pair % 3 === 0 ? `rgba(190,255,126,${0.54 * fade})` : `rgba(47,188,82,${0.48 * fade})`;
+            ctx.lineWidth = tile * (0.07 + (pair % 2) * 0.026) * (0.85 + k * 0.4);
+            ctx.shadowColor = "rgba(71,235,94,0.72)";
+            ctx.shadowBlur = tile * 0.16;
+            ctx.beginPath();
+            ctx.moveTo(startX, startY);
+            ctx.quadraticCurveTo(cx + Math.cos(angle) * drift * 0.72, cy - tile * (0.1 + k * 0.24), endX, endY);
+            ctx.stroke();
+          }
+        } else {
+          // Fireball keeps its existing rising tongues and embers.
+          for (let i = 0; i < 7; i += 1) {
+            const angle = burst.seed + i * 2.41 + k * 5.2;
+            const spread = tile * (0.18 + (i % 3) * 0.1) * (0.75 + k * 0.35);
+            const px = cx + Math.cos(angle) * spread;
+            const py = cy - tile * (0.08 + k * 0.28) + Math.sin(angle) * spread * 0.45;
+            const r = tile * (0.055 + (i % 2) * 0.025) * fade;
+            ctx.shadowColor = "rgba(255,106,12,0.95)";
+            ctx.shadowBlur = tile * 0.22;
+            ctx.fillStyle = i % 3 === 0 ? `rgba(255,239,150,${fade})` : `rgba(255,93,8,${0.85 * fade})`;
+            ctx.beginPath();
+            ctx.arc(px, py, Math.max(1, r), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      }
+    }
+  }
+
+  /** Lightning strikes and holy rays. Split out so the 3D overlay can draw each on its own hex. */
+  private drawLightningFx(ctx: any, tile: number): void {
+    if (this.lightningFxLive) {
+      for (const l of this.lightningFx) {
+        if (!l.live) continue;
+        const t3 = l.power === "t3";
+        const raio = l.power === "raio";
+        const divine = l.power === "divine";
+        const divineSplash = l.power === "divineSplash";
+        const { cx, cy } = this.hexCenter(l.x, l.y);
+        const topY = t3 ? -tile * 0.2 : cy - tile * (raio || divine ? LIGHTNING_RAIO_FALL_HEIGHT : divineSplash ? 1.1 : LIGHTNING_FALL_HEIGHT);
+        const k = l.t / l.max;
+        const reveal = Math.min(1, l.t / (t3 ? 0.07 : raio || divine ? 0.1 : divineSplash ? 0.045 : 0.06));
+        const hold = t3 ? 0.32 : raio || divine ? 0.28 : 0.35;
+        const fade = k < hold ? 1 : Math.max(0, 1 - (k - hold) / (1 - hold));
+        if (fade <= 0) continue;
+
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        const pulse = t3 || divine || divineSplash ? 0.82 + 0.18 * Math.abs(Math.sin(l.t * 52 + l.hue)) : 1;
+        // Real strikes restrike down the same channel two or three times in a fraction of a
+        // second — a hard strobe rather than a smooth fade.
+        const strobe = l.t < 0.05 ? 1 : l.t < 0.08 ? 0.22 : l.t < 0.14 ? 1 : l.t < 0.17 ? 0.35 : l.t < 0.21 ? 0.95 : 0.8;
+        const glow = fade * pulse * strobe;
+
+        // Seeded from the shape rolled at emit time, so the channel holds one fixed shape for
+        // the whole strike instead of re-rolling every frame.
+        const makeRng = (s: number) => () => {
+          s = (s + 0x6d2b79f5) >>> 0;
+          let r = Math.imul(s ^ (s >>> 15), 1 | s);
+          r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+          return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+        };
+        const baseSeed = (Math.floor(l.hue * 1000) ^ Math.floor((l.segs[0] ?? 0) * 1e6) ^ (l.branches.length * 7919)) >>> 0;
+        const rnd = makeRng(baseSeed);
+        const minSeg = tile * 0.08;
+        // Midpoint displacement: each halving adds a smaller kink, which is what gives
+        // lightning its fractal, crackling edge instead of a few straight zigzags.
+        const zig = (ax: number, ay: number, bx: number, by: number, rough: number, r: () => number) => {
+          const out = [{ x: ax, y: ay }];
+          const rec = (x0: number, y0: number, x1: number, y1: number, d: number) => {
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < minSeg) {
+              out.push({ x: x1, y: y1 });
+              return;
+            }
+            const off = (r() - 0.5) * d;
+            const mx = (x0 + x1) / 2 - (dy / len) * off;
+            const my = (y0 + y1) / 2 + (dx / len) * off;
+            rec(x0, y0, mx, my, d * 0.55);
+            rec(mx, my, x1, y1, d * 0.55);
+          };
+          rec(ax, ay, bx, by, Math.hypot(bx - ax, by - ay) * rough);
+          return out;
+        };
+
+        const main = zig(cx + (rnd() - 0.5) * tile * (t3 ? 0.5 : 1.1), topY, cx, cy, t3 ? 0.14 : 0.2, rnd);
+        const mainShown = Math.max(2, Math.ceil(main.length * reveal));
+
+        // Forks: every one is generated (keeps the shape stable) but only drawn once the
+        // descending leader has passed its split point.
+        const forks: { pts: { x: number; y: number }[]; shown: number; w: number; a: number }[] = [];
+        for (const b of l.branches) {
+          const idx = Math.min(main.length - 2, Math.floor(b.at * main.length));
+          const start = main[idx]!;
+          const ang = Math.PI / 2 + b.side * (0.35 + rnd() * 0.55);
+          const len = Math.max(tile * 0.6, (cy - start.y) * (0.3 + rnd() * 0.35));
+          const pts = zig(start.x, start.y, start.x + Math.cos(ang) * len, start.y + Math.sin(ang) * len, 0.3, rnd);
+          const forkReveal = Math.max(0, Math.min(1, (reveal - b.at) / (1 - b.at + 0.001)));
+          const shown = idx < mainShown ? Math.ceil(pts.length * forkReveal) : 0;
+          forks.push({ pts, shown, w: 0.55, a: 0.8 });
+          if (rnd() < 0.65) {
+            const sIdx = Math.floor(pts.length * (0.3 + rnd() * 0.4));
+            const s = pts[sIdx]!;
+            const sAng = ang + b.side * (0.3 + rnd() * 0.5);
+            const sLen = len * (0.3 + rnd() * 0.25);
+            const sub = zig(s.x, s.y, s.x + Math.cos(sAng) * sLen, s.y + Math.sin(sAng) * sLen, 0.32, rnd);
+            forks.push({ pts: sub, shown: shown > sIdx ? Math.ceil(sub.length * Math.min(1, (shown - sIdx) / Math.max(1, pts.length - sIdx))) : 0, w: 0.32, a: 0.55 });
+          }
+        }
+
+        // Three passes per channel: a tight coloured glow, a pale inner sheath and a thin
+        // white-hot core — the core stays hairline-thin, which is what reads as electricity.
+        const mainW = t3 ? 2.2 : divine ? 1.8 : raio ? 1.5 : divineSplash ? 0.85 : 1;
+        const drawChannel = (pts: { x: number; y: number }[], shown: number, w: number, a: number) => {
+          if (shown < 2) return;
+          ctx.beginPath();
+          ctx.moveTo(pts[0]!.x, pts[0]!.y);
+          for (let i = 1; i < shown; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
+          ctx.lineJoin = "round";
+          ctx.lineCap = "round";
+          ctx.shadowColor = `hsla(${l.hue}, 100%, 66%, ${Math.min(1, a * glow)})`;
+          ctx.shadowBlur = tile * 0.45 * w;
+          ctx.strokeStyle = `hsla(${l.hue}, 100%, 64%, ${0.42 * a * glow})`;
+          ctx.lineWidth = tile * 0.085 * w;
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = `hsla(${l.hue}, 100%, 86%, ${0.8 * a * glow})`;
+          ctx.lineWidth = tile * 0.032 * w;
+          ctx.stroke();
+          ctx.strokeStyle = `rgba(255,255,255,${Math.min(1, a * glow)})`;
+          ctx.lineWidth = Math.max(1, tile * 0.014 * w);
+          ctx.stroke();
+        };
+        for (const f of forks) drawChannel(f.pts, f.shown, mainW * f.w, f.a);
+        drawChannel(main, mainShown, mainW, 1);
+
+        // Ground discharge: short arcs crawling out from the impact, re-rolled fast so they
+        // crackle while the bolt is connected.
+        if (mainShown >= main.length && k < 0.5) {
+          const crackle = makeRng((baseSeed ^ (Math.floor(l.t * 40) * 2654435761)) >>> 0);
+          const arcs = t3 ? 6 : raio || divine ? 5 : 3;
+          const reachT = tile * (t3 ? 1.3 : divine ? 1.15 : raio ? 0.9 : divineSplash ? 0.42 : 0.6);
+          for (let i = 0; i < arcs; i++) {
+            const ang = crackle() * Math.PI * 2;
+            const len = reachT * (0.45 + crackle() * 0.55);
+            const arc = zig(cx, cy, cx + Math.cos(ang) * len, cy + Math.sin(ang) * len * 0.5, 0.35, crackle);
+            drawChannel(arc, arc.length, mainW * 0.3, 0.7 * (1 - k / 0.5));
+          }
+        }
+
+        const flashDuration = t3 ? 0.62 : divine ? 0.58 : raio ? 0.55 : 0.5;
+        if (k < flashDuration) {
+          const flashFade = Math.max(0, 1 - k / flashDuration);
+          const flashR = tile * (t3 ? 2.1 : divine ? 1.7 : raio ? 1.55 : divineSplash ? 0.48 : 0.9);
+          const flash = ctx.createRadialGradient(cx, cy, 0, cx, cy, flashR);
+          flash.addColorStop(0, `hsla(${l.hue}, 100%, 94%, ${(t3 ? 0.98 : divine ? 0.96 : raio ? 0.92 : divineSplash ? 0.68 : 0.7) * flashFade * pulse})`);
+          flash.addColorStop(0.32, `hsla(${l.hue}, 100%, 78%, ${(t3 ? 0.55 : divine ? 0.52 : raio ? 0.45 : divineSplash ? 0.22 : 0.3) * flashFade})`);
+          flash.addColorStop(1, `hsla(${l.hue}, 100%, 70%, 0)`);
+          ctx.fillStyle = flash;
+          ctx.beginPath();
+          ctx.arc(cx, cy, flashR, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /** Turn Undead's hexes. Split out so the 3D overlay can draw each on its own hex. */
+  private drawTurnUndeadFx(ctx: any, tile: number): void {
+    for (const fx of this.turnUndeadFx) {
+      const cells = fx.tiles.map((p) => {
+        const { cx, cy } = this.hexCenter(p.x, p.y);
+        return { x: cx, y: cy, corners: Array.from({ length: 6 }, (_, i): [number, number] => {
+          const angle = (60 * i - 30) * Math.PI / 180;
+          return [cx + tile * Math.cos(angle), cy + tile * Math.sin(angle)];
+        }) };
+      });
+      drawTurnUndeadV4(ctx, cells, fx.t);
+    }
+  }
+
+  /** Provoke's mark on its target. Split out so the 3D overlay can draw each on its own hex. */
+  private drawProvokeFx(ctx: any, tile: number): void {
+    for (const fx of this.provokeFx) {
+      const target = this.units.find(u => u.id === fx.unitId && u.alive);
+      if (!target || !this.targetable(target)) continue;
+      const { cx, cy } = this.hexCenter(target.x, target.y);
+      drawProvokeVFX(ctx, cx, cy - tile * 0.15, tile * 1.1, fx.t);
+    }
+  }
+
+  /** Ember's traveling bolts (missileFx), split out so the 3D overlay can draw each on its own sheet. */
+  private drawMissileFx(ctx: any, tile: number): void {
+    if (this.missileFxLive) {
+      for (const m of this.missileFx) {
+        if (!m.live) continue;
+        if (m.kind === "magicMissile" && m.t >= m.travel) continue;
+        // The integrated Three.js fireball is the only projectile visual when its renderer is
+        // active; never layer the legacy Canvas sprite over the original 3D tavern fireball.
+        if (m.kind === "fireball" && this.fireballVfxAvailable && !this.reducedMotion) continue;
+        if (m.kind === "causticVenom" && this.causticVenomVfxAvailable && !this.reducedMotion) continue;
+        const from = this.hexCenter(m.fromX, m.fromY);
+        const to = this.hexCenter(m.toX, m.toY);
+        const dxT = to.cx - from.cx;
+        const dyT = to.cy - from.cy;
+        const dist = Math.hypot(dxT, dyT) || 1;
+        const nx = -dyT / dist;
+        const ny = dxT / dist;
+        const along = (k: number) => {
+          const wave = Math.sin(k * Math.PI * 2.4 + m.seed) * tile * 0.16 * (1 - k * 0.6);
+          return { x: from.cx + dxT * k + nx * wave, y: from.cy - tile * 0.3 + dyT * k + ny * wave };
+        };
+        // kHead: the bolt's own position, 0-1, frozen at 1 once it lands. afterglow: 0 while
+        // still flying, ramping to 1 as the lingering trail fades out after arrival.
+        const kHead = Math.min(1, m.t / m.travel);
+        const afterglow = Math.max(0, (m.t - m.travel) / MISSILE_AFTERGLOW);
+        const physicalArrow = m.kind === "longShot";
+        if (physicalArrow) {
+          // All of Neera's arrow attacks share a restrained blood-red wake and a brief
+          // impact sparkle; the arrow itself keeps the approved projectile art.
+          const head = { x: from.cx + dxT * kHead, y: from.cy - tile * 0.3 + dyT * kHead };
+          const flightAngle = Math.atan2(dyT, dxT);
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = (1 - afterglow) * (m.neeraArrow ? 0.42 : 0.24);
+          ctx.strokeStyle = m.neeraArrow ? "rgba(220,38,54,0.82)" : "rgba(215,222,226,0.74)";
+          ctx.lineWidth = Math.max(1, tile * (m.neeraArrow ? 0.018 : 0.012));
+          for (let ring = 1; ring <= 2; ring += 1) {
+            const bk = Math.max(0, kHead - ring * 0.1);
+            const back = { x: from.cx + dxT * bk, y: from.cy - tile * 0.3 + dyT * bk };
+            if (m.neeraArrow) {
+              ctx.beginPath();
+              ctx.ellipse(back.x, back.y, tile * (0.10 + ring * 0.035), tile * (0.027 + ring * 0.01), flightAngle, 0, Math.PI * 2);
+              ctx.stroke();
+            } else {
+              ctx.beginPath();
+              ctx.ellipse(back.x, back.y, tile * (0.09 + ring * 0.035), tile * (0.024 + ring * 0.01), flightAngle, 0, Math.PI * 2);
+              ctx.stroke();
+            }
+          }
+          if (m.neeraArrow && afterglow < 1) {
+            // A few ember-red motes follow the arrow during flight and flare outward on impact.
+            for (let spark = 0; spark < 5; spark += 1) {
+              const trail = spark * 0.055;
+              const k = Math.max(0, kHead - trail);
+              const x = from.cx + dxT * k;
+              const y = from.cy - tile * 0.3 + dyT * k;
+              const phase = m.seed + spark * 2.4 + this.time * 5;
+              const spread = tile * (0.025 + spark * 0.012);
+              ctx.fillStyle = `rgba(255,${58 + spark * 14},${48 + spark * 8},${(1 - afterglow) * (0.85 - spark * 0.11)})`;
+              ctx.beginPath();
+              ctx.arc(x + Math.cos(phase) * spread, y + Math.sin(phase) * spread, tile * (0.018 + (spark % 2) * 0.008), 0, Math.PI * 2);
+              ctx.fill();
+            }
+            if (kHead >= 1) {
+              ctx.globalAlpha = (1 - afterglow) * 0.8;
+              ctx.strokeStyle = "rgba(255,75,62,0.9)";
+              ctx.lineWidth = Math.max(1, tile * 0.016);
+              for (let ray = 0; ray < 7; ray += 1) {
+                const a = m.seed + ray * (Math.PI * 2 / 7);
+                ctx.beginPath();
+                ctx.moveTo(head.x + Math.cos(a) * tile * 0.035, head.y + Math.sin(a) * tile * 0.035);
+                ctx.lineTo(head.x + Math.cos(a) * tile * (0.12 + afterglow * 0.12), head.y + Math.sin(a) * tile * (0.12 + afterglow * 0.12));
+                ctx.stroke();
+              }
+            }
+          }
+          ctx.restore();
+          ctx.save();
+          ctx.translate(head.x, head.y);
+          // The supplied source points northeast (-45°); rotate from that intrinsic direction to the flight angle.
+          ctx.rotate(flightAngle + Math.PI / 4);
+          ctx.globalCompositeOperation = "source-over";
+          ctx.globalAlpha = 1 - afterglow;
+          // 25% larger (was 1.08) so the arrow reads over the hex grid.
+          ctx.drawImage(this.art.arrowCore, -tile * 0.675, -tile * 0.675, tile * 1.35, tile * 1.35);
+          ctx.restore();
+          continue;
+        }
+
+        // Dreaming Web's shot is now the WebGL "webShot" beam (see BattleEngine.webShotBeam /
+        // BattleCanvas) — this MissileFx entry still exists purely as the timing clock that
+        // drives it (fromX/Y, toX/Y, t, travel), so it's kept alive and aged like any other
+        // missile, it just draws nothing of its own here.
+        if (m.kind === "webOfDreams") continue;
+
+        if (m.kind === "phantasmalForce") {
+          // A translucent attacker races along the cast path rather than behaving like a
+          // coloured projectile: skull, streaming lower body and two reaching claws make the
+          // hit read as a brief hostile apparition on the victim's hex.
+          const head = along(kHead);
+          const fade = 1 - afterglow;
+          const pulse = 0.9 + 0.1 * Math.sin(this.time * 15 + m.seed);
+          const reachAngle = Math.atan2(dyT, dxT);
+          ctx.save();
+          ctx.translate(head.x, head.y);
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = fade;
+          ctx.shadowColor = "rgba(64,196,255,0.95)";
+          ctx.shadowBlur = tile * 0.38;
+
+          // The tapering, ragged body remains upright so the figure reads at a glance even
+          // when it is flying sideways across the battlefield.
+          const body = ctx.createLinearGradient(0, -tile * 0.35, 0, tile * 0.58);
+          body.addColorStop(0, "rgba(188,246,255,0.80)");
+          body.addColorStop(0.34, "rgba(43,165,255,0.55)");
+          body.addColorStop(1, "rgba(19,82,222,0)");
+          ctx.fillStyle = body;
+          ctx.beginPath();
+          ctx.moveTo(-tile * 0.20 * pulse, -tile * 0.08);
+          ctx.quadraticCurveTo(-tile * 0.34, tile * 0.22, -tile * 0.17, tile * 0.57);
+          ctx.quadraticCurveTo(0, tile * 0.38, tile * 0.08, tile * 0.62);
+          ctx.quadraticCurveTo(tile * 0.24, tile * 0.24, tile * 0.20 * pulse, -tile * 0.08);
+          ctx.closePath();
+          ctx.fill();
+
+          // Pale face and hollow eyes give the effect a figure-like presence without needing
+          // a separate sprite sheet.
+          ctx.shadowBlur = tile * 0.18;
+          ctx.fillStyle = "rgba(180,242,255,0.92)";
+          ctx.beginPath();
+          ctx.ellipse(0, -tile * 0.24, tile * 0.16, tile * 0.19, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(9,45,118,0.92)";
+          for (const eye of [-1, 1]) {
+            ctx.beginPath();
+            ctx.ellipse(eye * tile * 0.058, -tile * 0.25, tile * 0.034, tile * 0.045, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          // Two long spectral arms aim into the direction of travel; their three-fingered
+          // tips close on impact.
+          ctx.rotate(reachAngle);
+          ctx.strokeStyle = "rgba(127,225,255,0.86)";
+          ctx.lineCap = "round";
+          ctx.lineWidth = tile * 0.07;
+          for (const side of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(0, side * tile * 0.04);
+            ctx.quadraticCurveTo(tile * 0.20, side * tile * 0.20, tile * 0.39, side * tile * 0.13);
+            ctx.stroke();
+            for (let claw = -1; claw <= 1; claw += 1) {
+              ctx.beginPath();
+              ctx.moveTo(tile * 0.35, side * tile * 0.13);
+              ctx.lineTo(tile * 0.49, side * tile * (0.13 + claw * 0.07));
+              ctx.stroke();
+            }
+          }
+          if (kHead >= 1) {
+            ctx.strokeStyle = `rgba(212,251,255,${0.9 * fade})`;
+            ctx.lineWidth = tile * 0.035;
+            for (const side of [-1, 1]) {
+              ctx.beginPath();
+              ctx.arc(tile * 0.48, side * tile * 0.10, tile * (0.16 + afterglow * 0.28), side < 0 ? -1.9 : 1.9, side < 0 ? -0.35 : 0.35);
+              ctx.stroke();
+            }
+          }
+          ctx.restore();
+          continue;
+        }
+
+        const minorArcaneBolt = m.kind === "arcaneBolt";
+
+        if (minorArcaneBolt) {
+          // Mage basic attack: two thin arcane pressure waves, then a runic impact at the target.
+          const head = along(kHead);
+          const angle = Math.atan2(dyT, dxT);
+          ctx.save();
+          ctx.globalCompositeOperation = "lighter";
+          ctx.globalAlpha = 1 - afterglow;
+          ctx.strokeStyle = "rgba(202,92,255,0.72)";
+          ctx.lineWidth = Math.max(1, tile * 0.017);
+          for (let ring = 1; ring <= 2; ring += 1) {
+            const back = along(Math.max(0, kHead - ring * 0.1));
+            ctx.beginPath();
+            ctx.ellipse(back.x, back.y, tile * (0.09 + ring * 0.035), tile * (0.025 + ring * 0.012), angle + Math.PI / 4, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+          ctx.fillStyle = "rgba(244,150,255,0.92)";
+          ctx.beginPath(); ctx.arc(head.x, head.y, tile * 0.035, 0, Math.PI * 2); ctx.fill();
+          if (kHead >= 1) {
+            ctx.strokeStyle = "rgba(255,110,220,0.88)";
+            ctx.lineWidth = Math.max(1, tile * 0.014);
+            for (let ray = 0; ray < 8; ray += 1) {
+              const a = m.seed + ray * Math.PI / 4;
+              const inner = tile * 0.05;
+              const outer = tile * (0.12 + 0.09 * afterglow);
+              ctx.beginPath();
+              ctx.moveTo(head.x + Math.cos(a) * inner, head.y + Math.sin(a) * inner * 0.55);
+              ctx.lineTo(head.x + Math.cos(a) * outer, head.y + Math.sin(a) * outer * 0.55);
+              ctx.stroke();
+            }
+          }
+          ctx.restore();
+          continue;
+        }
+
+        // The light trace it leaves behind: a single stroke along the whole path already
+        // flown, distinct from the comet below (which only ever hugs the head) — this is
+        // what stays visible on the ground after the bolt has passed through.
+        if (kHead > 0.02) {
+          const steps = 16;
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const p = along((i / steps) * kHead);
+            if (i === 0) ctx.moveTo(p.x, p.y);
+            else ctx.lineTo(p.x, p.y);
+          }
+          const traceFade = (1 - afterglow) * (physicalArrow ? 0.13 : minorArcaneBolt ? 0.44 : 0.55);
+          ctx.lineCap = "round";
+          ctx.lineJoin = "round";
+          ctx.lineWidth = tile * (physicalArrow ? 0.018 : minorArcaneBolt ? 0.028 : 0.05);
+          ctx.strokeStyle = physicalArrow ? `rgba(218,224,226,${traceFade})` : `hsla(${m.hue}, 90%, 74%, ${traceFade})`;
+          ctx.shadowColor = physicalArrow ? `rgba(218,224,226,${traceFade})` : `hsla(${m.hue}, 95%, 70%, ${traceFade})`;
+          ctx.shadowBlur = tile * (physicalArrow ? 0.1 : 0.4);
+          ctx.stroke();
+          ctx.shadowBlur = 0;
+        }
+
+        if (afterglow < 1) {
+          // A bigger, punchier comet trail right behind the head.
+          const cometCount = minorArcaneBolt ? 11 : 7;
+          for (let i = cometCount; i >= 0; i--) {
+            const tk = Math.max(0, kHead - i * 0.05);
+            const p = along(tk);
+            const fade = (1 - i / 8) * (1 - afterglow);
+            const r = tile * (physicalArrow ? (0.045 - i * 0.004) : (minorArcaneBolt ? 0.64 : 1) * (0.16 - i * 0.016));
+            if (r <= 0) continue;
+            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r * 3);
+            g.addColorStop(0, physicalArrow ? `rgba(228,232,234,${fade * 0.18})` : `hsla(${m.hue}, 95%, 86%, ${fade})`);
+            g.addColorStop(0.35, physicalArrow ? `rgba(150,158,162,${fade * 0.08})` : `hsla(${m.hue}, 92%, 68%, ${fade * 0.75})`);
+            g.addColorStop(1, physicalArrow ? `rgba(120,130,136,0)` : `hsla(${m.hue}, 90%, 55%, 0)`);
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, r * 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          const head = along(kHead);
+          // A big soft aura around the head, well beyond the core, for real glow.
+          const auraFade = 1 - afterglow;
+          const aura = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, tile * (physicalArrow ? 0.16 : minorArcaneBolt ? 0.34 : 0.55));
+          aura.addColorStop(0, physicalArrow ? `rgba(230,234,236,${0.1 * auraFade})` : `hsla(${m.hue}, 100%, 85%, ${(minorArcaneBolt ? 0.34 : 0.55) * auraFade})`);
+          aura.addColorStop(1, physicalArrow ? `rgba(180,188,192,0)` : `hsla(${m.hue}, 100%, 60%, 0)`);
+          ctx.fillStyle = aura;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, tile * (physicalArrow ? 0.16 : minorArcaneBolt ? 0.34 : 0.55), 0, Math.PI * 2);
+          ctx.fill();
+          if (minorArcaneBolt) {
+            // Basic mage attack: a compact scarlet lance, deliberately unlike Magic Missile.
+            ctx.save();
+            ctx.globalCompositeOperation = "lighter";
+            ctx.globalAlpha = auraFade;
+            const core = ctx.createRadialGradient(head.x, head.y, 0, head.x, head.y, tile * 0.18);
+            core.addColorStop(0, "rgba(255,242,200,0.98)");
+            core.addColorStop(0.22, "rgba(255,104,58,0.9)");
+            core.addColorStop(0.62, "rgba(182,20,27,0.35)");
+            core.addColorStop(1, "rgba(110,0,8,0)");
+            ctx.fillStyle = core;
+            ctx.beginPath(); ctx.arc(head.x, head.y, tile * 0.18, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = "rgba(255,96,55,0.72)";
+            ctx.lineWidth = Math.max(1, tile * 0.018);
+            for (let spark = 0; spark < 12; spark += 1) {
+              const a = m.seed + spark * 2.399 + this.time * (2.2 + spark * 0.09);
+              const radius = tile * (0.12 + ((spark * 7) % 6) * 0.018);
+              const x = head.x + Math.cos(a) * radius;
+              const y = head.y + Math.sin(a) * radius * 0.55;
+              ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - Math.cos(a) * tile * 0.065, y - Math.sin(a) * tile * 0.04); ctx.stroke();
+            }
+            ctx.restore();
+          }
+          const projectileCore = m.kind === "fireball" ? this.art.fireballCore : m.kind === "causticVenom" || m.kind === "minorVenom" ? this.art.causticVenomCore : null;
+          if (m.kind === "longShot" && this.art.arrowCore) {
+            // One shared approved arrow asset for normal shots, Multi Shot, Long Shot and Piercing Shot.
+            const angle = Math.atan2(dyT, dxT);
+            ctx.save();
+            ctx.translate(head.x, head.y);
+            ctx.rotate(angle);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = auraFade;
+            ctx.drawImage(this.art.arrowCore, -tile * 0.56, -tile * 0.22, tile * 1.12, tile * 0.44);
+            ctx.restore();
+          }
+          if (projectileCore) {
+            // v2 art: a real alpha-cutout comet (dense ball toward the source's own
+            // bottom-right corner, wispy tail trailing to the top-left), drawn with normal
+            // alpha compositing now that it has actual transparency instead of the old v1's
+            // flattened black background (which only ever worked via additive blending).
+            const img = projectileCore;
+            const flightAngle = Math.atan2(dyT, dxT);
+            // The art's ball-and-tail sit on its own fixed diagonal (45°, bottom-right) —
+            // rotating by the difference between that and the shot's actual flight angle
+            // points the ball at the target regardless of cast direction, the same
+            // orient-to-travel-direction treatment as Dreaming Web's shot (see
+            // BattleEngine.webShotBeam).
+            const pulse = 1 + 0.05 * Math.sin(this.time * 13 + m.seed);
+            const w = tile * 1.9 * pulse;
+            const h = (w * img.naturalHeight) / img.naturalWidth;
+            ctx.save();
+            ctx.translate(head.x, head.y);
+            ctx.rotate(flightAngle - Math.PI / 4);
+            ctx.globalCompositeOperation = "source-over";
+            ctx.globalAlpha = auraFade;
+            ctx.drawImage(img, -w / 2, -h / 2, w, h);
+            ctx.restore();
+          }
+          ctx.fillStyle = `rgba(255,255,255,${(physicalArrow ? 0 : 0.95) * auraFade})`;
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, tile * (minorArcaneBolt ? 0.05 : 0.085), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
   private drawBladeFx(ctx: any, tile: number): void {
     if (!this.bladeFxLive) return;
     for (const b of this.bladeFx) {

@@ -536,9 +536,9 @@ export function OverworldMapScreen({
       </div>}
 
       <header className="relative z-20 flex items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 flex-wrap">
-        <button type="button" onClick={onBack} className="size-10 grid place-items-center ember-icon-btn" aria-label="Voltar">
+        {test && <button type="button" onClick={onBack} className="size-10 grid place-items-center ember-icon-btn" aria-label="Voltar">
           <ChevronLeft className="size-5" />
-        </button>
+        </button>}
         <div className="flex-1 min-w-0">
           <p className="text-sm ember-kicker">{test ? "Modo teste" : "Campanha"} · RPG</p>
           <h1 className="font-display text-3xl leading-none ember-title">Mapa</h1>
