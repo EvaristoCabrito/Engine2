@@ -120,6 +120,13 @@
     cursor: url("/game/cursors/medieval-gauntlet-grab-small.svg") 13 13, grabbing !important;
   }
 
+  /* The 3D battle's camera rig (src/render/cameraRig.ts) flags a held-drag pan on <html>.
+     That rule lived only in public/game/ui/cursor.css, which game.html never loads. */
+  html.engine2-grabbing,
+  html.engine2-grabbing * {
+    cursor: url("/game/cursors/medieval-gauntlet-grab-small.svg") 13 13, grabbing !important;
+  }
+
   body {
     font-family: var(--font-sans);
     margin: 0;

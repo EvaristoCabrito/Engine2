@@ -4594,7 +4594,12 @@ export class BattleEngine {
   private isBladeAttack(unit: Unit, offHand = false): boolean {
     if (offHand) return !!unit.offHandId && EQUIPMENT[unit.offHandId]?.kind === "weapon";
     const weaponId = unit.weaponId ?? starterWeaponFor(unit.classId);
-    return !!weaponId && /^(espada|machado|lamina|adaga|punhal|katar)/.test(weaponId);
+    if (!weaponId) return false;
+    // By weapon type first: swords named without an "espada" prefix (montante-da-ruina,
+    // zweihander-profana, cimitarra-do-dragao) played Kael's swing with the blunt cue.
+    const type = EQUIPMENT[weaponId]?.weaponType;
+    if (type) return type === "sword" || type === "axe" || type === "dagger";
+    return /^(espada|machado|lamina|adaga|punhal|katar)/.test(weaponId);
   }
 
   /** True only for bow/crossbow users. Reach weapons strike physically instead of firing arrows. */

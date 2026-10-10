@@ -5,13 +5,21 @@ import type { BattleEngine } from "./engine";
 import type { DioramaView } from "../editor/ember/dioramaView";
 import { WebGL2DRenderer } from "./gfx/WebGL2DRenderer";
 import { EffectsRenderer } from "../vfx/legacy/two-d/EffectsRenderer";
+import { footprintFrontRow } from "./pathfinding";
+import { CARD_RENDER_ORDER, FOG_RENDER_ORDER } from "../render/drawOrder";
+
+type PortalItem = { live: boolean; x: number; y: number; body: { dx: number; dy: number }[] | null };
+/** After the ground and terrain fog, before unit/decoration cards: portals sit under the units. */
+const PORTAL_RENDER_ORDER = (FOG_RENDER_ORDER + CARD_RENDER_ORDER) / 2;
+const PORTAL_TEX_W = 512, PORTAL_TEX_H = 512;
 
 export class BattleSpellOverlay3D {
   private readonly legacy: WebGL2DRenderer;
   private readonly effects: EffectsRenderer;
   private readonly blizzards = new Map<number, number>();
   private webShot: number | null = null;
-  private readonly pulses = Array.from({ length: 4 }, () => ({ age: 1, light: new THREE.PointLight(0xb6e7ff, 0, 3.2, 1.8) }));
+  private readonly portalSheets = new Map<PortalItem, { mesh: THREE.Mesh; canvas: HTMLCanvasElement; texture: THREE.CanvasTexture }>();
+  private readonly pulses =Array.from({ length: 4 }, () => ({ age: 1, light: new THREE.PointLight(0xb6e7ff, 0, 3.2, 1.8) }));
   constructor(private readonly artCanvas: HTMLCanvasElement, private readonly fxCanvas: HTMLCanvasElement, private readonly view: DioramaView, private readonly engine: BattleEngine) {
     this.legacy = new WebGL2DRenderer(artCanvas, true);
     this.effects = new EffectsRenderer(fxCanvas, true);
@@ -59,14 +67,72 @@ export class BattleSpellOverlay3D {
    * ground (or water) with the hex centre at its foot, canvas up = camera up, 1 tile = 1 hex.
    * `footPx`: Ember drew a unit's feet that far below its hex centre (UnitVisual.footY); effects
    * aimed at a unit's body put that point on the ground, where the 3D card's feet are. */
-  private standingSheet(cell: { x: number; y: number }, tile: number, footPx = 0): THREE.Matrix4 {
+  private standingSheet(cell: { x: number; y: number }, tile: number, footPx = 0, shift = { dx: 0, dy: 0 }): THREE.Matrix4 {
     const camera = this.view.stage.camera, at = this.engine.effectAnchor(cell.x, cell.y), c = this.view.board!.cell(cell.x, cell.y);
-    const G = new THREE.Vector3(c.x, (c.water ? c.waterY : this.view.groundAt(c.x, c.z)) + 0.05, c.z);
+    // `shift`: the effect is centred that many canvas px off the hex centre (a multi-hex body).
+    // Canvas x/y are the board's x/z at 1 tile = 1 unit, so that point goes on the ground, not up the sheet.
+    const gx = c.x + shift.dx / tile, gz = c.z + shift.dy / tile;
+    const G = new THREE.Vector3(gx, (c.water ? c.waterY : this.view.groundAt(gx, gz)) + 0.05, gz);
     const R = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).divideScalar(tile);
     const D = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).divideScalar(-tile);
     const N = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2);
-    const O = G.clone().addScaledVector(R, -at.x).addScaledVector(D, -(at.y + footPx));
+    const O = G.clone().addScaledVector(R, -(at.x + shift.dx)).addScaledVector(D, -(at.y + shift.dy + footPx));
     return new THREE.Matrix4().set(R.x, D.x, N.x, O.x, R.y, D.y, N.y, O.y, R.z, D.z, N.z, O.z, 0, 0, 0, 1);
+  }
+  /** Summon Familiar / Warp portals: Ember's drawPortalFx art, painted into a texture on the same
+   * camera-facing sheet as the other standing effects, but inside the 3D scene and drawn the way
+   * the mist sheets are (no depth test, before the cards): over the ground, under the units —
+   * Ember's layer, so the familiar steps out in front of its portal. */
+  private syncPortals(items: PortalItem[], shiftOf: (q: PortalItem) => { dx: number; dy: number } | undefined, tile: number): void {
+    const eng = this.engine as unknown as Record<string, any>;
+    const used = new Set<PortalItem>();
+    for (const q of items) {
+      if (q.x < 0 || q.y < 0 || q.x >= this.engine.cols || q.y >= this.engine.rows) continue;
+      used.add(q);
+      let sheet = this.portalSheets.get(q);
+      if (!sheet) {
+        const canvas = document.createElement("canvas");
+        canvas.width = PORTAL_TEX_W; canvas.height = PORTAL_TEX_H;
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false, side: THREE.DoubleSide }));
+        mesh.matrixAutoUpdate = false;
+        mesh.frustumCulled = false;
+        mesh.renderOrder = PORTAL_RENDER_ORDER;
+        this.view.stage.scene.add(mesh);
+        sheet = { mesh, canvas, texture };
+        this.portalSheets.set(q, sheet);
+      }
+      // The box of Ember canvas px the art is painted in, around the portal's centre: wide enough
+      // for Familiar Titã's three-hex circle, tall enough for the light column / Warp gate.
+      const shift = shiftOf(q) ?? { dx: 0, dy: 0 };
+      const at = this.engine.effectAnchor(q.x, q.y);
+      const cx = at.x + shift.dx, cy = at.y + shift.dy;
+      const halfW = tile * 4.2, up = tile * 5, down = tile * 2.6;
+      const ctx = sheet.canvas.getContext("2d")!;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, PORTAL_TEX_W, PORTAL_TEX_H);
+      ctx.setTransform(PORTAL_TEX_W / (halfW * 2), 0, 0, PORTAL_TEX_H / (up + down), -(cx - halfW) * PORTAL_TEX_W / (halfW * 2), -(cy - up) * PORTAL_TEX_H / (up + down));
+      for (const other of items) other.live = other === q;
+      try { eng.drawPortalFx(ctx, tile); } finally { for (const other of items) other.live = true; }
+      sheet.texture.needsUpdate = true;
+      // the unit plane, stretched over that box in canvas px, then the standing sheet (canvas px → world)
+      const box = new THREE.Matrix4().makeTranslation(cx, cy + (down - up) / 2, 0).multiply(new THREE.Matrix4().makeScale(halfW * 2, -(up + down), 1));
+      sheet.mesh.matrix.copy(this.standingSheet(q, tile, 0, shift)).multiply(box);
+      sheet.mesh.matrixWorldNeedsUpdate = true;
+      sheet.mesh.visible = true;
+    }
+    for (const [q, sheet] of this.portalSheets) {
+      if (used.has(q)) continue;
+      sheet.mesh.visible = false;
+      if (!q.live) { this.disposePortal(sheet); this.portalSheets.delete(q); }
+    }
+  }
+  private disposePortal(sheet: { mesh: THREE.Mesh; texture: THREE.Texture }): void {
+    sheet.mesh.removeFromParent();
+    sheet.mesh.geometry.dispose();
+    (sheet.mesh.material as THREE.Material).dispose();
+    sheet.texture.dispose();
   }
   sync(dt: number): void {
     if (!this.view.board) return;
@@ -107,6 +173,18 @@ export class BattleSpellOverlay3D {
       [eng.portalFx, (q: any) => q, () => eng.drawPortalFx(this.legacy, tile), false],
     ] as Array<[Array<{ live: boolean }>, (fx: any) => { x: number; y: number } | null, () => void, boolean]>)
       .map(([list, cell, draw, onUnit]) => ({ items: list.filter(fx => fx.live), cell, draw, onUnit }));
+    // Summon Familiar's circle centres on the whole body that steps out (drawPortalFx): for a
+    // multi-hex familiar (Familiar Titã) that is off its anchor hex, which on the standing sheet
+    // pushed the circle down off the familiar. Its sheet stands where the familiar's 3D card has
+    // its feet instead: the centre of the body's front row (engine.footprintCentroidWorld).
+    const portals = standing[standing.length - 1]!.items;
+    const portalShift = (q: { x: number; y: number; body: { dx: number; dy: number }[] | null }) => {
+      if (!q.body) return undefined;
+      const centre = eng.hexCenter(q.x, q.y) as { cx: number; cy: number };
+      const cells = footprintFrontRow({ x: q.x, y: q.y, footprintOffsets: q.body }).map(c => eng.hexCenter(c.x, c.y) as { cx: number; cy: number });
+      return { dx: cells.reduce((s, c) => s + c.cx, 0) / cells.length - centre.cx, dy: cells.reduce((s, c) => s + c.cy, 0) / cells.length - centre.cy };
+    };
+    this.syncPortals(portals as unknown as PortalItem[], portalShift, tile);
     // hit sparks, level-up stars and Provoke sit on a unit's body: anchor them at its Ember feet
     const footAt = (cell: { x: number; y: number }) => { const u = this.engine.units.find(n => n.alive && n.x === cell.x && n.y === cell.y); return u ? eng.unitVisual(u, tile).footY as number : tile * Math.sqrt(3) * 0.42; };
     // Turn Undead and Provoke keep plain lists (no live flag): swapped out while they're drawn alone.
@@ -131,6 +209,7 @@ export class BattleSpellOverlay3D {
         const key = `${cell.x},${cell.y}`, group = byCell.get(key);
         if (group) group.fx.push(fx); else byCell.set(key, { cell: { x: cell.x, y: cell.y }, fx: [fx] });
       }
+      if (pool.items === portals) continue; // drawn in the 3D scene, under the units (syncPortals)
       for (const { cell, fx } of byCell.values()) {
         this.legacy.setProjection(viewProj.clone().multiply(this.standingSheet(cell, tile, pool.onUnit ? footAt(cell) : 0)).elements);
         for (const other of pool.items) (other as { live: boolean }).live = fx.includes(other);
@@ -193,5 +272,5 @@ export class BattleSpellOverlay3D {
     if (this.effects.hasEffects()) { this.fxCanvas.style.display = "block"; this.effects.render(this.view.stage.renderer.domElement, dt, anchor); }
     else this.fxCanvas.style.display = "none";
   }
-  dispose(): void { this.effects.dispose(); this.legacy.dispose(); for (const pulse of this.pulses) pulse.light.removeFromParent(); }
+  dispose(): void { for (const sheet of this.portalSheets.values()) this.disposePortal(sheet); this.portalSheets.clear(); this.effects.dispose(); this.legacy.dispose(); for (const pulse of this.pulses) pulse.light.removeFromParent(); }
 }

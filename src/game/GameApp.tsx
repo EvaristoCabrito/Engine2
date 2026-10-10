@@ -942,7 +942,6 @@ export function GameApp() {
   const startNewCampaign = startMode === "new";
   const [resumeEditorDraft] = useState<MapDraft | null>(() => (typeof window === "undefined" ? null : readEditorResume()));
   const [screen, setScreen] = useState<ScreenId>(() => (startNewCampaign ? "boot" : startOnMap ? "overworldMap" : startMode === "test" ? "testMenu" : startMode === "continue" ? "battle" : resumeEditorDraft ? "mapEditor" : "title"));
-  const loadingCurtain = useLoadingCurtain(screen);
   // Up from the instant a battle is requested until BattleCanvas reports "ember:battle-ready"
   // (art loaded, first frame drawn, every spell shader compiled and linked), so all of that
   // one-time work happens behind it instead of as stalls mid-fight. The timer is only a
@@ -1098,6 +1097,14 @@ export function GameApp() {
   const [slotMode, setSlotMode] = useState<"new" | "continue" | "save" | "load" | null>(null);
   const [slotReturnScreen, setSlotReturnScreen] = useState<ScreenId>("title");
   const [overwrite, setOverwrite] = useState<number | null>(null);
+  // The save/load slots opened from a battle sit on top of it instead of replacing it:
+  // unmounting BattleScreen threw away the whole 3D battlefield, and coming back rebuilt it
+  // from scratch — the multi-second freeze after every save.
+  const battleUnderSlots = screen === "saveSlots" && slotReturnScreen === "battle";
+  // Real save steps (snapshot, write, done) while a slot is being written; null otherwise.
+  const [saveProgress, setSaveProgress] = useState<number | null>(null);
+  const savingSlotRef = useRef(false);
+  const loadingCurtain = useLoadingCurtain(battleUnderSlots ? "battle" : screen);
 
   useEffect(() => {
     let alive = true;
@@ -2786,7 +2793,10 @@ export function GameApp() {
         />
       )}
 
-      {screen === "battle" && engine && (
+      {(screen === "battle" || battleUnderSlots) && engine && (
+        // display:contents adds no box; visibility hides the battle (and its pause menu)
+        // behind the slot screen while keeping the 3D canvas at full size.
+        <div style={{ display: "contents", visibility: battleUnderSlots ? "hidden" : undefined }}>
         <BattleScreen
           onUseRation={consumeRation}
           engine={engine}
@@ -2981,6 +2991,7 @@ export function GameApp() {
             goToMap();
           }}
         />
+        </div>
       )}
 
       {screen === "victory" && mission && (
@@ -3128,45 +3139,62 @@ export function GameApp() {
               enterFromSave(rec);
               return;
             }
-            const snapshot = (() => {
-              // Map saves must use the current map record. combatStartRef holds the
-              // snapshot from before the last battle/map transition, so using it here
-              // silently reset travel progress when a player saved from the RPG map.
-              if (slotReturnScreen === "overworldMap" || slotReturnScreen === "worldMap" || slotReturnScreen === "campaign") {
-                return { ...readMapSave(), muted };
-              }
-              if (engine && missionId) {
-                const levels = { ...save.levels };
-                const xp = { ...save.xp };
-                for (const u of engine.units) {
-                  if (u.side !== "player" || u.summoned) continue;
-                  levels[u.name] = u.level;
-                  xp[u.name] = u.xp;
+            if (savingSlotRef.current) return;
+            savingSlotRef.current = true;
+            // Each step gets a painted frame before it runs, so the bar shows where the save
+            // is instead of the screen freezing until the whole write is done.
+            const painted = () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+            void (async () => {
+              setSaveProgress(0);
+              await painted();
+              const snapshot = (() => {
+                // Map saves must use the current map record. combatStartRef holds the
+                // snapshot from before the last battle/map transition, so using it here
+                // silently reset travel progress when a player saved from the RPG map.
+                if (slotReturnScreen === "overworldMap" || slotReturnScreen === "worldMap" || slotReturnScreen === "campaign") {
+                  return { ...readMapSave(), muted };
                 }
-                return {
-                  ...save,
-                  pendingMission: missionId,
-                  battle: engine.captureSnapshot(),
-                  bags: { ...save.bags, ...engine.remainingBags() },
-                  affinityScores: { ...engine.affinityScores },
-                  heroSkills: structuredClone(engine.heroSkills),
-                  unitHp: { ...save.unitHp, ...engine.battlePlayerHp() },
-                  heroHunger: { ...save.heroHunger, ...engine.battlePlayerHunger() },
-                  spellUses: engine.spentTiers(),
-                  levels,
-                  xp,
-                  muted,
-                };
-              }
-              return combatStartRef.current ?? { ...save, pendingMission: missionId, muted, battle: save.battle ?? null };
-            })();
-            const next = writeSlot(bank, index, snapshot);
-            applySlot(next);
-            setSlotMode(null);
-            setOverwrite(null);
-            setPaused(false);
-            setScreen(slotReturnScreen);
+                if (engine && missionId) {
+                  const levels = { ...save.levels };
+                  const xp = { ...save.xp };
+                  for (const u of engine.units) {
+                    if (u.side !== "player" || u.summoned) continue;
+                    levels[u.name] = u.level;
+                    xp[u.name] = u.xp;
+                  }
+                  return {
+                    ...save,
+                    pendingMission: missionId,
+                    battle: engine.captureSnapshot(),
+                    bags: { ...save.bags, ...engine.remainingBags() },
+                    affinityScores: { ...engine.affinityScores },
+                    heroSkills: structuredClone(engine.heroSkills),
+                    unitHp: { ...save.unitHp, ...engine.battlePlayerHp() },
+                    heroHunger: { ...save.heroHunger, ...engine.battlePlayerHunger() },
+                    spellUses: engine.spentTiers(),
+                    levels,
+                    xp,
+                    muted,
+                  };
+                }
+                return combatStartRef.current ?? { ...save, pendingMission: missionId, muted, battle: save.battle ?? null };
+              })();
+              setSaveProgress(50);
+              await painted();
+              const next = writeSlot(bank, index, snapshot);
+              setSaveProgress(100);
+              await painted();
+              applySlot(next);
+              setSlotMode(null);
+              setOverwrite(null);
+              setPaused(false);
+              setScreen(slotReturnScreen);
+            })().finally(() => {
+              savingSlotRef.current = false;
+              setSaveProgress(null);
+            });
           }}
+          saveProgress={saveProgress}
         />
       )}
       {!testMode && (screen === "worldMap" || screen === "overworldMap" || screen === "campaign") && <>
@@ -10778,6 +10806,7 @@ function SlotScreen({
   onOverwrite,
   onClose,
   onPick,
+  saveProgress = null,
 }: {
   mode: "new" | "continue" | "save" | "load";
   bank: SaveBank;
@@ -10785,6 +10814,8 @@ function SlotScreen({
   onOverwrite: (i: number | null) => void;
   onClose: () => void;
   onPick: (index: number) => void;
+  /** Real save steps done (0-100) while a slot is being written; null when idle. */
+  saveProgress?: number | null;
 }) {
   const title = mode === "new" ? "Nova campanha" : mode === "save" ? "Salvar jogo" : "Carregar jogo";
   const hint =
@@ -10848,6 +10879,22 @@ function SlotScreen({
           })}
         </ol>
       </main>
+      {saveProgress !== null && (
+        <div className="absolute inset-0 z-20 grid place-items-center bg-black/60" aria-live="polite">
+          <div className="w-[min(22rem,80vw)] ember-plate px-5 py-4 text-center">
+            <p className="font-display text-lg ember-title">Salvando… {saveProgress}%</p>
+            <div
+              className="mt-3 h-2.5 overflow-hidden rounded-sm bg-black/60"
+              role="progressbar" aria-label="Salvando o jogo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={saveProgress}
+            >
+              <div
+                className="h-full bg-gradient-to-r from-[#713718] via-[#e1a541] to-[#fff0a2] transition-[width] duration-100 ease-linear"
+                style={{ width: `${saveProgress}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
