@@ -162,6 +162,7 @@ export class DecorLayer {
         holder.userData.groundY = holder.position.y;
         holder.scale.x = mirror ? -1 : 1;
         holder.userData.decor = p.id;
+        holder.userData.at = { x: p.x, y: p.y };
         // Ember's 3D rule (ThreeBattleRenderer, tactics camera): barricades stand in the authored
         // world direction — along the map, turned by the placement's rot in sixths — instead of
         // swivelling toward the camera, which would break a continuous fence line.
@@ -188,6 +189,19 @@ export class DecorLayer {
       c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;
       for (const o of c.children) if ((o as THREE.Mesh).isMesh) o.castShadow = flatTop === null && !!o.userData.castsShadow;
     }
+  }
+
+  /** Battle: remove the chest cards whose chest is gone from the engine's own decoration list
+   * (opened with a lockpick, or already opened in a restored fight). */
+  dropOpenedChests(present: readonly { id: string; x: number; y: number }[]): void {
+    const keep = new Set(present.filter(d => CHEST_DECOR_IDS.has(d.id)).map(d => `${d.id}|${d.x},${d.y}`));
+    this.cards = this.cards.filter(c => {
+      const at = c.userData.at as { x: number; y: number } | undefined;
+      if (!CHEST_DECOR_IDS.has(c.userData.decor) || !at || keep.has(`${c.userData.decor}|${at.x},${at.y}`)) return true;
+      this.group.remove(c);
+      c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); if (o instanceof CarriedLight) o.dispose(); });
+      return false;
+    });
   }
 
   /** How many decoration cards are placed (they load in after the board). */

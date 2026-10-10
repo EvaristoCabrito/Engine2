@@ -10,7 +10,7 @@ import type { BattleEngine } from "./engine";
 import type { HudSnapshot, Unit } from "./types";
 import { DioramaView, type GridMark } from "../editor/ember/dioramaView";
 import { tacticalGridStyleQuiet as tacticalGridStyle, GRID_ROUTE, GRID_MOVE, GRID_ENEMY_TARGET, GRID_OFFHAND_TARGET } from "./tacticalGrid";
-import { TERRAIN } from "./data";
+import { CHEST_DECOR_IDS, TERRAIN } from "./data";
 import { tileAt } from "./pathfinding";
 
 /** Inner edge of Ember's hex border mesh (buildHexBorder(0.47) on a 0.5 hex). */
@@ -294,7 +294,7 @@ export function Battle3D({
       view.stage.setMoon(phase ? moonlightFor(phase) : { strength: 1 });
     };
 
-    let hudClock = 0, lastTick = 0;
+    let hudClock = 0, lastTick = 0, chestKey = "";
     view.stage.onFrame((dt) => {
       followMoon();
       followCameraButtons();
@@ -308,6 +308,11 @@ export function Battle3D({
       lastTick = now;
       if (!pausedRef.current) while (real > 1e-4) { const step = Math.min(0.05, real); engine.tick(step); real -= step; }
       syncUnits();
+      // an opened chest leaves the engine's decoration list: take its card off the 3D board too
+      // (checked whenever the chest count or the loaded card count changes)
+      const engineDecor = engine.decorations as { id: string; x: number; y: number }[];
+      const key = `${engineDecor.filter((d) => CHEST_DECOR_IDS.has(d.id)).length}|${view.decor.count}`;
+      if (key !== chestKey) { chestKey = key; view.decor.dropOpenedChests(engineDecor); }
       // the cinematic camera moves first, so cards, effects and the HUD all face/project onto this frame's view
       cinematics.director.update(dt);
       const yaw = view.rig.facingYaw;

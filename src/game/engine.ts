@@ -537,6 +537,19 @@ const HIT_ANIM_SECONDS = 3;
 const LONG_WALK_SECONDS = 1.5;
 // Give the heavy Ox time to settle into each pose; all of its clocks share this pace.
 const BIG_BLUE_OX_PACE = 0.75;
+/** Malrec's sheets (public/game/sprites/malrec): standing body height (staff included, frame 1)
+ * and feet height above the canvas bottom, in source pixels, per file prefix. Drawn so every
+ * sheet's body is MALREC_BODY_CELLS tall — his idle size as it always was (296 px of a 320 px
+ * canvas in the standard 1.704-cell box). Mirrored in units/visual.ts for the 3D cards. */
+const MALREC_SHEET_PX: Record<string, { body: number; feet: number }> = {
+  "": { body: 296, feet: 12 },
+  "idle2-": { body: 296, feet: 12 },
+  "atk-": { body: 244, feet: 38 },
+  "cast-": { body: 312, feet: 4 },
+  "move-": { body: 668, feet: 7 },
+  "move-left-": { body: 630, feet: 11 },
+};
+const MALREC_BODY_CELLS = 1.42 * 1.2 * 296 / 320;
 /** Salazar V2's walk (Attachments/Salazar Left/Right.mp4): his 36-frame loop plays close to the
  * video's own pace, and he crosses each hex slower than the 0.22 s default so his feet carry him
  * instead of sliding. Both scale with the speed mode like everyone else's walk. */
@@ -11045,12 +11058,6 @@ export class BattleEngine {
     const cultistV2CastWidthMul = isCultistV2Casting ? 1.06 : 1;
     const isCultistV2Attacking = isCultistV2 && atk != null && !isCultistV2Casting;
     const cultistV2AtkScale = isCultistV2Attacking ? 1.13 : 1;
-    const malrecWalkHeightScale = u.sprite === "malrec" && walk ? 0.948 : 1;
-    const malrecWalkWidthScale = u.sprite === "malrec" && walk ? 0.689 : 1;
-    const isMalrecAttacking = u.sprite === "malrec" && atk != null && !casting;
-    const malrecAtkScale = isMalrecAttacking ? 1.113 : 1;
-    const isMalrecAtkFrame27 = isMalrecAttacking && fi === 26;
-    const malrecAtkFrame27WidthScale = isMalrecAtkFrame27 ? 1.49 : 1;
     const cultistV2WalkScale = isCultistV2 && walk ? 1.02 : 1;
     // Kael Final's atk-*.png sheet is exported on a bigger, more-padded canvas than his
     // stand-*.png idle sheet (432x640 vs 354x528, character filling ~90% of frame height on
@@ -11139,8 +11146,6 @@ export class BattleEngine {
       spriteScale *
       cultistV2CastHeightMul *
       cultistV2AtkScale *
-      malrecWalkHeightScale *
-      malrecAtkScale *
       cultistV2WalkScale *
       familiar3Scale *
       familiar2WalkScale *
@@ -11166,9 +11171,6 @@ export class BattleEngine {
       familiar2WalkScale *
       cultistV2CastWidthMul *
       cultistV2AtkScale *
-      malrecWalkWidthScale *
-      malrecAtkScale *
-      malrecAtkFrame27WidthScale *
       cultistV2WalkScale *
       familiar3Scale *
       familiar3WidthScale *
@@ -11225,6 +11227,17 @@ export class BattleEngine {
       h = img.naturalHeight * jacarePerPixel;
       w = img.naturalWidth * jacarePerPixel;
     }
+    // Malrec: each sheet was exported at its own scale (body incl. staff, frame 1, measured: idle
+    // 296 px of a 256x320 canvas, ATT 244 px with feet 38 px up, cast 312 px, walks on bigger
+    // canvases). One fixed scale per sheet keeps his body the idle's size in every pose, and
+    // the feet on the idle's ground line (feet 12 px above the idle canvas bottom).
+    const malrecSheet = u.sprite === "malrec" ? img?.src.match(/\/malrec\/(idle2-|atk-|cast-|move-left-|move-)?\d+\.png/)?.[1] ?? (img?.src.includes("/malrec/") ? "" : undefined) : undefined;
+    const malrecPose = malrecSheet !== undefined ? MALREC_SHEET_PX[malrecSheet] : undefined;
+    const malrecPerPixel = malrecPose ? cell * MALREC_BODY_CELLS / malrecPose.body : 0;
+    if (malrecPose && img) {
+      h = img.naturalHeight * malrecPerPixel;
+      w = img.naturalWidth * malrecPerPixel;
+    }
     // Salazar V2: every sheet is rescaled onto one shared 416x613 canvas (salazar-final/), idle
     // body 480 px head to feet, feet 8 px above the bottom. Same 1.53-cell human height.
     const isSalazarV2 = u.sprite === "salazar";
@@ -11242,7 +11255,7 @@ export class BattleEngine {
     // — same fix, smaller correction.
     // Milícia V2's feet sit 64 px above his canvas bottom (room for the death fall); Neera V2's
     // sit 3 px above hers with no offset, so shift him down by the 61 px difference.
-    const footOffset = neeraV2Sheet ? 0 : isMiliciaV2 ? 61 * miliciaV2PerPixel : isSalazarV2 ? 8 * salazarV2PerPixel : u.sprite === "apparition" ? 34 * apparitionPerPixel : u.sprite === "jacare" ? 13 * jacarePerPixel : isCultistV2Casting
+    const footOffset = neeraV2Sheet ? 0 : isMiliciaV2 ? 61 * miliciaV2PerPixel : isSalazarV2 ? 8 * salazarV2PerPixel : malrecPose ? (malrecPose.feet - 12) * malrecPerPixel : u.sprite === "apparition" ? 34 * apparitionPerPixel : u.sprite === "jacare" ? 13 * jacarePerPixel : isCultistV2Casting
       ? h * 0.127
       : isKaelFinalAttacking
         ? h * 0.025

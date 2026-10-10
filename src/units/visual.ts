@@ -27,6 +27,14 @@ export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, nat
     const k = (CELL * 1.53) / neeraV2Px[pose]!;
     return { w: natW * k, h: natH * k, foot: 0 };
   }
+  // Malrec: one fixed scale per sheet (body incl. staff, frame 1) so every pose is his idle's size,
+  // feet on the idle's ground line (12 px above its canvas bottom) — engine.ts MALREC_SHEET_PX
+  const malrecPx: Partial<Record<Pose, [number, number]>> = { idle: [296, 12], idle2: [296, 12], attack: [244, 38], cast: [312, 4], walk: [668, 7], walkLeft: [630, 11] };
+  if (sprite === 'malrec' && malrecPx[pose]) {
+    const [body, feet] = malrecPx[pose]!;
+    const k = (CELL * 1.42 * 1.2 * 296 / 320) / body;
+    return { w: natW * k, h: natH * k, foot: (feet - 12) * k };
+  }
   // Salazar V2: one shared 416x613 canvas for every sheet, idle body 480 px, feet 8 px up
   if (sprite === 'salazar') { const k = (CELL * 1.53) / 480; return { w: natW * k, h: natH * k, foot: 8 * k }; }
   if (sprite === 'militia-v2') { const k = (CELL * 1.53) / 628; return { w: natW * k, h: natH * k, foot: 61 * k }; }
@@ -43,9 +51,6 @@ export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, nat
   hm *= 1.2 * (big ? 0.75 : 1) * spriteScale;
   wm *= 1.2 * (big ? 0.75 : 1) * spriteScale;
 
-  // Malrec
-  if (sprite === 'malrec' && walk) { hm *= 0.948; wm *= 0.689; }
-  if (sprite === 'malrec' && atk && !casting) { hm *= 1.113; wm *= 1.113; if (frame === 26) wm *= 1.49; }
   // Kael Final's padded ATT canvas
   if (sprite === 'kaelFinal' && atk) { hm *= 1.135; wm *= 1.135; }
   // Neera's top-level cast sheet
