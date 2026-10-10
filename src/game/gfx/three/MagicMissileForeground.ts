@@ -15,7 +15,10 @@ export class MagicMissileForeground {
   private size = "";
 
   constructor(canvas: HTMLCanvasElement, scene: THREE.Scene, camera: THREE.Camera) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    // The postprocessed foreground is composited over the battle canvases. Keep its RGBA
+    // output straight-alpha: the bloom/output passes already carry soft edge alpha, and
+    // premultiplying it again leaves a dark fringe around bright additive spell geometry.
+    this.renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, premultipliedAlpha: false });
     this.renderer.setClearColor(0x000000, 0);
     this.composer = new EffectComposer(this.renderer);
     this.composer.addPass(new RenderPass(scene, camera));
