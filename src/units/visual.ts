@@ -100,8 +100,8 @@ export function framePace(u: UnitDef, pose: Pose, n: number, t: number): { frame
     return { frame: x < n ? x : cycle - x, done: false };
   }
   if (pose === 'walk' || pose === 'walkLeft') {
-    // Salazar V2's walk loop plays at 2.6 s, close to his video's own pace (engine.ts SALAZAR_WALK_LOOP_SECONDS)
-    const fps = long ? n / (u.sprite === 'salazar' ? 2.6 : 1.5) : Math.min(n / 2, 6) * slow / 0.22;
+    // Salazar V2's walk loop plays at 1.9 s (engine.ts SALAZAR_WALK_LOOP_SECONDS)
+    const fps = long ? n / (u.sprite === 'salazar' ? 1.9 : 1.5) : Math.min(n / 2, 6) * slow / 0.22;
     return { frame: Math.floor(t * fps) % n, done: false };
   }
   // one-shot sheets: long sheets last 3 s (Apparition's 60-frame ATT lasts 5 s); short ones ~0.8 s

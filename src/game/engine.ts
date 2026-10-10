@@ -550,11 +550,11 @@ const MALREC_SHEET_PX: Record<string, { body: number; feet: number }> = {
   "move-left-": { body: 630, feet: 11 },
 };
 const MALREC_BODY_CELLS = 1.42 * 1.2 * 296 / 320;
-/** Salazar V2's walk (Attachments/Salazar Left/Right.mp4): his 36-frame loop plays close to the
- * video's own pace, and he crosses each hex slower than the 0.22 s default so his feet carry him
- * instead of sliding. Both scale with the speed mode like everyone else's walk. */
-const SALAZAR_WALK_LOOP_SECONDS = 2.6;
-const SALAZAR_STEP_PACE = 0.22 / 0.55;
+/** Salazar V2's walk: his 36-frame loop plays at 1.9 s and he crosses a hex in 0.34 s (default
+ * 0.22 s), a compromise — one loop of the authored stride covers only ~1 hex, so at playable speed
+ * his feet still slide a little. Both scale with the speed mode like everyone else's walk. */
+const SALAZAR_WALK_LOOP_SECONDS = 1.9;
+const SALAZAR_STEP_PACE = 0.22 / 0.34;
 // Sums of the supplied Minor Horror atlas JSON frame durations.
 const MINOR_HORROR_SECONDS = { idle: 3.240, attack: 2.844, cast: 3.168, walk: 3.456, death: 3.924 };
 /** Bow shots on a long sheet: normal ATT shots wait for the full sheet. Bow skills normally
