@@ -143,12 +143,18 @@ const FRAGMENT = /* glsl */ `
         float r = uLightRange[k], q = dot(v, v) / (r * r);
         light += uLightColor[k] * max(0.0, 1.0 - q) / (1.0 + 6.0 * q);
       }
+      // spell lights can be extremely bright: the mist only ever glows within a sane range,
+      // so the bloom after it never receives an overflow (it turned that into a black box)
+      light = clamp(light, vec3(0.0), vec3(4.0));
       float a = 1.0 - exp(-d * dt);
       glow += T * a * uAlbedo * light;
       T *= 1.0 - a;
       if (T.x < 0.01) break;
     }
-    gl_FragColor = vec4(scene.rgb * T + glow, scene.a);
+    vec3 outC = scene.rgb * T + glow;
+    // never hand an invalid value on (NaN fails every comparison with itself)
+    if (!(outC.r == outC.r) || !(outC.g == outC.g) || !(outC.b == outC.b)) outC = scene.rgb;
+    gl_FragColor = vec4(min(outC, vec3(64.0)), scene.a);
   }
 `;
 
@@ -292,7 +298,7 @@ export class VolumetricFogPass extends Pass {
     u.uLightCount.value = lit.length;
     lit.forEach(({ l, p }, i) => {
       u.uLightPos.value[i].copy(p);
-      u.uLightColor.value[i].copy(l.color).multiplyScalar(l.intensity * 0.03);
+      u.uLightColor.value[i].copy(l.color).multiplyScalar(Math.min(l.intensity, 60) * 0.03);
       u.uLightRange.value[i] = Math.max(1.5, l.distance || 4) * 0.8;
     });
   }
