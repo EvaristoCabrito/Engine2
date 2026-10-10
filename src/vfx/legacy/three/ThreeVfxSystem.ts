@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { WEBGPU } from "../../../render/gpu";
+import { flipbookParticleNodes } from "../../legacyNodes";
 
 export interface VfxParticleCurves {
   size: (age: number) => number;
@@ -113,6 +116,15 @@ export class ParticleEmitter {
       geometry.setAttribute(name, a);
       return a;
     };
+    if (WEBGPU) {
+      // WebGPU reads at most 8 vertex buffers per draw; position + uv + these 7 made 9. Packed into
+      // one interleaved buffer instead (setX/setXYZ/needsUpdate below work the same on it).
+      const layout: [string, number][] = [["aCenter", 3], ["aSize", 1], ["aRotation", 1], ["aFrame", 1], ["aOpacity", 1], ["aEmissive", 1], ["aTint", 3]];
+      const stride = layout.reduce((sum, [, size]) => sum + size, 0);
+      const packed = new THREE.InstancedInterleavedBuffer(new Float32Array(MAX_PARTICLES * stride), stride).setUsage(THREE.DynamicDrawUsage);
+      let offset = 0;
+      for (const [name, size] of layout) { geometry.setAttribute(name, new THREE.InterleavedBufferAttribute(packed, size, offset)); offset += size; }
+    } else {
     attr("aCenter", 3);
     attr("aSize", 1);
     attr("aRotation", 1);
@@ -120,10 +132,11 @@ export class ParticleEmitter {
     attr("aOpacity", 1);
     attr("aEmissive", 1);
     attr("aTint", 3);
+    }
     geometry.instanceCount = 0;
     this.geometry = geometry;
 
-    this.material = new THREE.ShaderMaterial({
+    this.material = shaderMaterial({
       uniforms: {
         uFlipbook: { value: texture },
         uSceneDepth: { value: depthTexture },
@@ -206,7 +219,7 @@ export class ParticleEmitter {
       depthWrite: false,
       blending: THREE.NormalBlending,
       toneMapped: false,
-    });
+    }, flipbookParticleNodes);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.frustumCulled = false;
   }

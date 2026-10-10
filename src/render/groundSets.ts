@@ -10,7 +10,8 @@
 
 import * as THREE from 'three';
 import { GROUND_LAYER_COUNT, GROUND_LAYERS } from '../map/board';
-import { ENGINE2_V3_GROUND_VARIANTS } from '../ember/tileVariants';
+import { ENGINE2_V3_GROUND_VARIANTS, GROUND_VARIANT_LAYERS, groundVariantMaps } from '../ember/tileVariants';
+import { maxAnisotropy } from './gpu';
 
 export type GroundSet = 'proto' | 'claude' | 'gpt' | 'engine2-v3' | 'engine2-v4';
 export const GROUND_SET_LABEL: Record<GroundSet, string> = { proto: 'Protótipo', claude: 'Claude', gpt: 'GPT', 'engine2-v3': 'Engine2 V3', 'engine2-v4': 'Engine2 V4 Photo' };
@@ -35,7 +36,11 @@ const folders = (set: Exclude<GroundSet, 'proto'>, terrain: string): string[] =>
   if (set === 'engine2-v3' || set === 'engine2-v4') {
     const v3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.key === terrain);
     const version = set === 'engine2-v4' ? 'v4' : 'v3';
-    return v3 ? [`/game/ground-engine2-${version}/${v3.folder}`] : [];
+    if (v3) return [`/game/ground-engine2-${version}/${v3.folder}`];
+    // The generated V3/V4 packs do not include snow or barricade. Keep those authored tiles
+    // visible in full 3D with the existing photoreal Claude PBR materials instead of silently
+    // dropping them back to the prototype shader.
+    return terrain === 'snow' || terrain === 'barricade' ? [`/game/ground-claude/${terrain}`] : [];
   }
   return set === 'claude'
     ? [...(terrain === 'plains' ? ['/game/ground-claude/plains-v2'] : []), `/game/ground-claude/${terrain}`]
@@ -82,8 +87,15 @@ async function bitmap(url: string): Promise<ImageBitmap | null> {
 async function loadSet(set: Exclude<GroundSet, 'proto'>): Promise<Loaded> {
   const maps = ['color', 'normal', 'rough'] as const;
   // per terrain: the first folder that has a colour map; its normal/rough from the same folder
-  const terrains = [...GROUND_LAYERS, 'city', 'shallow-water', 'river-rocks'];
+  const terrains = [...GROUND_LAYERS, 'city', 'shallow-water', 'river-rocks', ...GROUND_VARIANT_LAYERS.map((entry) => entry.key)];
   const layers = await Promise.all(terrains.map(async (terrain) => {
+    const addedVariant = GROUND_VARIANT_LAYERS.find((entry) => entry.key === terrain);
+    if (addedVariant) {
+      const paths = groundVariantMaps(addedVariant);
+      const [color, normal, rough] = await Promise.all([bitmap(paths.color), bitmap(paths.normal), bitmap(paths.rough)]);
+      if (!color || !normal || !rough) throw new Error(`Missing 3D tile material: ${addedVariant.key}`);
+      return { color, normal, rough };
+    }
     for (const folder of folders(set, terrain)) {
       const color = await bitmap(`${folder}/color.png`);
       if (!color) continue;
@@ -95,7 +107,7 @@ async function loadSet(set: Exclude<GroundSet, 'proto'>): Promise<Loaded> {
   // One size per set. Keep the 15-layer V3 array at 1024 so its three PBR arrays stay practical
   // on GPU memory; source maps remain at their baked resolution on disk.
   const largest = Math.max(1, ...layers.flatMap(l => (l ? [l.color.width, l.color.height] : [])));
-  const size = set === 'engine2-v3' || set === 'engine2-v4' ? Math.min(1024, largest) : largest;
+  const size = Math.min(1024, largest);
   const canvas = new OffscreenCanvas(size, size);
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   const build = (key: typeof maps[number], fallback: [number, number, number]) => {
@@ -134,15 +146,15 @@ async function loadSet(set: Exclude<GroundSet, 'proto'>): Promise<Loaded> {
 function apply(): void {
   const set = current;
   groundSetUniforms.uGroundSet.value = 0;
-  if (set === 'proto') { listeners.forEach(fn => fn(set)); return; }
-  let job = loaded.get(set);
-  if (!job) { job = loadSet(set); loaded.set(set, job); }
+  const source = set === 'proto' ? 'claude' : set;
+  let job = loaded.get(source);
+  if (!job) { job = loadSet(source); loaded.set(source, job); }
   void job.then((l) => {
     if (current !== set) return;
     groundSetUniforms.tSetColor.value = l.color;
     groundSetUniforms.tSetNormal.value = l.normal;
     groundSetUniforms.tSetRough.value = l.rough;
-    groundSetUniforms.uSetHas.value = l.has;
+    groundSetUniforms.uSetHas.value = set === 'proto' ? l.has.map((has, i) => i < GROUND_LAYERS.length + 3 ? 0 : has) : l.has;
     groundSetUniforms.uGroundSet.value = 1;
     listeners.forEach(fn => fn(set));
   });
@@ -154,18 +166,33 @@ export function setGroundSet(set: GroundSet): void {
   apply();
 }
 
+/** The game's loading curtain must wait for the tile materials, not just the meshes. */
+export async function ensureGroundSets(): Promise<void> {
+  const source = current === 'proto' ? 'claude' : current;
+  let job = loaded.get(source);
+  if (!job) { job = loadSet(source); loaded.set(source, job); }
+  await job;
+}
+
 /** Called by the terrain material once a renderer exists (anisotropy), then loads the saved pick. */
 let started = false;
 export function startGroundSets(renderer: THREE.WebGLRenderer): void {
   if (started) return;
   started = true;
-  anisotropy = renderer.capabilities.getMaxAnisotropy();
+  anisotropy = maxAnisotropy(renderer);
   apply();
 }
 
 /** How many of the 12 tiles the set actually has (for the editor's switch). */
 export async function groundSetCount(set: Exclude<GroundSet, 'proto'>): Promise<number> {
-  const found = await Promise.all([...GROUND_LAYERS, 'city', 'shallow-water', 'river-rocks'].map(async (terrain) => {
+  const found = await Promise.all([...GROUND_LAYERS, 'city', 'shallow-water', 'river-rocks', ...GROUND_VARIANT_LAYERS.map((entry) => entry.key)].map(async (terrain) => {
+    const addedVariant = GROUND_VARIANT_LAYERS.find((entry) => entry.key === terrain);
+    if (addedVariant) {
+      try {
+        const res = await fetch(`/game/ground-variant-tiles/${addedVariant.file}`, { method: 'HEAD' });
+        return res.ok && (res.headers.get('content-type') ?? '').startsWith('image/') ? 1 : 0;
+      } catch { return 0; }
+    }
     for (const folder of folders(set, terrain)) {
       try {
         const res = await fetch(`${folder}/color.png`, { method: 'HEAD' });

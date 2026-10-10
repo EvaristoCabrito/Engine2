@@ -3,7 +3,7 @@
 
 import { type HexLayout, makeLayout, hexX, hexZ, indexOf, STEP } from '../core/hex';
 import type { EmberMapDraft, TerrainId } from './emberMap';
-import { CLAUDE_VARIANT, ENGINE2_V3_GROUND_VARIANTS, ENGINE2_V3_CITY_VARIANT } from '../ember/tileVariants';
+import { CLAUDE_VARIANT, ENGINE2_V3_GROUND_VARIANTS, ENGINE2_V3_CITY_VARIANT, GROUND_VARIANT_LAYERS, groundVariantLayer } from '../ember/tileVariants';
 
 /** Ground surfaces the terrain material knows how to paint. */
 export const SURFACE = { grass: 0, forest: 1, pavers: 2, snow: 3, rock: 4, gravel: 5, ash: 6, plains049: 7 } as const;
@@ -12,7 +12,8 @@ export type Surface = keyof typeof SURFACE | 'void';
 /** The 12 baked ground tiles (Claude's and GPT's sets): one layer per basic Ember terrain. */
 export const GROUND_LAYERS: TerrainId[] = ['plains', 'woods', 'ruins', 'water', 'ember', 'hill', 'flame', 'column', 'nave', 'barricade', 'door', 'snow'];
 /** V3 adds City plus two water variants: shallows and a rocky ford bed. */
-export const GROUND_LAYER_COUNT = GROUND_LAYERS.length + 3;
+export const GROUND_LAYER_COUNT = GROUND_LAYERS.length + 3 + GROUND_VARIANT_LAYERS.length;
+export const GROUND_WEIGHT_ATTRIBUTES = Array.from({ length: Math.ceil(GROUND_LAYER_COUNT / 4) }, (_, i) => `ground${String.fromCharCode(65 + i)}`);
 
 export interface TerrainInfo {
   name: string;
@@ -103,12 +104,19 @@ export class Board {
         const variant = draft.tileVariants?.[i] ?? 0;
         const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === type && entry.variant === variant);
         const cityTile = type === 'plains' && (variant === ENGINE2_V3_CITY_VARIANT || (variant >= 21 && variant <= 38 && variant !== 22));
-        const claudeTile = CLAUDE_VARIANT[type] !== undefined && variant === CLAUDE_VARIANT[type];
         const v3Layer = engine2V3?.key === 'city' ? GROUND_LAYERS.length
           : engine2V3?.key === 'shallow-water' ? GROUND_LAYERS.length + 1
             : engine2V3?.key === 'river-rocks' ? GROUND_LAYERS.length + 2
               : engine2V3 ? GROUND_LAYERS.indexOf(type) : -1;
-        const ground = surf !== 'void' && cityTile ? GROUND_LAYERS.length : surf !== 'void' && engine2V3 ? v3Layer : surf !== 'void' && claudeTile ? GROUND_LAYERS.indexOf(type) : -1;
+        const variantLayer = groundVariantLayer(type, variant);
+        // HEAD's rule for every tile that existed before (only Claude's version per terrain is
+        // baked; the rest keep the painted ground), plus GPT's appended variant layers.
+        const claudeTile = CLAUDE_VARIANT[type] !== undefined && variant === CLAUDE_VARIANT[type];
+        const ground = surf === 'void' ? -1
+          : cityTile ? GROUND_LAYERS.length
+            : engine2V3 ? v3Layer
+              : variantLayer >= 0 ? GROUND_LAYERS.length + 3 + variantLayer
+                : claudeTile ? GROUND_LAYERS.indexOf(type) : -1;
         let groundY: number;
         if (info.surface === 'void') groundY = 0;
         else if (water) groundY = (BASE_LEVELS - 1 + level) * STEP;

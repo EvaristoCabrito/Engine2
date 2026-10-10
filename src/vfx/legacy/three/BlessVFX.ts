@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { blessWaveNodes } from "../../legacyNodes";
 
 export interface BlessVfxAlly { id: string; position: THREE.Vector3; distanceHexes: number }
 export interface BlessVfxCast {
@@ -86,7 +88,7 @@ export class BlessVFX {
     const segments = 160, sides = 8;
     for (let i=0;i<=segments;i++) { const a=i/segments*Math.PI*2; for(let j=0;j<=sides;j++){ const b=j/sides*Math.PI*2; const r=1+0.07*Math.cos(b); positions.push(Math.cos(a)*r,Math.sin(a)*r,0.07*Math.sin(b)); if(i<segments&&j<sides){const k=i*(sides+1)+j; indices.push(k,k+sides+1,k+1,k+1,k+sides+1,k+sides+2);} } }
     const geo = new THREE.BufferGeometry(); geo.setAttribute("position",new THREE.Float32BufferAttribute(positions,3)); geo.setIndex(indices); geo.computeVertexNormals();
-    const waveMaterial = new THREE.ShaderMaterial({ uniforms:{uTime:{value:0},uRadius:{value:0.05},uThickness:{value:0.12},uNoise:{value:0.2},uHeight:{value:0.42},uOpacity:{value:0},uEmissive:{value:4}}, vertexShader:WAVE_VERTEX, fragmentShader:WAVE_FRAGMENT, transparent:true, depthTest:true, depthWrite:false, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, toneMapped:false });
+    const waveMaterial = shaderMaterial({ uniforms:{uTime:{value:0},uRadius:{value:0.05},uThickness:{value:0.12},uNoise:{value:0.2},uHeight:{value:0.42},uOpacity:{value:0},uEmissive:{value:4}}, vertexShader:WAVE_VERTEX, fragmentShader:WAVE_FRAGMENT, transparent:true, depthTest:true, depthWrite:false, side:THREE.DoubleSide, blending:THREE.AdditiveBlending, toneMapped:false }, blessWaveNodes);
     this.ring = new THREE.Mesh(geo,waveMaterial); this.ring.renderOrder=9; this.ring.frustumCulled=false;
     this.core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.18,2),new THREE.MeshStandardMaterial({color:0xffd77e,emissive:0xffb83e,emissiveIntensity:4,roughness:0.32,metalness:0.08}));
     this.core.renderOrder=10; this.core.castShadow=false;

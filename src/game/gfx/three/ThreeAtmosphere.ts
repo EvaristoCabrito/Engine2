@@ -28,6 +28,8 @@
 import * as THREE from "three";
 import type { BattleEngine } from "../../engine";
 import { boxBlur } from "./ThreeGroundAO";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { mist2Nodes, mist3Nodes, mist4Nodes, fog5Nodes, exteriorFogNodes, revealFogNodes, dustNodes, emberNodes } from "./atmosphereNodes";
 
 /** Mist tuning for one frame — built fresh from Mission.mistIntensity in ThreeAtmosphere.sync()
  * (see its own comment) rather than a hardcoded per-mission-id table, so the Map Editor's
@@ -194,7 +196,7 @@ class GroundMist {
 
   constructor() {
     for (let i = 0; i < 3; i++) {
-      const material = new THREE.ShaderMaterial({
+      const material = shaderMaterial({
         vertexShader: MIST_VERTEX,
         fragmentShader: MIST_FRAGMENT,
         transparent: true,
@@ -209,7 +211,7 @@ class GroundMist {
           uSunColor: { value: new THREE.Color(0xffffff) },
           uAlpha: { value: 0 },
         },
-      });
+      }, mist2Nodes);
       const mesh = new THREE.Mesh(this.geo, material);
       // Below the character billboards (order 2) so ground mist never paints over a unit.
       mesh.renderOrder = 1.5 + i * 0.1;
@@ -343,7 +345,7 @@ class GroundMist3 {
 
   constructor() {
     for (let i = 0; i < 3; i++) {
-      const material = new THREE.ShaderMaterial({
+      const material = shaderMaterial({
         vertexShader: MIST3_VERTEX,
         fragmentShader: MIST3_FRAGMENT,
         transparent: true,
@@ -356,7 +358,7 @@ class GroundMist3 {
           uSunColor: { value: new THREE.Color(0xffffff) },
           uAlpha: { value: 0 },
         },
-      });
+      }, mist3Nodes);
       const mesh = new THREE.Mesh(this.geo, material);
       // Below the character billboards (order 2) so ground mist never paints over a unit.
       mesh.renderOrder = 1.5 + i * 0.1;
@@ -491,7 +493,7 @@ class GroundMist4 {
   private static readonly BASE_Z = 6;
 
   constructor() {
-    this.material = new THREE.ShaderMaterial({
+    this.material = shaderMaterial({
       vertexShader: MIST4_VERTEX,
       fragmentShader: MIST4_FRAGMENT,
       transparent: true,
@@ -508,7 +510,7 @@ class GroundMist4 {
         uBoardHalfSize: { value: new THREE.Vector2(1, 1) },
         uBorderThickness: { value: 1 },
       },
-    });
+    }, mist4Nodes);
     this.mesh = new THREE.Mesh(this.geo, this.material);
     // Below the character billboards (order 2) so ground mist never paints over a unit.
     this.mesh.renderOrder = 1.5;
@@ -821,7 +823,7 @@ class VolumetricFog5 {
   constructor() {
     FOG5_LAYERS.forEach((spec, i) => {
       for (const footPass of [0, 1]) {
-      const material = new THREE.ShaderMaterial({
+      const material = shaderMaterial({
         vertexShader: FOG5_VERTEX,
         fragmentShader: FOG5_FRAGMENT,
         transparent: true,
@@ -850,7 +852,7 @@ class VolumetricFog5 {
           uLight: { value: new THREE.Color(0xffffff) },
           uAlpha: { value: 0 },
         },
-      });
+      }, fog5Nodes);
       const mesh = new THREE.Mesh(this.geo, material);
       // Must draw after the units' fogCut depth writers (renderOrder 99).
       mesh.renderOrder = 101 + i;
@@ -983,7 +985,7 @@ class BoardFogArtwork {
     this.texture.colorSpace = THREE.SRGBColorSpace;
     this.texture.minFilter = THREE.LinearFilter;
     this.texture.magFilter = THREE.LinearFilter;
-    this.material = new THREE.ShaderMaterial({
+    this.material = shaderMaterial({
       vertexShader: EXTERIOR_FOG_VERTEX,
       fragmentShader: EXTERIOR_FOG_FRAGMENT,
       transparent: true,
@@ -996,7 +998,7 @@ class BoardFogArtwork {
         uBoardCenter: { value: new THREE.Vector2() },
         uBoardHalfSize: { value: new THREE.Vector2(1, 1) },
       },
-    });
+    }, exteriorFogNodes);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.renderOrder = 30;
     this.group.add(this.mesh);
@@ -1184,7 +1186,7 @@ class RevealFog {
   private builtKey = "";
 
   constructor() {
-    this.material = new THREE.ShaderMaterial({
+    this.material = shaderMaterial({
       vertexShader: REVEAL_FOG_VERTEX,
       fragmentShader: REVEAL_FOG_FRAGMENT,
       transparent: true,
@@ -1203,7 +1205,7 @@ class RevealFog {
         uBoardCenter: { value: new THREE.Vector2() },
         uBoardHalfSize: { value: new THREE.Vector2(1, 1) },
       },
-    });
+    }, revealFogNodes);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     // This layer is the atmosphere that softens the game's completely opaque unseen fill.
     // ThreeFogMask draws at order 100; placing Fog 01 behind it made the shader technically
@@ -1411,7 +1413,7 @@ class ParticleField {
     geo.setAttribute("aSeed", new THREE.InstancedBufferAttribute(aSeed, 1));
     geo.setAttribute("aSize", new THREE.InstancedBufferAttribute(aSize, 1));
 
-    const material = new THREE.ShaderMaterial({
+    const material = shaderMaterial({
       vertexShader: this.kind === "ember" ? EMBER_VERTEX : DUST_VERTEX,
       fragmentShader: PARTICLE_FRAGMENT,
       transparent: true,
@@ -1424,7 +1426,7 @@ class ParticleField {
         uOpacity: { value: this.kind === "ember" ? 0.9 : 0.5 },
         ...(this.kind === "ember" ? { uRiseHeight: { value: riseHeight } } : {}),
       },
-    });
+    }, this.kind === "ember" ? emberNodes : dustNodes);
 
     const mesh = new THREE.InstancedMesh(geo, material, count);
     // Anchors and drift live in custom attributes, outside the PlaneGeometry's bounds.

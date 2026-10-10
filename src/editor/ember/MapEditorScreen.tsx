@@ -12,7 +12,8 @@ import { THREE_D_DOOR_VARIANTS, decorationPlacementArt, SOLID_CART_DECOR_IDS, BA
 import { ENCOUNTER_NPC_IDS, encounterNpcSpawn, type EncounterNpcId } from "../../ember/encounter-npcs";
 import { DEFAULT_AMBIENT_INTENSITY, DEFAULT_BLOOM_INTENSITY, DEFAULT_SUN_INTENSITY, TIME_OF_DAY_LIGHT } from "../../ember/battleLight";
 import { LIGHT_DEFS } from "../../ember/lighting";
-import { CLAUDE_VARIANT, TILE_VARIANT_COUNT, tileVariantName } from "../../ember/tileVariants";
+import { CLAUDE_VARIANT, TILE_VARIANT_COUNT, tileVariantName, tileVariantSrc, GROUND_VARIANT_LAYERS } from "../../ember/tileVariants";
+import { TERRAIN_INFO } from "../../map/board";
 import { ENGINE2_V3_GROUND_VARIANTS, ENGINE2_V3_CITY_VARIANT } from "../../ember/tileVariants";
 import { GroundSetPicker } from "../../render/GroundSetPicker";
 import { DialogEditor } from "./DialogEditor";
@@ -27,16 +28,35 @@ import {
 import type { ClassId, DecorationPlacement, DialogTree, ElementalFxPlacement, GameArt, MapTimeOfDay, Mission, Spawn, SpriteId, TerrainId, WinCondition, WorldLocation } from "../../ember/types";
 import { footprint, hexNeighbors } from "../../campaign/pathfinding";
 
+/** A tile's picker image. Every terrain's base tile (001) is its painted diorama surface, drawn by
+ * the same painter as the 3D ground, so the thumbnail always matches what the map shows. */
+function thumbFor(terrain: TerrainId, variant: number): string {
+  return tileVariantSrc(terrain, variant);
+}
+
 /** Baked ground variants appear beside the original surface and keep their own saved indices. */
 function groundVersions(terrain: TerrainId): { label: string; variant: number; thumb: string }[] {
-  const list = [{ variant: 0, thumb: "" }];
+  if (terrain === 'barricade') return GROUND_VARIANT_LAYERS.filter(entry => entry.terrain === terrain).map(entry => ({ label: entry.label, variant: entry.variant, thumb: thumbFor(terrain, entry.variant) }));
+  const list = [{ variant: 0, thumb: thumbFor(terrain, 0) }];
   if (terrain === "plains") list.push({ variant: 48, thumb: "/game/ground-claude/049-plains/color.png" });
   const claude = CLAUDE_VARIANT[terrain];
   if (claude !== undefined) list.push({ variant: claude, thumb: `/game/ground-claude/${terrain === "plains" ? "plains-v2" : terrain}/color.png` });
-  for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city")) {
+  // plains052 (V3 "plains", index 51) duplicates another tile: hidden here, still valid in saved maps
+  for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city" && !(terrain === "plains" && item.variant === 51))) {
     list.push({ variant: entry.variant, thumb: `/game/ground-engine2-v3/${entry.folder}/color.png` });
   }
-  return list.map((v, i) => ({ ...v, label: String(i + 1).padStart(2, "0") }));
+  for (const entry of GROUND_VARIANT_LAYERS.filter(item => item.terrain === terrain && item.key !== 'photo-city')) {
+    list.push({ variant: entry.variant, thumb: thumbFor(terrain, entry.variant) });
+  }
+  // plains: numbered in picker order (001, 002, …); saved indices are unchanged
+  if (terrain === "plains") return list.map((v, i) => ({ ...v, label: String(i + 1).padStart(3, "0") }));
+  return list.map(v => ({ ...v, label: GROUND_VARIANT_LAYERS.find(item => item.terrain === terrain && item.variant === v.variant)?.label ?? String(v.variant + 1).padStart(3, "0") }));
+}
+
+/** The selected base as the picker shows it: terrain name plus its picker number/label. */
+function baseVersionLabel(terrain: TerrainId, variant: number): string {
+  const version = groundVersions(terrain).find((v) => v.variant === variant);
+  return `${TERRAIN[terrain].name} ${version?.label ?? String(variant + 1).padStart(3, "0")}`;
 }
 
 /** The real latest saved draft for a scenario, asked from the dev server directly rather than
@@ -1188,7 +1208,7 @@ export function MapEditorScreen({
       tileVariants: Array.from({ length: d.cols * d.rows }, () => selectedVariant),
       tileRots: Array.from({ length: d.cols * d.rows }, () => 0),
     }));
-    setNote(`Base inteira substituída por ${TERRAIN[brush].name.toLowerCase()} · ${VARIANT_LABEL[brush]?.[selectedVariant] ?? `arte ${selectedVariant + 1}`}.`);
+    setNote(`Base inteira substituída por ${baseVersionLabel(brush, selectedVariant)}.`);
   };
 
   /** Turns one hex's art a sixth of a circle. The tile, its variant and everything standing
@@ -2705,6 +2725,7 @@ export function MapEditorScreen({
                   tileVariant: 0,
                 })),
                 { key: "city" as const, terrain: "plains" as const, label: "City", tileVariant: 21 },
+                { key: "barricade-earth-v2", terrain: "barricade" as const, label: "Barricade Earth II", tileVariant: 2 },
               ]
                 .sort((a, b) => byName(a.label, b.label))
                 .map(({ key, terrain, label, tileVariant }) => {
@@ -2718,15 +2739,15 @@ export function MapEditorScreen({
                         setBrush(terrain);
                         if (key === "city") {
                           setCityMode(true);
-                          setVariant((v) => ((v >= 21 && v <= 38 && v !== 22) || v === ENGINE2_V3_CITY_VARIANT ? v : 21));
+                          setVariant((v) => ((v >= 21 && v <= 38 && v !== 22) || v === ENGINE2_V3_CITY_VARIANT || v === 54 ? v : ENGINE2_V3_CITY_VARIANT));
                         } else {
                           setCityMode(false);
-                          setVariant((v) => (terrain === "plains" && ((v >= 21 && v <= 38) || v === ENGINE2_V3_CITY_VARIANT) ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
+                          setVariant((v) => terrain === 'barricade' ? tileVariant : (terrain === "plains" && ((v >= 21 && v <= 38) || v === ENGINE2_V3_CITY_VARIANT || v === 54) ? 0 : Math.min(v, (TILE_VARIANT_COUNT[terrain] ?? 1) - 1)));
                         }
                       }}
                       className={`text-xs px-1.5 py-1 rounded-md border flex items-center gap-1.5 ${selected ? "border-accent" : "border-border"}`}
                     >
-                      <span aria-hidden="true" className="size-7 rounded-sm shrink-0" style={{ background: TERRAIN_SWATCH[terrain] }} />
+                      <img src={thumbFor(terrain, key === "city" ? ENGINE2_V3_CITY_VARIANT : tileVariant)} alt="" className="size-7 rounded-sm shrink-0 object-cover" />
                       {label}
                     </button>
                   );
@@ -2755,16 +2776,17 @@ export function MapEditorScreen({
               </div>
             )}
             {cityMode && (
-              <button
+              <div className="flex flex-wrap gap-1.5">{[{ variant: ENGINE2_V3_CITY_VARIANT, label: 'Engine2 V3' }, ...GROUND_VARIANT_LAYERS.filter(entry => entry.key === 'photo-city')].map(entry => <button
+                key={entry.variant}
                 type="button"
-                title="City · Engine2 V3"
-                aria-pressed={variant === ENGINE2_V3_CITY_VARIANT}
-                onClick={() => setVariant(ENGINE2_V3_CITY_VARIANT)}
-                className={`flex w-fit items-center gap-1 rounded-md border overflow-hidden pr-1.5 text-xs ${variant === ENGINE2_V3_CITY_VARIANT ? "border-accent" : "border-border"}`}
+                title={`City · ${entry.label}`}
+                aria-pressed={variant === entry.variant}
+                onClick={() => setVariant(entry.variant)}
+                className={`flex w-fit items-center gap-1 rounded-md border overflow-hidden pr-1.5 text-xs ${variant === entry.variant ? "border-accent" : "border-border"}`}
               >
-                <img src="/game/ground-engine2-v3/city/color.png" alt="" className="size-8 object-cover" />
-                <span>Engine2 V3</span>
-              </button>
+                <img src={thumbFor('plains', entry.variant)} alt="" className="size-8 object-cover" />
+                <span>{entry.label}</span>
+              </button>)}</div>
             )}
             {brush === "hill" && (
               <p className="text-xs text-muted">Colina cria relevo. Use Elevação para esculpir vários níveis e ver o resultado na prévia 3D.</p>
@@ -2782,7 +2804,7 @@ export function MapEditorScreen({
                   }}
                   className={`text-xs px-1.5 py-1 rounded-md border flex items-center gap-1.5 ${brush === "snow" ? "border-accent" : "border-border"}`}
                 >
-                  <span aria-hidden="true" className="size-7 rounded-sm shrink-0" style={{ background: TERRAIN_SWATCH["snow"] }} />
+                  <img src={thumbFor("snow", 0)} alt="" className="size-7 rounded-sm shrink-0 object-cover" />
                   Neve e gelo
                 </button>
               </div>
@@ -3039,11 +3061,11 @@ export function MapEditorScreen({
             <Button
               size="sm"
               variant="quiet"
-              title="Preenche todos os hexes com o terreno e a versão selecionados acima"
+              title={`Preenche todos os hexes com ${baseVersionLabel(brush, Math.min(variant, (TILE_VARIANT_COUNT[brush] ?? 1) - 1))}`}
               onClick={replaceBaseTile}
             >
-              <span aria-hidden="true" className="size-5 rounded-sm shrink-0" style={{ background: TERRAIN_SWATCH[brush] }} />
-              Substituir base
+              <img src={thumbFor(brush, Math.min(variant, (TILE_VARIANT_COUNT[brush] ?? 1) - 1))} alt="" className="size-5 rounded-sm shrink-0 object-cover" style={{ background: TERRAIN_SWATCH[brush] }} />
+              Substituir base · {baseVersionLabel(brush, Math.min(variant, (TILE_VARIANT_COUNT[brush] ?? 1) - 1))}
             </Button>
             <Button
               size="sm"

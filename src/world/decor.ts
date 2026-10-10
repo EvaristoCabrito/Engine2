@@ -17,6 +17,7 @@ import { LIGHT_DEFS, LIGHT_RADIUS_MUL, MAP_LIGHT_MIN_HEIGHT } from '../ember/lig
 import { CarriedLight } from '../render/carriedLight';
 import { FLAT_ROW_STEP } from '../render/cameraRig';
 import { CARD_RENDER_ORDER } from '../render/drawOrder';
+import { maxAnisotropy } from '../render/gpu';
 
 const SQRT3 = Math.sqrt(3);
 const FILES = new Set(decorFiles as string[]);
@@ -117,7 +118,7 @@ export class DecorLayer {
       ...barricadeDecor(d.tiles as TerrainId[], d.cols, d.rows, (d.decorations ?? []) as { id: string; x: number; y: number }[]),
     ];
     const inBoard = (c: number, r: number) => c >= 0 && r >= 0 && c < L.cols && r < L.rows;
-    const aniso = this.renderer.capabilities.getMaxAnisotropy();
+    const aniso = maxAnisotropy(this.renderer);
     const jobs: Promise<void>[] = [];
     for (const p of placements) {
       const def = DECORATIONS[p.id];

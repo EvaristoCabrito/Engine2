@@ -30,7 +30,7 @@ export function createProp(kind:PropKind,options:PropOptions={}):THREE.Object3D{
 export function propMetrics(prop:THREE.Object3D){
   const counts:{name:string;triangles:number}[]=[];const textures=new Map<string,THREE.Texture>();
   prop.traverse(o=>{if(o instanceof THREE.Mesh){counts.push({name:o.name,triangles:(o.geometry.index?.count??o.geometry.getAttribute('position').count)/3});for(const mat of Array.isArray(o.material)?o.material:[o.material]){if(mat instanceof THREE.MeshStandardMaterial)for(const tex of [mat.map,mat.normalMap,mat.roughnessMap,mat.metalnessMap,mat.aoMap])if(tex)textures.set(tex.uuid,tex);}}});
-  const images=[...textures.values()].map(t=>({width:t.image.width,height:t.image.height,mipmaps:t.generateMipmaps}));
+  const images=[...textures.values()].map(t=>{const image=t.image as {width:number;height:number};return {width:image.width,height:image.height,mipmaps:t.generateMipmaps};});
   const glassTriangles=counts.filter(c=>c.name==='GothicCottage_Glass').reduce((s,c)=>s+c.triangles,0);
   return {lods:counts.filter(c=>c.name!=='GothicCottage_Glass').map(c=>({...c,triangles:c.triangles+glassTriangles})),glassTriangles,textures:images,gpuTextureMiB:images.reduce((s,t)=>s+t.width*t.height*4*(t.mipmaps?4/3:1),0)/1048576};
 }

@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { venomSmokeNodes } from "../../legacyNodes";
 import { pixelPreset, ProceduralElementEmitter } from "./ProceduralElementEmitter";
 
 export interface CausticVenomCastOptions {
@@ -303,7 +305,7 @@ export class CausticVenomVFX {
       this.scene.add(light);
       const smoke = Array.from({ length: 6 }, (_, puffIndex) => {
         const seed = index * 7.31 + puffIndex * 2.17;
-        const smokeMaterial = new THREE.ShaderMaterial({
+        const smokeMaterial = shaderMaterial({
           vertexShader: VENOM_SMOKE_VERTEX,
           fragmentShader: VENOM_SMOKE_FRAGMENT,
           transparent: true,
@@ -316,7 +318,7 @@ export class CausticVenomVFX {
             uOpacity: { value: 0 },
             uSeed: { value: seed },
           },
-        });
+        }, venomSmokeNodes);
         const puff = new THREE.Mesh(this.smokeGeometry, smokeMaterial);
         const angle = puffIndex * Math.PI * 2 / 6 + index * 0.7;
         const radius = this.worldScale * (0.045 + (puffIndex % 2) * 0.055);

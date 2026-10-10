@@ -80,7 +80,8 @@ export class Stage {
     // Full screen resolution: quality is never capped to fit a GPU (PLAN.md: no graphics budget).
     this.renderer.setPixelRatio(devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // three r186 removed PCFSoftShadowMap; its PCFShadowMap is the soft-filtered one now.
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     // Neutral keeps colours and saturation as authored (sprites look exactly as painted);
     // it only compresses highlights.
     this.renderer.toneMapping = THREE.NeutralToneMapping;
@@ -93,8 +94,11 @@ export class Stage {
     this.sun = new THREE.DirectionalLight('#fff0d4', 3.0);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(4096, 4096);
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.04;
+    // three r186 dropped PCFSoftShadowMap: its PCF filter speckled flat ground (shadow acne) with
+    // the old bias, so the sun's shadow sits a little further off the surface and is softened
+    this.sun.shadow.bias = -0.001;
+    this.sun.shadow.normalBias = 0.08;
+    this.sun.shadow.radius = 3;
     this.scene.add(this.hemi, this.sun, this.sun.target);
 
     // Multisampled target: real anti-aliasing survives the post-processing chain.
@@ -106,7 +110,7 @@ export class Stage {
     this.mist = new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
     this.composer.addPass(this.mist);
     // gentle: bright fires and spells glow a little, they don't flare (0.3 / 0.9 was too much)
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.18, 0.5, 0.95);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.55, 0.9);
     this.composer.addPass(this.bloom);
     for (let i = 0; i < 2; i++) for (const d of [[1, 0], [0, 1]]) {
       const p = new ShaderPass(TiltShiftShader);
@@ -244,7 +248,19 @@ export class Stage {
     // budget, so the count the shaders see never changes; their own state is restored after.
     const parked = this.parkHiddenLights();
     this.balanceLightCount();
+    this.drawMissingShadowMaps();
     try { this.composer.render(); } finally { this.restoreParkedLights(parked); }
+  }
+
+  /** three r186 samples every shadow-casting light's map as a depth texture. A light whose
+   * shadow updates are off (filler and parked lights, idle spell lights) and that never drew
+   * one left an empty slot, so every lit material failed its draw (GL_INVALID_OPERATION) and
+   * the whole scene vanished. Each such light draws its map once. */
+  private drawMissingShadowMaps(): void {
+    this.scene.traverseVisible((o) => {
+      const light = o as THREE.PointLight;
+      if (light.isLight && light.castShadow && light.shadow && !light.shadow.map) light.shadow.needsUpdate = true;
+    });
   }
 
   private lightBudget: { point: number; shadow: number } | null = null;

@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { pfCoreNodes, pfShellNodes, pfTendrilNodes } from "../../legacyNodes";
 
 export interface PhantasmalForceSettings {
   radius: number;
@@ -260,7 +262,7 @@ export class PhantasmalForceVFX {
   private disposed = false;
 
   constructor(private readonly scene: THREE.Object3D) {
-    this.coreMat = new THREE.ShaderMaterial({
+    this.coreMat = shaderMaterial({
       uniforms: { uTime: { value: 0 }, uEmission: { value: 1 }, uDistortion: { value: 0.08 } },
       vertexShader: CORE_VERTEX,
       fragmentShader: CORE_FRAGMENT,
@@ -269,8 +271,8 @@ export class PhantasmalForceVFX {
       depthWrite: false,
       blending: THREE.AdditiveBlending,
       toneMapped: false,
-    });
-    this.shellMat = new THREE.ShaderMaterial({
+    }, pfCoreNodes);
+    this.shellMat = shaderMaterial({
       uniforms: { uOpacity: { value: 0 }, uDistortion: { value: 0.1 }, uTime: { value: 0 } },
       vertexShader: SHELL_VERTEX,
       fragmentShader: SHELL_FRAGMENT,
@@ -280,7 +282,7 @@ export class PhantasmalForceVFX {
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       toneMapped: false,
-    });
+    }, pfShellNodes);
     const ico = new THREE.IcosahedronGeometry(0.5, 3);
     this.core = new THREE.Mesh(ico, this.coreMat);
     this.shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 4), this.shellMat);
@@ -448,7 +450,7 @@ export class PhantasmalForceVFX {
         uSplineNoise: { value: this.settings.splineNoise },
         uOpacity: { value: 0 },
       };
-      const material = new THREE.ShaderMaterial({
+      const material = shaderMaterial({
         uniforms,
         vertexShader: TENDRIL_VERTEX,
         fragmentShader: TENDRIL_FRAGMENT,
@@ -458,7 +460,7 @@ export class PhantasmalForceVFX {
         side: THREE.DoubleSide,
         blending: THREE.AdditiveBlending,
         toneMapped: false,
-      });
+      }, pfTendrilNodes);
       const mesh = new THREE.Mesh(tubeGeometry(this.settings.seed + i * 137, this.settings.tendrilThickness), material);
       mesh.renderOrder = 6;
       mesh.frustumCulled = false;

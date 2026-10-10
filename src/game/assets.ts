@@ -1,29 +1,13 @@
 import { DECORATIONS, decorationImage, decorationImageWebp, decorationSideFile } from "./data";
 import type { GameArt, SpriteId, TerrainId } from "./types";
 import { ENCOUNTER_NPC_IDS } from "./encounter-npcs";
-import { ENGINE2_V3_GROUND_VARIANTS } from "../ember/tileVariants";
+import { ENGINE2_V3_GROUND_VARIANTS, GROUND_VARIANT_LAYERS, TILE_VARIANT_COUNT as EMBER_TILE_VARIANT_COUNT, tileVariantSrc as editorTileVariantSrc } from "../ember/tileVariants";
 
 // Number of art variants available per terrain, e.g. plains001.png / plains002.png.
 // Index 0 (the "001" file) is what every mission renders with unless it names a
 // different variant in Mission.tileVariants — keep it as the tile that's safe
 // for existing maps.
-export const TILE_VARIANT_COUNT: Record<TerrainId, number> = {
-  plains: 52,
-  woods: 14,
-  ruins: 10,
-  water: 28,
-  ember: 8,
-  hill: 7,
-  flame: 6,
-  column: 5,
-  nave: 21,
-  barricade: 1,
-  door: 3,
-  void: 1,
-  // The Icelands section keeps legacy snow variants first, then the 12 supplied
-  // cold-ground tiles (snow004–snow015) so saved maps retain their old indices.
-  snow: 21,
-};
+export const TILE_VARIANT_COUNT = EMBER_TILE_VARIANT_COUNT;
 
 /** Append-only terrain set: previous saved-map indices keep their exact artwork. */
 export const HEX_GROUND_001: Partial<Record<TerrainId, { variant: number; file: string }>> = {
@@ -43,6 +27,8 @@ export const HEX_GROUND_001: Partial<Record<TerrainId, { variant: number; file: 
  * Two variants of the same terrain differ only in art, so this is the only way to tell
  * from a painted map which of them a cell is actually using. */
 export function tileVariantName(id: TerrainId, variant: number): string {
+  const addedGround = GROUND_VARIANT_LAYERS.find((entry) => entry.terrain === id && entry.variant === variant);
+  if (addedGround) return addedGround.label;
   const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === id && entry.variant === variant);
   if (engine2V3) return `engine2-v3-${engine2V3.folder}`;
   if (id === "plains" && variant === 46) return "hex-ground-013-farm-soil";
@@ -103,14 +89,13 @@ export function tileVariantName(id: TerrainId, variant: number): string {
 }
 
 export function isHexGroundVariant(id: TerrainId, variant: number): boolean {
-  return id !== "column" && ((id === "woods" && (variant === 10 || variant === 11)) || (id === "water" && variant === 23) || HEX_GROUND_001[id]?.variant === variant || (id === "plains" && variant >= 39 && variant <= 45) || (id === "snow" && (variant >= 16 && variant <= 20)) || (id === "nave" && variant >= 3 && variant <= 18));
+  return id !== "column" && (GROUND_VARIANT_LAYERS.some((entry) => entry.terrain === id && entry.variant === variant) || ENGINE2_V3_GROUND_VARIANTS.some((entry) => entry.terrain === id && entry.variant === variant) || (id === "woods" && (variant === 10 || variant === 11)) || (id === "water" && variant === 23) || HEX_GROUND_001[id]?.variant === variant || (id === "plains" && variant >= 39 && variant <= 47) || (id === "snow" && variant >= 16 && variant <= 20) || (id === "nave" && variant >= 3 && variant <= 18));
 }
 
 export function tileVariantSrc(id: TerrainId, variant: number): string {
-  const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === id && entry.variant === variant);
-  if (engine2V3) return `/game/ground-engine2-v3/${engine2V3.folder}/color.png`;
-  return `/game/tiles/${tileVariantName(id, variant)}.png?v=66`;
+  return `${editorTileVariantSrc(id, variant)}?v=67`;
 }
+
 /** Framed portrait art for the sprites that have one; every other sprite falls back to its
  * own first battle-frame, unframed. */
 const HERO_PORTRAIT: Partial<Record<string, string>> = {

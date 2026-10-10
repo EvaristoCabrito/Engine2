@@ -8,7 +8,8 @@ import * as THREE from 'three';
 import { fbm, vnoise } from '../core/noise';
 import { type HexLayout, hexAt, neighbors, corner, SQ3, STEP } from '../core/hex';
 import type { Board, Cell } from '../map/board';
-import { GROUND_LAYER_COUNT } from '../map/board';
+import { terrainReliefAt } from './terrainRelief';
+import { GROUND_LAYER_COUNT, GROUND_WEIGHT_ATTRIBUTES } from '../map/board';
 
 export type EdgeStyle = 'smooth' | 'hard';
 
@@ -23,7 +24,7 @@ const RING7 = [[0, 0], ...Array.from({ length: 6 }, (_, k) => [Math.sin((k * Mat
 
 /** Weights per vertex: 8 shared surfaces plus the baked terrain layers, including V3 City. */
 const STRIDE = 8 + GROUND_LAYER_COUNT;
-const WEIGHT_ATTRIBUTES = ['splatA', 'splatB', 'groundA', 'groundB', 'groundC', 'groundD'] as const;
+const WEIGHT_ATTRIBUTES = ['splatA', 'splatB', ...GROUND_WEIGHT_ATTRIBUTES];
 
 /** Surface and tile weights around a point: softly blended, void contributes nothing. */
 function splat(b: Board, L: HexLayout, sx: number, sz: number, rad: number, out: Float32Array, o: number): void {
@@ -68,7 +69,7 @@ export function buildSmoothGround(b: Board): THREE.BufferGeometry {
     for (const [ox, oz] of SM) h += cellAt(b, L, wx + ox, wz + oz).groundY;
     const v = j * VX + i;
     pos[v * 3] = x; pos[v * 3 + 2] = z;
-    pos[v * 3 + 1] = edge ? 0 : h / SM.length + (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04;
+    pos[v * 3 + 1] = edge ? 0 : h / SM.length + (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04 + terrainReliefAt(b, x, z);
     splat(b, L, wx, wz, 0.3, splats, v);
   }
   const index = new Uint32Array((VX - 1) * (VZ - 1) * 6);
@@ -115,7 +116,7 @@ export function buildHardGround(b: Board): THREE.BufferGeometry {
 export function groundHeightAt(b: Board, style: EdgeStyle, x: number, z: number): number {
   if (style === 'hard') return cellAt(b, b.layout, x, z).groundY;
   const [wx, wz] = warp(x, z);
-  return cellAt(b, b.layout, wx, wz).groundY;
+  return cellAt(b, b.layout, wx, wz).groundY + terrainReliefAt(b, x, z);
 }
 
 /** Water surface: one sheet that follows the shore of the active look; hidden under dry land. */

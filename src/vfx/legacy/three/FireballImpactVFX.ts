@@ -1,4 +1,7 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { WEBGPU } from "../../../render/gpu";
+import { fireballFlashNodes, fireballImpactNodes } from "../../legacyNodes";
 
 export type ImpactSettings = {
   seed: number;
@@ -93,9 +96,19 @@ export class FireballImpactVFX {
     this.geometry.setAttribute("position", quad.getAttribute("position"));
     this.geometry.setAttribute("uv", quad.getAttribute("uv"));
     const attr = (name: string, size: number) => this.geometry.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(CAPACITY * size), size).setUsage(THREE.DynamicDrawUsage));
+    if (WEBGPU) {
+      // WebGPU reads at most 8 vertex buffers per draw; position + uv + these 8 made 10. Packed into
+      // one interleaved buffer instead (setX/setXYZ/needsUpdate below work the same on it).
+      const layout: [string, number][] = [["aCenter", 3], ["aSize", 1], ["aRotation", 1], ["aFrame", 1], ["aAlpha", 1], ["aIntensity", 1], ["aTint", 3], ["aKind", 1]];
+      const stride = layout.reduce((sum, [, size]) => sum + size, 0);
+      const packed = new THREE.InstancedInterleavedBuffer(new Float32Array(CAPACITY * stride), stride).setUsage(THREE.DynamicDrawUsage);
+      let offset = 0;
+      for (const [name, size] of layout) { this.geometry.setAttribute(name, new THREE.InterleavedBufferAttribute(packed, size, offset)); offset += size; }
+    } else {
     attr("aCenter", 3); attr("aSize", 1); attr("aRotation", 1); attr("aFrame", 1); attr("aAlpha", 1); attr("aIntensity", 1); attr("aTint", 3); attr("aKind", 1);
+    }
     this.geometry.instanceCount = 0;
-    this.material = new THREE.ShaderMaterial({
+    this.material = shaderMaterial({
       uniforms: { uFlipbook: { value: texture }, uDepth: { value: depth }, uNear: { value: near }, uFar: { value: far }, uViewport: { value: viewport }, uFps: { value: DEFAULT_IMPACT_SETTINGS.flipbookFps }, uSoftDistance: { value: 0.28 }, uSoftParticles: { value: depth ? 1 : 0 } },
       vertexShader: `attribute vec3 aCenter; attribute float aSize; attribute float aRotation; attribute float aFrame; attribute float aAlpha; attribute float aIntensity; attribute vec3 aTint; attribute float aKind; uniform float uFps; varying vec2 vUv; varying float vFrame; varying float vAlpha; varying float vIntensity; varying vec3 vTint; varying float vKind; varying float vDepth; void main(){ vec4 c=modelViewMatrix*vec4(aCenter,1.0); float cs=cos(aRotation), sn=sin(aRotation); vec2 p=vec2(position.x*cs-position.y*sn,position.x*sn+position.y*cs)*aSize; c.xy+=p; gl_Position=projectionMatrix*c; vUv=uv; vFrame=aFrame; vAlpha=aAlpha; vIntensity=aIntensity; vTint=aTint; vKind=aKind; vDepth=-c.z; }`,
       fragmentShader: `uniform sampler2D uFlipbook; uniform sampler2D uDepth; uniform float uNear; uniform float uFar; uniform vec2 uViewport; uniform float uSoftDistance; uniform float uSoftParticles; varying vec2 vUv; varying float vFrame; varying float vAlpha; varying float vIntensity; varying vec3 vTint; varying float vKind; varying float vDepth; float hash(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); } float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),f.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x),f.y); } void main(){ vec2 uv=vUv; vec4 texel; float alpha; vec3 color=vTint; if(vKind<0.5){ float frame=floor(mod(vFrame,16.0)); vec2 tile=vec2(mod(frame,4.0),3.0-floor(frame/4.0)); vec2 atlas=(clamp(uv,vec2(0.015),vec2(0.985))+tile)*0.25; texel=texture2D(uFlipbook,atlas); alpha=texel.a*vAlpha; color*=texel.rgb; } else if(vKind<1.5){ vec2 q=(uv-0.5)*vec2(1.0,1.8); float d=length(q); alpha=(1.0-smoothstep(0.02,0.5,d))*vAlpha; color*=mix(vec3(1.0,0.98,0.78),vec3(1.0,0.18,0.015),smoothstep(0.05,0.42,d)); } else { vec2 q=(uv-0.5)*vec2(1.0,1.35); float n=noise(uv*5.3+vec2(vFrame*0.008,-vFrame*0.013))*0.55+noise(uv*11.0+vFrame*0.004)*0.25; float d=length(q); float cloud=1.0-smoothstep(0.18+n*0.12,0.58+n*0.2,d); alpha=cloud*vAlpha; color*=0.62+n*0.55; } if(uSoftParticles>0.5){ vec2 suv=gl_FragCoord.xy/uViewport; float z=texture2D(uDepth,suv).x; float scene=(2.0*uNear*uFar)/(uFar+uNear-(z*2.0-1.0)*(uFar-uNear)); float soft=clamp((scene-vDepth)/uSoftDistance,0.0,1.0); alpha*=soft; } if(alpha<0.004) discard; gl_FragColor=vec4(color*vIntensity,alpha);
@@ -103,10 +116,10 @@ export class FireballImpactVFX {
 #include <colorspace_fragment>
 }`, 
       transparent: true, depthTest: worldOcclusion, depthWrite: false, blending: THREE.NormalBlending, toneMapped: false,
-    });
+    }, fireballImpactNodes);
     this.mesh = new THREE.Mesh(this.geometry, this.material);
     this.mesh.frustumCulled = false;
-    this.flashMaterial = new THREE.ShaderMaterial({ uniforms: { uOpacity: { value: 0 }, uIntensity: { value: 18 }, uTint: { value: new THREE.Color(0xfff2c1) } }, vertexShader: `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`, fragmentShader: `uniform float uOpacity; uniform float uIntensity; uniform vec3 uTint; varying vec2 vUv; void main(){float d=length((vUv-0.5)*vec2(1.0,1.15));float core=exp(-d*18.0);float halo=exp(-d*5.0);float a=(core+halo*0.36)*uOpacity;if(a<0.005)discard;vec3 c=mix(vec3(1.0,0.46,0.04),uTint,core);gl_FragColor=vec4(c*a*uIntensity,a);}` , transparent: true, depthTest: worldOcclusion, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
+    this.flashMaterial = shaderMaterial({ uniforms: { uOpacity: { value: 0 }, uIntensity: { value: 18 }, uTint: { value: new THREE.Color(0xfff2c1) } }, vertexShader: `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`, fragmentShader: `uniform float uOpacity; uniform float uIntensity; uniform vec3 uTint; varying vec2 vUv; void main(){float d=length((vUv-0.5)*vec2(1.0,1.15));float core=exp(-d*18.0);float halo=exp(-d*5.0);float a=(core+halo*0.36)*uOpacity;if(a<0.005)discard;vec3 c=mix(vec3(1.0,0.46,0.04),uTint,core);gl_FragColor=vec4(c*a*uIntensity,a);}` , transparent: true, depthTest: worldOcclusion, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }, fireballFlashNodes);
     this.flash = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), this.flashMaterial);
     this.flash.frustumCulled = false;
     this.build(DEFAULT_IMPACT_SETTINGS);

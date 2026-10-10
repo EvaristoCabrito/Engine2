@@ -9,6 +9,8 @@ import { groundTextures } from '../../render/textures';
 import { makeTerrainMaterial } from '../../render/terrainMaterial';
 import { buildSmoothGround, buildWater, groundHeightAt } from '../../render/terrainMesh';
 import { Board } from '../../map/board';
+import { prepareTerrainRelief } from '../../render/terrainRelief';
+import { ensureGroundSets } from '../../render/groundSets';
 import type { EmberMapDraft } from '../../map/emberMap';
 import { corner, hexAt, SQ3 } from '../../core/hex';
 import { DecorLayer } from '../../world/decor';
@@ -138,6 +140,8 @@ export class DioramaView {
       this.stage.fitToBoard(w, depth);
       if (m.environment === 'indoor') { this.stage.sun.intensity *= 0.4; this.stage.hemi.intensity *= 1.4; }
     }
+    await Promise.all([prepareTerrainRelief(board), ensureGroundSets()]);
+    if (gen !== this.gen) return;
     this.buildGround();
     if (key !== this.mapKey) {
       const avgY = board.cells.reduce((s, c) => s + c.groundY, 0) / board.cells.length;

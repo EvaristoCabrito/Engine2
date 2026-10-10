@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { mmCoreNodes, mmShellNodes, mmTrailNodes } from "../../legacyNodes";
 
 const MAGIC_MISSILE_VFX_RENDER_ORDER = 8;
 
@@ -82,8 +84,8 @@ export class MagicMissileV2VFX {
       this.scene.add(light);
     }
     for (let i = 0; i < 1; i++) {
-      const coreMaterial = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uDistort: { value: 0.1 }, uScale: { value: 0.001 }, uGlow: { value: 1 } }, vertexShader: BOLT_VERTEX, fragmentShader: CORE_FRAGMENT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false });
-      const shellMaterial = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uDistort: { value: 0.3 }, uScale: { value: 0.001 }, uGlow: { value: 1 }, uOpacity: { value: 0 } }, vertexShader: BOLT_VERTEX, fragmentShader: SHELL_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false });
+      const coreMaterial = shaderMaterial({ uniforms: { uTime: { value: 0 }, uDistort: { value: 0.1 }, uScale: { value: 0.001 }, uGlow: { value: 1 } }, vertexShader: BOLT_VERTEX, fragmentShader: CORE_FRAGMENT, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false }, mmCoreNodes);
+      const shellMaterial = shaderMaterial({ uniforms: { uTime: { value: 0 }, uDistort: { value: 0.3 }, uScale: { value: 0.001 }, uGlow: { value: 1 }, uOpacity: { value: 0 } }, vertexShader: BOLT_VERTEX, fragmentShader: SHELL_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }, mmShellNodes);
       const core = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 3), coreMaterial);
       const shell = new THREE.Mesh(new THREE.IcosahedronGeometry(1, 2), shellMaterial);
       core.visible = shell.visible = false; core.frustumCulled = shell.frustumCulled = false;
@@ -270,7 +272,7 @@ export class MagicMissileV2VFX {
     const count = 34; const positions = new Float32Array(count * 2 * 3); const uvs = new Float32Array(count * 2 * 2); const indices: number[] = [];
     for (let i = 0; i < count; i++) { const u = i / (count - 1); uvs.set([u, 0, u, 1], i * 4); if (i < count - 1) { const k = i * 2; indices.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); } }
     const geometry = new THREE.BufferGeometry(); geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3).setUsage(THREE.DynamicDrawUsage)); geometry.setAttribute("uv", new THREE.BufferAttribute(uvs, 2)); geometry.setIndex(indices);
-    const material = new THREE.ShaderMaterial({ uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 }, uBreakup: { value: 0.46 } }, vertexShader: TRAIL_VERTEX, fragmentShader: TRAIL_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false });
+    const material = shaderMaterial({ uniforms: { uTime: { value: 0 }, uOpacity: { value: 0 }, uBreakup: { value: 0.46 } }, vertexShader: TRAIL_VERTEX, fragmentShader: TRAIL_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false }, mmTrailNodes);
     const mesh = new THREE.Mesh(geometry, material); mesh.frustumCulled = false; mesh.renderOrder = 8; return mesh;
   }
   private updateTrail(mesh: THREE.Mesh, history: THREE.Vector3[], tip: THREE.Vector3, direction: THREE.Vector3, t: number, fade = 1): void {

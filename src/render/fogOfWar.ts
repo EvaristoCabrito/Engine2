@@ -7,6 +7,9 @@
 // by DecorLayer.shade, and hidden enemies are not drawn at all.
 
 import * as THREE from 'three';
+import { MeshBasicNodeMaterial } from 'three/webgpu';
+import { positionWorld, texture, uniform, vec3, float, or } from 'three/tsl';
+import { WEBGPU } from './gpu';
 import type { Board } from '../map/board';
 import { hexAt } from '../core/hex';
 import { FOG_RENDER_ORDER } from './drawOrder';
@@ -51,6 +54,19 @@ export class FogOfWar {
     vertexShader: VERTEX, fragmentShader: FRAGMENT, transparent: true, depthWrite: false,
     uniforms: { uMask: { value: null }, uRect: { value: new THREE.Vector4() }, uLift: { value: LIFT } },
   });
+  /** WebGPU path (render/gpu.ts): the same mask lookup in TSL; the lift goes into each copy's matrix. */
+  private readonly maskNode = texture(Object.assign(new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1), { needsUpdate: true }));
+  private readonly rectNode = uniform(new THREE.Vector4());
+  private readonly nodeMaterial = WEBGPU ? this.makeNodeMaterial() : null;
+
+  private makeNodeMaterial(): MeshBasicNodeMaterial {
+    const m = new MeshBasicNodeMaterial({ transparent: true, depthWrite: false });
+    const uvw = positionWorld.xz.sub(this.rectNode.xy).div(this.rectNode.zw);
+    const outside = or(or(uvw.x.lessThan(0), uvw.y.lessThan(0)), or(uvw.x.greaterThan(1), uvw.y.greaterThan(1)));
+    m.colorNode = vec3(0);
+    m.opacityNode = outside.select(float(1), this.maskNode.sample(uvw).a);
+    return m;
+  }
   private texture: THREE.DataTexture | null = null;
   private key = '';
   private sources: THREE.Mesh[] = [];
@@ -67,9 +83,10 @@ export class FogOfWar {
       this.sources = surfaces;
       this.group.clear();
       for (const s of surfaces) {
-        const m = new THREE.Mesh(s.geometry, this.material);
+        const m = new THREE.Mesh(s.geometry, this.nodeMaterial ?? this.material);
         m.matrixAutoUpdate = false;
         m.matrix.copy(s.matrixWorld);
+        if (this.nodeMaterial) m.matrix.premultiply(new THREE.Matrix4().makeTranslation(0, LIFT, 0));
         m.renderOrder = FOG_RENDER_ORDER; // over ground/grid; cards have their own fog shading
         this.group.add(m);
       }
@@ -112,10 +129,13 @@ export class FogOfWar {
     this.texture = tex;
     this.material.uniforms.uMask.value = tex;
     (this.material.uniforms.uRect.value as THREE.Vector4).set(x0, z0, w, d);
+    this.maskNode.value = tex;
+    this.rectNode.value.set(x0, z0, w, d);
   }
 
   dispose(): void {
     this.texture?.dispose();
     this.material.dispose();
+    this.nodeMaterial?.dispose();
   }
 }

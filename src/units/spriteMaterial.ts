@@ -5,6 +5,10 @@
 //  - one shared exposure, calibrated so open daylight shows the art as painted.
 
 import * as THREE from 'three';
+import { MeshLambertNodeMaterial, PhongLightingModel } from 'three/webgpu';
+import type { LightingModelDirectInput } from 'three/src/nodes/core/LightingModel.js';
+import { BRDF_Lambert, diffuseColor, faceDirection, normalView, transformNormalToView, uniform, vec3, max } from 'three/tsl';
+import { WEBGPU } from '../render/gpu';
 
 /** Shared by every sprite: tune daylight calibration in one place. */
 export const SPRITE_EXPOSURE = { value: 1.0 };
@@ -23,6 +27,7 @@ const LAMBERT_WRAPPED = THREE.ShaderChunk.lights_lambert_pars_fragment.replace(
 );
 
 export function makeSpriteMaterial(pointLightsOnBothSides = false): THREE.MeshLambertMaterial {
+  if (WEBGPU) return new SpriteNodeMaterial(pointLightsOnBothSides) as unknown as THREE.MeshLambertMaterial;
   const m = new THREE.MeshLambertMaterial({ transparent: true, alphaTest: 0.004, side: THREE.DoubleSide, depthWrite: true });
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uSpriteExposure = SPRITE_EXPOSURE;
@@ -52,4 +57,39 @@ export function makeSpriteMaterial(pointLightsOnBothSides = false): THREE.MeshLa
   };
   m.customProgramCacheKey = () => pointLightsOnBothSides ? 'engine2-unit-sprite-lit-v3' : 'engine2-sprite-lit-v2';
   return m;
+}
+
+// ---- The same card in TSL for the WebGPU path (render/gpu.ts) ----
+
+const exposureNode = uniform(SPRITE_EXPOSURE.value).onRenderUpdate(() => SPRITE_EXPOSURE.value);
+const floorNode = uniform(SPRITE_FLOOR.value).onRenderUpdate(() => SPRITE_FLOOR.value);
+
+/** Lambert with the wrap-around falloff; on a unit card, point lights light whichever side faces them. */
+class SpriteLighting extends PhongLightingModel {
+  constructor(private readonly pointLightsOnBothSides: boolean) { super(false); }
+
+  direct({ lightDirection, lightColor, lightNode, reflectedLight }: LightingModelDirectInput): void {
+    // the typings declare these as plain Nodes; they are the vec3s of three's own models
+    type V3 = ReturnType<typeof vec3>;
+    const dir = lightDirection as unknown as V3, color = lightColor as unknown as V3, diffuse = reflectedLight.directDiffuse as unknown as V3;
+    const facing = normalView.dot(dir);
+    const light = (lightNode as unknown as { light?: THREE.PointLight }).light;
+    const d = this.pointLightsOnBothSides && light?.isPointLight ? facing.abs() : facing;
+    const dotNL = d.add(WRAP).div(1 + WRAP).clamp();
+    diffuse.addAssign(dotNL.mul(color).mul(BRDF_Lambert({ diffuseColor: diffuseColor.rgb }) as unknown as V3));
+  }
+}
+
+class SpriteNodeMaterial extends MeshLambertNodeMaterial {
+  constructor(private readonly pointLightsOnBothSides: boolean) {
+    super({ transparent: true, alphaTest: 0.004, side: THREE.DoubleSide, depthWrite: true });
+    // the card faces the camera, its shading normal tilted upward (flipped on the back face, as WebGL does)
+    this.normalNode = transformNormalToView(vec3(0, TILT, 1).normalize()).mul(faceDirection);
+  }
+
+  setupLightingModel(): PhongLightingModel { return new SpriteLighting(this.pointLightsOnBothSides); }
+
+  setupLighting(builder: Parameters<MeshLambertNodeMaterial['setupLighting']>[0]) {
+    return max(super.setupLighting(builder) as ReturnType<typeof vec3>, diffuseColor.rgb.mul(floorNode)).mul(exposureNode);
+  }
 }

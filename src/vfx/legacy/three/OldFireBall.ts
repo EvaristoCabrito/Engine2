@@ -8,6 +8,8 @@
  * is a child of the same group, so it sits at the ball's real world position and travels with it.
  */
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { oldFireballFlameNodes } from "../../legacyNodes";
 
 const NOISE_GLSL = /* glsl */ `
   vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -62,7 +64,7 @@ const NOISE_GLSL = /* glsl */ `
 `;
 
 function flameMaterial(amplitude: number, opacity: number, edgeFade: boolean): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({
+  return shaderMaterial({
     uniforms: { uTime: { value: 0 }, uAmp: { value: amplitude }, uOpacity: { value: opacity } },
     vertexShader: /* glsl */ `
       uniform float uTime;
@@ -107,7 +109,7 @@ function flameMaterial(amplitude: number, opacity: number, edgeFade: boolean): T
     transparent: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
-  });
+  }, oldFireballFlameNodes(edgeFade));
 }
 
 export class OldFireBall {

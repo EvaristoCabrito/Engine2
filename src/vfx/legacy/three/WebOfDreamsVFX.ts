@@ -1,4 +1,6 @@
 import * as THREE from "three";
+import { shaderMaterial } from "../../../render/shaderNode";
+import { webThreadNodes } from "../../legacyNodes";
 import { WEB_SHOT_TRAVEL, type BattleEngine } from "../../engine";
 
 export interface WebOfDreamsVfxSettings {
@@ -263,7 +265,7 @@ class WebZoneVFX {
       uTime: { value: 0 }, uPulseSpeed: { value: settings.pulseSpeed }, uFormation: { value: Math.min(2, this.elapsed) }, uTightening: { value: settings.tightening },
       uDisplacement: { value: settings.displacement }, uEnergy: { value: settings.emissive ? 1 : 0.42 }, uOpacity: { value: 0.94 },
     };
-    this.webMaterial = new THREE.ShaderMaterial({
+    this.webMaterial = shaderMaterial({
       uniforms,
       vertexShader: THREAD_VERTEX,
       fragmentShader: THREAD_FRAGMENT,
@@ -273,8 +275,8 @@ class WebZoneVFX {
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       toneMapped: false,
-    });
-    this.targetMaterial = new THREE.ShaderMaterial({
+    }, webThreadNodes);
+    this.targetMaterial = shaderMaterial({
       uniforms: {
         uTime: uniforms.uTime, uPulseSpeed: uniforms.uPulseSpeed, uFormation: uniforms.uFormation, uTightening: uniforms.uTightening,
         uDisplacement: uniforms.uDisplacement, uEnergy: uniforms.uEnergy, uOpacity: uniforms.uOpacity,
@@ -287,7 +289,7 @@ class WebZoneVFX {
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending,
       toneMapped: false,
-    });
+    }, webThreadNodes);
     const network: TubeData[] = [];
     const filamentCount = Math.max(6, Math.min(40, Math.round(settings.filamentCount)));
     // Connect the scattered 3D dream seeds as an irregular lattice. Neighbor links

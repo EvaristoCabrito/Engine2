@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import prepared from './prepared.json';
 import type { PoseSrc } from './catalog';
+import { maxAnisotropy } from '../render/gpu';
 
 export interface PoseFrames {
   key: string;
@@ -39,7 +40,7 @@ let usedBytes = 0;
 
 export function initFrames(r: THREE.WebGLRenderer): void {
   renderer = r;
-  anisotropy = r.capabilities.getMaxAnisotropy();
+  anisotropy = maxAnisotropy(r);
 }
 
 /** Call once per rendered frame: uploads a few queued textures so a new pose never hitches. */

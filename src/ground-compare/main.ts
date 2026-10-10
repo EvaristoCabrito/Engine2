@@ -12,6 +12,7 @@ import { initFrames, pumpUploads } from '../units/frames';
 import { groundTextures } from '../render/textures';
 import { TERRAIN_INFO } from '../map/board';
 import type { TerrainId } from '../ember/types';
+import { maxAnisotropy } from '../render/gpu';
 
 const TERRAINS: { id: string; name: string; gpt: string[] }[] = [
   { id: 'plains', name: 'Planície', gpt: ['grass-plains', 'grass_plains', 'plains'] },
@@ -43,7 +44,7 @@ function tex(url: string, srgb: boolean): Promise<THREE.Texture | null> {
   if (!cache.has(url)) cache.set(url, loader.loadAsync(url).then(t => {
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
     t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
-    t.anisotropy = stage.renderer.capabilities.getMaxAnisotropy();
+    t.anisotropy = maxAnisotropy(stage.renderer);
     return t;
   }, () => null));
   return cache.get(url)!;
