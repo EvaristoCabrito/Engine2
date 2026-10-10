@@ -15,7 +15,7 @@ import { OptionsButton } from "./OptionsMenu";
 import { CUTSCENE_SUBTITLES, syncSubtitles } from "./cutsceneSubtitles";
 import { uiText, useGamePreferences, type Translations } from "./gamePreferences";
 import { GraphicsQualityControl } from "./GraphicsQualityControl";
-import { cloneElement, Fragment, isValidElement, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { cloneElement, Fragment, isValidElement, type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactElement, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Dices, Grip, ListOrdered, Lock, Pencil, RotateCcw, Shuffle, SlidersHorizontal, Swords, Volume2, VolumeX, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { artProgress, ensureDecorationArt, ensureTerrainArt, ensureSpriteArt, loadGameArt, portraitFor, releaseSpriteArt, subscribeArtProgress, TILE_VARIANT_COUNT, tileVariantName, tileVariantSrc } from "./assets";
@@ -61,6 +61,7 @@ import { POISON_TIERS, poisonDice, poisonTierOf } from "./poison";
 import { hungerPenaltyFor, partyIsFed, stepOverworld, teleportOverworld, worldToHex, type OverworldEvent } from "./overworld";
 import { GoldAmount } from "./GoldAmount";
 import { DISPLAY_VERSION } from "./version";
+import { returnToTitle } from "./titleNavigation";
 import { TURN_UNDEAD, TURN_UNDEAD_PROGRESSION, turnUndeadPower, ICE_STORM, iceStormPower } from "./data";
 import {
   ALL_LOCATIONS,
@@ -914,6 +915,12 @@ const FAMILIAR_SPRITES: SpriteId[] = ["familiar", "familiar2", "familiar3", "fam
 /** Sprites a battle's own units use — loaded before its board opens (see startBattle). */
 function battleSpriteIds(battle: BattleEngine): SpriteId[] {
   return battle.units.map((u) => u.sprite);
+}
+
+/** Handoff before paint: the gameplay document never draws its legacy title. */
+function TitlePageHandoff() {
+  useLayoutEffect(() => { stopMusic(); returnToTitle(); }, []);
+  return null;
 }
 
 export function GameApp() {
@@ -1955,8 +1962,6 @@ export function GameApp() {
 
   const goToTitle = useCallback(() => {
     stopMusic();
-    playMenuMusic();
-    setScreen("title");
     // Wipe every trace of test mode the instant you leave it — testMode itself used to
     // linger true here (only onNew/onContinue on the title screen ever cleared it, as a
     // defensive afterthought), and testOverworld/testEmber stayed at whatever test mode
@@ -1965,6 +1970,7 @@ export function GameApp() {
     setTestMode(false);
     setTestOverworld(null);
     setTestEmber(TEST_EMBER);
+    returnToTitle();
   }, []);
 
   /** The save every map/Inn handler below reads: the real bank normally, or test mode's
@@ -2176,47 +2182,7 @@ export function GameApp() {
       {screen === "boot" && (
         <CutsceneScreen src="/game/title-open.mp4" onSkip={leaveBoot} />
       )}
-      {screen === "title" && (
-        <TitleScreen
-          ready={!!art}
-          error={loadError}
-          hasProgress={hasProgress}
-          muted={muted}
-          help={help}
-          onMute={() => {
-            unlockAudio();
-            setMutedUi((v) => !v);
-          }}
-          onHelp={() => setHelp((v) => !v)}
-          onNew={() => {
-            bootAudio();
-            setTestMode(false);
-            setOverwrite(null);
-            setSlotReturnScreen("title");
-            setSlotMode("new");
-            setScreen("boot");
-          }}
-          onContinue={() => {
-            bootAudio();
-            setTestMode(false);
-            setOverwrite(null);
-            setSlotReturnScreen("title");
-            setSlotMode("continue");
-            setScreen("saveSlots");
-          }}
-          onTest={() => {
-            bootAudio();
-            setTestMode(true);
-            setMapMode(null);
-            setTestEmber(TEST_EMBER);
-            setTestOverworld(null);
-            setLastGrowth(null);
-            setLastLoot([]);
-            setMissionId(null);
-            setScreen("testMenu");
-          }}
-        />
-      )}
+      {screen === "title" && <TitlePageHandoff />}
 
       {screen === "testMenu" && (
         <TestMenuScreen

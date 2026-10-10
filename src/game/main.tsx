@@ -1,6 +1,7 @@
 import "@/styles.css";
 import { createRoot } from "react-dom/client";
 import { GameApp } from "./GameApp";
+import { returnToTitle, shouldReturnToTitle } from "./titleNavigation";
 
 const root = document.getElementById("app");
 if (!root) throw new Error("Missing #app root for the Ember campaign.");
@@ -12,7 +13,7 @@ const nav = performance.getEntriesByType("navigation")[0] as PerformanceNavigati
 let editorResume = false;
 try { editorResume = !!sessionStorage.getItem("ember:editor-resume"); } catch { /* storage blocked */ }
 
-if (nav?.type === "reload" && !editorResume) window.location.replace("/");
+if (shouldReturnToTitle(new URLSearchParams(location.search).get("start"), nav?.type === "reload", editorResume)) returnToTitle();
 else {
   createRoot(root).render(<GameApp />);
   // game.html's boot loading screen covers the code load; fade it once the app has painted.

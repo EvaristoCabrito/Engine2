@@ -1,0 +1,153 @@
+{
+ "fireball": {
+  "h": "player-Neera-1",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "archer",
+   6,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   8,
+   13
+  ],
+  "dy": 0
+ },
+ "causticVenom": {
+  "h": "player-Neera-1",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "archer",
+   6,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   8,
+   13
+  ],
+  "dy": 0
+ },
+ "magicMissileV2": {
+  "h": "player-Neera-1",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "archer",
+   6,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   8,
+   13
+  ],
+  "dy": 0
+ },
+ "phantasmalForce": {
+  "h": "player-Neera-1",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "archer",
+   6,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   8,
+   13
+  ],
+  "dy": 0
+ },
+ "cleave": {
+  "h": "player-Kael-0",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   7,
+   16
+  ],
+  "dy": 0
+ },
+ "varredura": {
+  "h": "player-Kael-0",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   7,
+   15
+  ],
+  "dy": 0
+ },
+ "burningHands": {
+  "h": "player-Kael-0",
+  "f": "enemy-Piqueiro-3",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "pikeman",
+   7,
+   15
+  ],
+  "dy": 0
+ },
+ "hit": {
+  "h": "player-Kael-0",
+  "f": "enemy-Besteiro-1",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "brigand",
+   16,
+   4
+  ],
+  "dy": 1
+ },
+ "lightning": {
+  "h": "player-Kael-0",
+  "f": "enemy-Besteiro-1",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "brigand",
+   16,
+   4
+  ],
+  "dy": 1
+ },
+ "bless": {
+  "h": "player-Kael-0",
+  "f": "enemy-Besteiro-1",
+  "hc": [
+   "swordsman",
+   8,
+   16
+  ],
+  "fc": [
+   "brigand",
+   16,
+   4
+  ],
+  "dy": 1
+ }
+}
+{"errors":[]}

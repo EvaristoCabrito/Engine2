@@ -3,6 +3,7 @@ import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import { APP_VERSION, renderReleaseVersion } from './src/version';
 // @ts-expect-error JS plugin alongside the TS vite config
 import { mapSavePlugin } from './tools/map-save-plugin.mjs';
 
@@ -65,8 +66,11 @@ function mapsPlugin(): Plugin {
 // Engine2's own dev server. Port 5300 only — never Ember's 8080.
 export default defineConfig({
   // React + Tailwind: Ember's own menus are built with them and are brought over as-is.
-  plugins: [mapsPlugin(), mapSavePlugin(), react(), tailwindcss()],
-  define: { __APP_VERSION__: JSON.stringify('0.034') },
+  plugins: [
+    { name: 'engine2-release-version', transformIndexHtml: renderReleaseVersion },
+    mapsPlugin(), mapSavePlugin(), react(), tailwindcss(),
+  ],
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   // `@/` is Ember's src alias; Ember's shared UI pieces live in src/ember-ui.
   resolve: { alias: { '@': resolve('src/ember-ui') } },
   server: {
