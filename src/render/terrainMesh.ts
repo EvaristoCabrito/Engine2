@@ -69,16 +69,22 @@ export function buildSmoothGround(b: Board): THREE.BufferGeometry {
     for (const [ox, oz] of SM) h += cellAt(b, L, wx + ox, wz + oz).groundY;
     const v = j * VX + i;
     pos[v * 3] = x; pos[v * 3 + 2] = z;
-    pos[v * 3 + 1] = edge ? 0 : h / SM.length + (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04 + terrainReliefAt(b, x, z);
+    // Only the new smooth plains version omits decorative vertex noise.
+    const cell = cellAt(b, L, wx, wz);
+    const flatPlains = cell.type === 'plains' && (b.draft.tileVariants?.[cell.i] === 56 || b.draft.tileVariants?.[cell.i] === 57 || b.draft.tileVariants?.[cell.i] === 58 || b.draft.tileVariants?.[cell.i] === 59 || b.draft.tileVariants?.[cell.i] === 60 || b.draft.tileVariants?.[cell.i] === 61);
+    pos[v * 3 + 1] = edge ? 0 : h / SM.length + (flatPlains ? 0 : (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04) + terrainReliefAt(b, x, z);
     splat(b, L, wx, wz, 0.3, splats, v);
   }
   const index = new Uint32Array((VX - 1) * (VZ - 1) * 6);
   let t = 0;
   for (let j = 0; j < VZ - 1; j++) for (let i = 0; i < VX - 1; i++) {
     const a = j * VX + i, bb = a + 1, c = a + VX, d = c + 1;
+    const x = (pos[a * 3] + pos[d * 3]) / 2, z = (pos[a * 3 + 2] + pos[d * 3 + 2]) / 2;
+    const [wx, wz] = warp(x, z);
+    if (cellAt(b, L, wx, wz).surface < 0) continue;
     index[t++] = a; index[t++] = c; index[t++] = bb; index[t++] = bb; index[t++] = c; index[t++] = d;
   }
-  return finish(pos, splats, index, null);
+  return finish(pos, splats, index.subarray(0, t), null);
 }
 
 /** Hard look: crisp hex cliffs at every height step, seamless tops. */
@@ -150,6 +156,9 @@ export function buildWater(b: Board, style: EdgeStyle): THREE.BufferGeometry | n
   let t = 0;
   for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) {
     const a = j * VX + i, bb = a + 1, c = a + VX, d = c + 1;
+    const x = (pos[a * 3] + pos[d * 3]) / 2, z = (pos[a * 3 + 2] + pos[d * 3 + 2]) / 2;
+    const [sx, sz] = style === 'smooth' ? warp(x, z) : [x, z];
+    if (cellAt(b, L, sx, sz).surface < 0) continue;
     index[t++] = a; index[t++] = c; index[t++] = bb; index[t++] = bb; index[t++] = c; index[t++] = d;
   }
   const g = new THREE.BufferGeometry();
@@ -157,7 +166,7 @@ export function buildWater(b: Board, style: EdgeStyle): THREE.BufferGeometry | n
   const uv = new Float32Array(VX * VZ * 2);
   for (let v = 0; v < VX * VZ; v++) { uv[v * 2] = pos[v * 3] / 4; uv[v * 2 + 1] = pos[v * 3 + 2] / 4; }
   g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  g.setIndex(new THREE.BufferAttribute(index, 1));
+  g.setIndex(new THREE.BufferAttribute(index.subarray(0, t), 1));
   g.computeVertexNormals();
   return g;
 }

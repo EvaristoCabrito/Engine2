@@ -507,6 +507,29 @@ def scene_meadow(mats, seed=300):
     st.build('stones', sm.m)
 
 
+def scene_vivid(mats, seed=500):
+    """Plains 02: vivid, even, lush grass - dense blades over the whole tile, flat ground, no bare
+    patches, stones or flowers, colour variation only at small scale (no blotches or bumps)."""
+    # no cavity/AO darkening and green soil: nothing dark shows between the blades
+    gm = mats('ground', detail_scale=40, detail_bump=0.0, color_var=0.08, cavity=0.0)
+    bm = mats('grass', detail_scale=140, detail_bump=0.0008, color_var=0.12, cavity=0.0, ao_dist=0.06)
+    flat = lambda x, y: np.zeros(len(np.atleast_1d(x)))
+    ground('ground', flat, lambda x, y: np.repeat(rgb('#4f9c2a')[None, :], len(x), 0),
+           lambda x, y: np.full(len(x), 0.9), gm.m, 0.0)
+    rng = np.random.default_rng(seed + 5)
+    blades = Batch()
+    tone = lambda x, y: fourier(x, y, seed + 7, kmax=20, power=0.6)
+    greens = [(0.0, rgb('#3f8a22')), (0.35, rgb('#4f9c2a')), (0.7, rgb('#62ad33')), (1.0, rgb('#79bd3e'))]
+    pts = jittered(90000, seed + 6, jitter=1.0)
+    tv = sample(tone, pts)
+    for (x, y), t in zip(pts, tv):
+        h = rng.uniform(0.08, 0.14)
+        vv, ff = blade(rng, x, y, 0.0, h, rng.uniform(0.011, 0.018), rng.uniform(0.3, 0.8))
+        c = ramp(np.array([np.clip(t * 0.6 + rng.random() * 0.4, 0, 1)]), greens)[0]
+        blades.add_wrapped(vv, ff, c, rng.uniform(0.55, 0.7), 0.2)
+    blades.build('blades', bm.m)
+
+
 def scene_woods(mats, seed=40):
     gm = mats('ground', detail_scale=40, detail_bump=0.006)
     lm = mats('leaves', detail_scale=150, detail_bump=0.0015, color_var=0.35, cavity=0.85, grime=0.3)
@@ -750,6 +773,8 @@ def build(name, mats):
         scene_plains(mats, 0)
     elif name == 'plains-v2':
         scene_meadow(mats)
+    elif name == 'plains-vivid':
+        scene_vivid(mats)
     elif name == 'hill':
         scene_plains(mats, 20, dry=1.0, rocks=1.0)
     elif name == 'woods':

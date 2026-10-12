@@ -104,6 +104,8 @@ export interface MapDraft {
   environment?: "outdoor" | "indoor";
   /** See Mission.timeOfDay. */
   timeOfDay?: MapTimeOfDay;
+  /** Image ID from the map background catalog; empty or absent means black void. */
+  backgroundImage?: string;
   sunIntensity?: number;
   ambientIntensity?: number;
   /** See Mission.mistIntensity. */
@@ -271,6 +273,7 @@ export function draftToMission(d: MapDraft): Mission {
     autoTactics: d.autoTactics ? undefined : false,
     fog: d.fog ? true : undefined,
     environment: d.environment === "indoor" ? "indoor" : undefined,
+    backgroundImage: d.backgroundImage,
     timeOfDay: d.timeOfDay === "noon" || d.timeOfDay === "dawn" || d.timeOfDay === "dusk" || d.timeOfDay === "brightNight" || d.timeOfDay === "darkNight" ? d.timeOfDay : undefined,
     sunIntensity: typeof d.sunIntensity === "number" ? d.sunIntensity : undefined,
     ambientIntensity: typeof d.ambientIntensity === "number" ? d.ambientIntensity : undefined,

@@ -9,8 +9,8 @@ import type { TerrainId } from "./types";
 export const TILE_VARIANT_COUNT: Record<TerrainId, number> = {
   // 049 is the first numbered Engine2 PBR plains base. Keep every earlier index stable.
   // Claude's baked tiles remain at their original indices; the Engine2 V3 material versions append after them.
-  plains: 55,
-  woods: 16,
+  plains: 62,
+  woods: 17,
   ruins: 11,
   water: 31,
   ember: 9,
@@ -30,7 +30,10 @@ export const TILE_VARIANT_COUNT: Record<TerrainId, number> = {
  * Each has separate normal/roughness data and geometric relief; source artwork stays intact. */
 export const GROUND_VARIANT_LAYERS = [
   { key: 'variant-plains-meadow-v2', terrain: 'plains', variant: 52, file: 'plains-meadow-v2.png', label: 'Meadow II', relief: 0.08 },
-  { key: 'variant-barricade-earth-v2', terrain: 'barricade', variant: 2, file: 'barricade-earth-v2.png', label: 'Barricade Earth II', relief: 0.12 },
+  // moved from Barricada to Bosque on request (no saved map used it as barricade 2)
+  // Plains 02: vivid flat grass, fine detail only, zero relief
+  { key: 'variant-plains-vivid', terrain: 'plains', variant: 55, file: 'plains-vivid.png', label: 'Planície vívida', relief: 0 },
+  { key: 'variant-barricade-earth-v2', terrain: 'woods', variant: 16, file: 'barricade-earth-v2.png', label: 'Barricade Earth II', relief: 0.12 },
   { key: 'variant-woods-floor-v2', terrain: 'woods', variant: 14, file: 'woods-floor-v2.png', label: 'Forest Floor II', relief: 0.10 },
   { key: 'photo-plains', terrain: 'plains', variant: 53, file: '../ground-engine2-v4/plains/color.png', label: 'Planície · Photo 3D', relief: 0.08 },
   { key: 'photo-city', terrain: 'plains', variant: 54, file: '../ground-engine2-v4/city/color.png', label: 'City · Photo 3D', relief: 0.06 },
@@ -45,6 +48,15 @@ export const GROUND_VARIANT_LAYERS = [
   { key: 'photo-column', terrain: 'column', variant: 5, file: '../ground-engine2-v4/column/color.png', label: 'Coluna · Photo 3D', relief: 0.16 },
   { key: 'photo-nave', terrain: 'nave', variant: 21, file: '../ground-engine2-v4/nave/color.png', label: 'Laje · Photo 3D', relief: 0.06 },
   { key: 'photo-door', terrain: 'door', variant: 3, file: '../ground-engine2-v4/door/color.png', label: 'Porta · Photo 3D', relief: 0.06 },
+  { key: 'variant-plains-smooth', terrain: 'plains', variant: 56, file: '../ground-claude/049-plains/color.png', label: 'Planicie suave 007', relief: 0 },
+  { key: 'variant-plains-real-grass', terrain: 'plains', variant: 57, file: 'plains-real-grass-008-reference.png', label: 'Planicie real 008', relief: 0 },
+  { key: 'variant-plains-real-grass-009', terrain: 'plains', variant: 58, file: 'plains-real-grass-009.png', label: 'Planicie real 009', relief: 0 },
+  { key: 'variant-plains-meadow-3d', terrain: 'plains', variant: 59, file: 'plains-real-grass-008-reference.png', label: 'Prado 3D 010', relief: 0 },
+  { key: 'variant-plains-tall-3d', terrain: 'plains', variant: 60, file: 'plains-real-grass-008-reference.png', label: 'Grama alta 3D 011', relief: 0 },
+  // Explicit replacement of the duplicate Chama 005; its saved index remains 4.
+  { key: 'variant-flame-005-fire', terrain: 'flame', variant: 4, file: 'flame-005-fire.png', label: '005', relief: 0 },
+  { key: 'city-stone-paving', terrain: 'plains', variant: 50, file: 'city-stone-paving.png', label: 'Stone paving', relief: 0 },
+  { key: 'city-indoor-wood', terrain: 'plains', variant: 61, file: 'city-indoor-wood.png', label: 'Indoor wood', relief: 0 },
 ] as const;
 
 /** Stable lookup for new per-variant 3D material layers. */

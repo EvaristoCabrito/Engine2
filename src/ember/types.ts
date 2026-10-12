@@ -573,6 +573,8 @@ export interface Mission {
    * uses the softer "day" preset. "noon" retains the former stronger daytime preset. At night
    * the Moon replaces the Sun and sunIntensity drives the Moon instead. */
   timeOfDay?: MapTimeOfDay;
+  /** Image ID from the map background catalog; empty or absent means black void. */
+  backgroundImage?: string;
   /** DirectionalLight ("sun") intensity override, for the Three renderer only. Undefined uses
    * the renderer's own default. Author-tunable per mission because "how strong should the light
    * and its shadows read" turned out to need a per-map answer, not one global constant. */

@@ -20,12 +20,12 @@ interface LightPreset {
 
 /** Night presets keep the dark readable: bluish moonlight plus a sprite readability floor. */
 export const TIME_PRESETS: Record<TimeOfDay, LightPreset> = {
-  day: { sun: '#fff0d4', sunIntensity: 3.0, azimuth: -0.95, elevation: 0.95, sky: '#d4e6ff', ground: '#5d4b33', hemi: 1.0, background: '#9fc2dd', spriteFloor: 0 },
-  noon: { sun: '#ffffff', sunIntensity: 3.5, azimuth: -0.6, elevation: 1.25, sky: '#dcecff', ground: '#64523a', hemi: 1.1, background: '#a9cbe6', spriteFloor: 0 },
-  dawn: { sun: '#ffc58f', sunIntensity: 2.3, azimuth: -1.6, elevation: 0.35, sky: '#c9b3c9', ground: '#4a3a30', hemi: 0.8, background: '#d9a98a', spriteFloor: 0.05 },
-  dusk: { sun: '#ff9a5c', sunIntensity: 2.1, azimuth: 1.6, elevation: 0.3, sky: '#8a7aa8', ground: '#3b2a28', hemi: 0.7, background: '#6c5874', spriteFloor: 0.08 },
-  brightNight: { sun: '#a8bdff', sunIntensity: 1.1, azimuth: -0.7, elevation: 0.9, sky: '#3a4f7a', ground: '#181820', hemi: 0.45, background: '#142038', spriteFloor: 0.22 },
-  darkNight: { sun: '#8fa3e8', sunIntensity: 0.55, azimuth: -0.7, elevation: 0.9, sky: '#233353', ground: '#121218', hemi: 0.25, background: '#0b1322', spriteFloor: 0.16 },
+  day: { sun: '#fff0d4', sunIntensity: 3.0, azimuth: -0.95, elevation: 0.95, sky: '#d4e6ff', ground: '#5d4b33', hemi: 1.0, background: '#000000', spriteFloor: 0 },
+  noon: { sun: '#ffffff', sunIntensity: 3.5, azimuth: -0.6, elevation: 1.25, sky: '#dcecff', ground: '#64523a', hemi: 1.1, background: '#000000', spriteFloor: 0 },
+  dawn: { sun: '#ffc58f', sunIntensity: 2.3, azimuth: -1.6, elevation: 0.35, sky: '#c9b3c9', ground: '#4a3a30', hemi: 0.8, background: '#000000', spriteFloor: 0.05 },
+  dusk: { sun: '#ff9a5c', sunIntensity: 2.1, azimuth: 1.6, elevation: 0.3, sky: '#8a7aa8', ground: '#3b2a28', hemi: 0.7, background: '#000000', spriteFloor: 0.08 },
+  brightNight: { sun: '#a8bdff', sunIntensity: 1.1, azimuth: -0.7, elevation: 0.9, sky: '#3a4f7a', ground: '#181820', hemi: 0.45, background: '#000000', spriteFloor: 0.22 },
+  darkNight: { sun: '#8fa3e8', sunIntensity: 0.55, azimuth: -0.7, elevation: 0.9, sky: '#233353', ground: '#121218', hemi: 0.25, background: '#000000', spriteFloor: 0.16 },
 };
 
 const FULLSCREEN_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
@@ -87,7 +87,7 @@ export class Stage {
     this.renderer.toneMapping = THREE.NeutralToneMapping;
     host.appendChild(this.renderer.domElement);
 
-    this.scene.background = new THREE.Color('#1a1714');
+    this.scene.background = new THREE.Color('#000000');
     this.camera = new THREE.PerspectiveCamera(30, 1, 0.5, 600);
 
     this.hemi = new THREE.HemisphereLight('#d4e6ff', '#5d4b33', 1.0);
@@ -184,8 +184,8 @@ export class Stage {
     this.hemi.groundColor.set(p.ground);
     this.hemi.intensity = p.hemi;
     // a painted backdrop (a texture) keeps its own colours; a plain background takes the preset's
-    if ((this.scene.background as THREE.Color | null)?.isColor) (this.scene.background as THREE.Color).set(p.background);
-    if (this.scene.fog) (this.scene.fog as THREE.Fog).color.set(p.background);
+    if ((this.scene.background as THREE.Color | null)?.isColor) (this.scene.background as THREE.Color).set('#000000');
+    if (this.scene.fog) (this.scene.fog as THREE.Fog).color.set('#000000');
     SPRITE_FLOOR.value = p.spriteFloor;
   }
 

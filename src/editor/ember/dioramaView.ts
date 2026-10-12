@@ -3,7 +3,8 @@
 // made by Ember's editor through MapPreview3D's callbacks, exactly as with Ember's own preview.
 
 import * as THREE from 'three';
-import { Stage, TIME_PRESETS, type TimeOfDay } from '../../render/stage';
+import { MeadowGrass } from '../../render/meadowGrass';
+import { Stage, type TimeOfDay } from '../../render/stage';
 import { CameraRig, START_PITCH, START_YAW } from '../../render/cameraRig';
 import { groundTextures } from '../../render/textures';
 import { makeTerrainMaterial } from '../../render/terrainMaterial';
@@ -61,6 +62,7 @@ export class DioramaView {
   units: PlacedUnit[] = [];
   private readonly groundMat: THREE.MeshStandardMaterial;
   private readonly waterMat: THREE.MeshStandardMaterial;
+  private readonly meadow = new MeadowGrass();
   private ground: THREE.Mesh | null = null;
   private water: THREE.Mesh | null = null;
   readonly decor: DecorLayer;
@@ -75,6 +77,7 @@ export class DioramaView {
   private baseDist = 50;
   private backdrop: THREE.Texture | null = null;
   private backdropId: string | null = null;
+  private backdropRequest = 0;
   private gen = 0;
 
   constructor(host: HTMLElement) {
@@ -93,7 +96,7 @@ export class DioramaView {
     this.hover.visible = false;
     this.hover.renderOrder = 5;
     this.marks.renderOrder = 6;
-    this.stage.scene.add(this.hover, this.marks, this.unitGroup);
+    this.stage.scene.add(this.hover, this.marks, this.unitGroup, this.meadow.group);
     initFrames(this.stage.renderer);
     this.stage.onFrame((dt, time) => {
       pumpUploads();
@@ -114,6 +117,7 @@ export class DioramaView {
   setFlat(on: boolean): void {
     if (on === this.rig.flat) return;
     this.rig.flat = on;
+    this.meadow.group.visible = !on;
     // distance fog would grey out the whole board from the long lens's far position
     if (on) { this.flatFog = this.stage.scene.fog as THREE.Fog | null; this.stage.scene.fog = null; }
     else if (this.flatFog) { this.stage.scene.fog = this.flatFog; this.flatFog = null; }
@@ -136,7 +140,7 @@ export class DioramaView {
     const tod = (['day', 'noon', 'dawn', 'dusk', 'brightNight', 'darkNight'] as TimeOfDay[]).includes(m.timeOfDay as TimeOfDay) ? m.timeOfDay as TimeOfDay : 'day';
     if (key !== this.mapKey || tod !== this.stage.timeOfDay) {
       this.stage.timeOfDay = tod;
-      this.stage.scene.background = new THREE.Color(TIME_PRESETS[tod].background);
+      this.stage.scene.background = new THREE.Color('#000000');
       this.stage.fitToBoard(w, depth);
       if (m.environment === 'indoor') { this.stage.sun.intensity *= 0.4; this.stage.hemi.intensity *= 1.4; }
     }
@@ -161,18 +165,22 @@ export class DioramaView {
     this.ground = new THREE.Mesh(buildSmoothGround(board), this.groundMat);
     this.ground.castShadow = this.ground.receiveShadow = true;
     this.stage.scene.add(this.ground);
+    this.meadow.rebuild(board, this.groundAt);
     const wg = buildWater(board, EDGES);
     this.water = wg ? new THREE.Mesh(wg, this.waterMat) : null;
     if (this.water) { this.water.receiveShadow = true; this.water.renderOrder = 2; this.stage.scene.add(this.water); }
   }
 
   private async applyBackdrop(draft: EmberMapDraft): Promise<void> {
+    const request = ++this.backdropRequest;
     const item = resolvedMapBackground(draft);
     const scene = this.stage.scene;
-    if (!item) { this.backdrop?.dispose(); this.backdrop = null; this.backdropId = null; scene.background = new THREE.Color(TIME_PRESETS[this.stage.timeOfDay].background); return; }
+    if (!item) { this.backdrop?.dispose(); this.backdrop = null; this.backdropId = null; scene.background = new THREE.Color('#000000'); return; }
     if (this.backdrop && this.backdropId === item.id) { scene.background = this.backdrop; return; }
+    scene.background = new THREE.Color('#000000');
     try {
       const texture = await new THREE.TextureLoader().loadAsync(mapBackgroundUrl(item));
+      if (request !== this.backdropRequest) { texture.dispose(); return; }
       texture.colorSpace = THREE.SRGBColorSpace;
       this.backdrop?.dispose();
       this.backdrop = texture; this.backdropId = item.id;
@@ -382,6 +390,7 @@ export class DioramaView {
     for (const u of this.units) u.actor.dispose();
     this.units = [];
     for (const m of [this.ground, this.water]) m?.geometry.dispose();
+    this.meadow.dispose();
     this.groundMat.dispose(); this.waterMat.dispose(); this.backdrop?.dispose();
     for (const child of this.gridGroup.children) (child as THREE.Mesh).geometry.dispose();
     for (const mat of this.gridMats.values()) mat.dispose();

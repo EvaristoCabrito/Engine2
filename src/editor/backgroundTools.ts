@@ -8,7 +8,7 @@ export class BackgroundTools {
   private readonly choices = new Map<string, HTMLButtonElement>();
   private readonly modeButtons = new Map<'auto' | 'none', HTMLButtonElement>();
   private draft: EmberMapDraft | null = null;
-  private selected = 'auto';
+  private selected = 'none';
 
   constructor(private readonly panel: HTMLDetailsElement, private readonly choose: (choice: BackgroundChoice) => void) {
     this.render();
@@ -29,7 +29,7 @@ export class BackgroundTools {
     this.panel.appendChild(summary);
 
     const modes = document.createElement('div'); modes.className = 'tools-row background-modes';
-    for (const [id, label] of [['auto', 'Automático'], ['none', 'Sem fundo']] as const) {
+    for (const [id, label] of [['none', 'Vazio preto']] as const) {
       const button = document.createElement('button'); button.type = 'button'; button.textContent = label;
       button.addEventListener('click', () => this.choose(id));
       this.modeButtons.set(id, button); modes.appendChild(button);

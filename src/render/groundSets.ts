@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { GROUND_LAYER_COUNT, GROUND_LAYERS } from '../map/board';
 import { ENGINE2_V3_GROUND_VARIANTS, GROUND_VARIANT_LAYERS, groundVariantMaps } from '../ember/tileVariants';
 import { maxAnisotropy } from './gpu';
+import { smoothPlainsCanvas } from './textures';
 
 export type GroundSet = 'proto' | 'claude' | 'gpt' | 'engine2-v3' | 'engine2-v4';
 export const GROUND_SET_LABEL: Record<GroundSet, string> = { proto: 'Protótipo', claude: 'Claude', gpt: 'GPT', 'engine2-v3': 'Engine2 V3', 'engine2-v4': 'Engine2 V4 Photo' };
@@ -90,6 +91,14 @@ async function loadSet(set: Exclude<GroundSet, 'proto'>): Promise<Loaded> {
   const terrains = [...GROUND_LAYERS, 'city', 'shallow-water', 'river-rocks', ...GROUND_VARIANT_LAYERS.map((entry) => entry.key)];
   const layers = await Promise.all(terrains.map(async (terrain) => {
     const addedVariant = GROUND_VARIANT_LAYERS.find((entry) => entry.key === terrain);
+    if (addedVariant?.key === 'variant-plains-smooth') {
+      return { color: await createImageBitmap(await smoothPlainsCanvas()), normal: null, rough: null };
+    }
+    if (addedVariant?.key === 'variant-plains-real-grass' || addedVariant?.key === 'variant-plains-real-grass-009' || addedVariant?.key === 'variant-plains-meadow-3d' || addedVariant?.key === 'variant-plains-tall-3d' || addedVariant?.key === 'variant-flame-005-fire' || addedVariant?.key === 'city-stone-paving' || addedVariant?.key === 'city-indoor-wood') {
+      const color = await bitmap(groundVariantMaps(addedVariant).color);
+      if (!color) throw new Error(`Missing grass texture: ${addedVariant.key}`);
+      return { color, normal: null, rough: null };
+    }
     if (addedVariant) {
       const paths = groundVariantMaps(addedVariant);
       const [color, normal, rough] = await Promise.all([bitmap(paths.color), bitmap(paths.normal), bitmap(paths.rough)]);

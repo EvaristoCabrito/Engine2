@@ -5,6 +5,7 @@
 // Ember's 3D architecture (model3d walls/doors) has no art and is skipped for now.
 
 import * as THREE from 'three';
+import { fitHouseToHumans } from './houseScale';
 import {
   DECORATIONS, CHEST_DECOR_IDS, HOUSE_DECOR_IDS, BIG_HOUSE_DECOR_IDS, DECOR_ART_SCALE, HOUSE_ART_SCALE,
   decorationImage, decorationPlacementArt, decorationFacing, placedFootprint, placedBlockingFootprint, barricadeDecor, BARRICADE_LIKE_DECOR,
@@ -41,7 +42,7 @@ function decorSize(id: string, def: DecorationDef, tile = 1): { w: number; h: nu
     : item ? tile * 0.72 : one ? tile * 1.65 : tile * (1.5 * (maxDy - minDy) + 2.3);
   const h = def.artAspect ? w / def.artAspect : baseH * (def.heightScale ?? 1);
   const s = waypoint ? 1 : (anyHouse ? HOUSE_ART_SCALE : DECOR_ART_SCALE) * (def.artScale ?? 1);
-  return { w: w * s, h: h * s };
+  return fitHouseToHumans(id, { w: w * s, h: h * s }, tile);
 }
 
 /** URL → file name on disk (decorationImage adds cache-busting queries). */

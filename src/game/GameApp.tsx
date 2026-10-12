@@ -22,7 +22,6 @@ import { artProgress, ensureDecorationArt, ensureTerrainArt, ensureSpriteArt, lo
 import { getAudioVolumes, getCutsceneAudioSettings, installAudioUnlock, pauseMusic, playFile, playMenuMusic, playTheme, resumeAudio, resumeMusic, setCutsceneEnabled, setCutsceneVolume, setMusicVolume, setMuted, setSfxVolume, sfxPlay, stopMusic, unlockAudio } from "./audio";
 import { Battle3D as BattleCanvas } from "./Battle3D";
 import { MapEditorScreen as MapEditorScreen3D } from "../editor/ember/MapEditorScreen";
-import { GroundSetPicker } from "../render/GroundSetPicker";
 import { ENGINE2_V3_CITY_VARIANT } from "../ember/tileVariants";
 import { ELEMENT_LABELS, PLACEABLE_ELEMENT_KINDS, type PlaceableElementKind } from "./gfx/params";
 import { ELEMENT_FX_REGISTRY, pixelDefaults, pixelPresetsFor, type PixelElement, type PixelElementSettings } from "./gfx/three/ProceduralElementEmitter";
@@ -6977,7 +6976,6 @@ export function MapEditorScreen({
           <div className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-xs text-muted flex-1 min-w-[12rem]">Escolha um terreno ou grupo de tiles para pintar o mapa.</p>
-              <GroundSetPicker />
               <Button
                 size="sm"
                 variant={turning ? "primary" : "ghost"}

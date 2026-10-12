@@ -10,7 +10,7 @@ const grids = new Map<number, ReliefGrid>();
 const pending = new Map<number, Promise<void>>();
 
 export async function prepareTerrainRelief(board: Board): Promise<void> {
-  const used = new Set(board.cells.map(c => c.ground - GROUND_LAYERS.length - 3).filter(i => i >= 0));
+  const used = new Set(board.cells.map(c => c.ground - GROUND_LAYERS.length - 3).filter(i => i >= 0 && GROUND_VARIANT_LAYERS[i]?.relief > 0));
   await Promise.all([...used].map(i => {
     let job = pending.get(i);
     if (!job) {

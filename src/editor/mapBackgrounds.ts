@@ -1,10 +1,6 @@
 import type { EmberMapDraft } from '../map/emberMap';
 
-const IMAGE_URLS = import.meta.glob('./map-background-assets/*.jpg', {
-  eager: true,
-  query: '?url',
-  import: 'default',
-}) as Record<string, string>;
+const IMAGE_URLS = import.meta.glob('/public/game/map-backgrounds/*.{jpg,jpeg,png,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
 
 export interface MapBackground {
   id: string;
@@ -59,6 +55,11 @@ export const MAP_BACKGROUNDS: MapBackground[] = [
   { id: 'campaign-world-map', label: 'Mapa da campanha', file: 'world-map.jpg', kind: 'campaign' },
 ];
 
+for (const path of Object.keys(IMAGE_URLS)) {
+  const file = path.split('/').pop()!;
+  if (!MAP_BACKGROUNDS.some(item => item.file === file)) MAP_BACKGROUNDS.push({ id: file, label: file, file, kind: 'battle' });
+}
+
 const BY_ID = new Map(MAP_BACKGROUNDS.map((item) => [item.id, item]));
 const BY_MAP_ID = new Map(MAP_BACKGROUNDS.flatMap((item) => (item.mapIds ?? []).map((id) => [id, item] as const)));
 
@@ -71,13 +72,13 @@ export function resolvedMapBackground(draft: EmberMapDraft): MapBackground | nul
   if (typeof draft.backgroundImage === 'string') {
     return draft.backgroundImage ? BY_ID.get(draft.backgroundImage) ?? null : null;
   }
-  return automaticMapBackground(draft);
+  return null;
 }
 
 export function selectedMapBackground(draft: EmberMapDraft): string {
-  return typeof draft.backgroundImage === 'string' ? (draft.backgroundImage || 'none') : 'auto';
+  return typeof draft.backgroundImage === 'string' ? (draft.backgroundImage || 'none') : 'none';
 }
 
 export function mapBackgroundUrl(item: MapBackground): string {
-  return IMAGE_URLS[`./map-background-assets/${item.file}`] ?? '';
+  return `/game/map-backgrounds/${encodeURIComponent(item.file)}`;
 }

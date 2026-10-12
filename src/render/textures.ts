@@ -62,6 +62,54 @@ export function grassThumbnail(): string {
   return (grassThumb = cv.toDataURL());
 }
 
+let smoothPlainsJob: Promise<HTMLCanvasElement> | null = null;
+/** A separate, flat grass blend; source images and the original grass stay intact. */
+export function smoothPlainsCanvasFirstBlend(): Promise<HTMLCanvasElement> {
+  if (smoothPlainsJob) return smoothPlainsJob;
+  smoothPlainsJob = new Promise<HTMLCanvasElement>((resolve, reject) => {
+    const source = new Image();
+    source.onerror = () => { smoothPlainsJob = null; reject(new Error('Cannot load plains 003 source')); };
+    source.onload = () => {
+      // Low-frequency colour only: no individual pebbles, clumps or pixel grain.
+      const low = document.createElement('canvas'); low.width = low.height = 32;
+      const lg = low.getContext('2d')!; lg.drawImage(source, 0, 0, 32, 32);
+      const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
+      const ctx = canvas.getContext('2d')!; ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+      // Repeat neighbours while blurring so the texture remains seamless at its borders.
+      ctx.filter = 'blur(16px)';
+      for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) ctx.drawImage(low, x * 1024, y * 1024, 1024, 1024);
+      ctx.filter = 'none';
+      const pixels = ctx.getImageData(0, 0, 1024, 1024);
+      for (let y = 0; y < 1024; y++) for (let x = 0; x < 1024; x++) {
+        const px = x / 4, py = y / 4;
+        const n = sstep(pfbm(px / 32, py / 32, S / 32, S / 32));
+        const grass = mix(C.g1, C.g2, n), i = (y * 1024 + x) * 4;
+        for (let k = 0; k < 3; k++) pixels.data[i + k] = grass[k] * 0.8 + pixels.data[i + k] * 0.2;
+      }
+      ctx.putImageData(pixels, 0, 0); resolve(canvas);
+    };
+    source.src = '/game/ground-claude/049-plains/color.png';
+  });
+  return smoothPlainsJob;
+}
+
+let flatPlainsCanvas: HTMLCanvasElement | null = null;
+/** Planicie 007: continuous grass colour, without clumps, stones, grain or baked shading. */
+export function smoothPlainsCanvas(): Promise<HTMLCanvasElement> {
+  if (flatPlainsCanvas) return Promise.resolve(flatPlainsCanvas);
+  const canvas = document.createElement('canvas'); canvas.width = canvas.height = 1024;
+  const ctx = canvas.getContext('2d')!, pixels = ctx.createImageData(1024, 1024);
+  for (let y = 0; y < 1024; y++) for (let x = 0; x < 1024; x++) {
+    // Broad, periodic colour variation; restrained contrast prevents raised-looking patches.
+    const n = pfbm(x / 128, y / 128, 8, 8, 2);
+    const c = mix(C.g1, C.g2, 0.35 + n * 0.4), i = (y * 1024 + x) * 4;
+    for (let k = 0; k < 3; k++) pixels.data[i + k] = c[k];
+    pixels.data[i + 3] = 255;
+  }
+  ctx.putImageData(pixels, 0, 0); flatPlainsCanvas = canvas;
+  return Promise.resolve(canvas);
+}
+
 function rockAt(x: number, y: number, strata: boolean): RGB {
   const layers = strata ? pfbm(x / 64, y / 9, S / 64, S / 9, 4) : pfbm(x / 24, y / 24, S / 24, S / 24, 4);
   let c = mix(C.r1, C.r2, sstep(layers));

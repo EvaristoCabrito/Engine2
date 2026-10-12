@@ -1,8 +1,9 @@
+import { MeadowGrass } from '../render/meadowGrass';
 // Engine2 map editor — step A: open any of Ember's maps as a 3D diorama board.
 // Same map files as Ember, same hex layout; terrain edges are the player-selectable look.
 
 import * as THREE from 'three';
-import { Stage, TIME_PRESETS, type TimeOfDay } from '../render/stage';
+import { Stage, type TimeOfDay } from '../render/stage';
 import { CameraRig } from '../render/cameraRig';
 import { groundTextures } from '../render/textures';
 import { makeTerrainMaterial } from '../render/terrainMaterial';
@@ -78,7 +79,7 @@ async function applyMapBackground(draft: import('../map/emberMap').EmberMapDraft
   if (!item) {
     const old = activeBackdrop;
     activeBackdrop = null; activeBackdropId = null;
-    stage.scene.background = new THREE.Color(TIME_PRESETS[stage.timeOfDay].background);
+    stage.scene.background = new THREE.Color('#000000');
     old?.dispose();
     return;
   }
@@ -98,7 +99,7 @@ async function applyMapBackground(draft: import('../map/emberMap').EmberMapDraft
       console.warn(`[engine2] could not load map background ${item.id}`, error);
       const old = activeBackdrop;
       activeBackdrop = null; activeBackdropId = null;
-      stage.scene.background = new THREE.Color(TIME_PRESETS[stage.timeOfDay].background);
+      stage.scene.background = new THREE.Color('#000000');
       old?.dispose();
     }
   }
@@ -126,6 +127,9 @@ function disposeMesh(m: THREE.Mesh | THREE.LineSegments | null): void {
 }
 
 /** (Re)build the ground in the current edge style. Applied on load or when the setting changes. */
+const meadow = new MeadowGrass();
+stage.scene.add(meadow.group);
+
 function buildGround(): void {
   if (!board) return;
   const t0 = performance.now();
@@ -136,6 +140,7 @@ function buildGround(): void {
   const wg = buildWater(board, edges);
   water = wg ? new THREE.Mesh(wg, waterMat) : null;
   if (water) { water.receiveShadow = true; water.renderOrder = 2; stage.scene.add(water); }
+  meadow.rebuild(board, groundAt);
   placeMarkers();
   buildGrid();
   // decorations stand on the ground of the active edge style
@@ -195,7 +200,7 @@ async function openMap(entry: MapEntry): Promise<void> {
   // the map's own Ember time of day; indoor maps soften the sun on top of it
   const tod = (['day', 'noon', 'dawn', 'dusk', 'brightNight', 'darkNight'] as TimeOfDay[]).includes(file.draft.timeOfDay as TimeOfDay) ? file.draft.timeOfDay as TimeOfDay : 'day';
   stage.timeOfDay = tod;
-  stage.scene.background = new THREE.Color(TIME_PRESETS[tod].background);
+  stage.scene.background = new THREE.Color('#000000');
   stage.fitToBoard(w, dpt);
   await applyMapBackground(file.draft);
   if (file.draft.environment === 'indoor') { stage.sun.intensity *= 0.4; stage.hemi.intensity *= 1.4; }
@@ -364,7 +369,7 @@ const toggleGrid = () => { if (grid) { grid.visible = !grid.visible; $('grid').c
 $('tilt').addEventListener('click', toggleTilt);
 $<HTMLSelectElement>('tod').addEventListener('change', (e) => {
   const next = (e.target as HTMLSelectElement).value as TimeOfDay;
-  if (activeBackdrop) stage.scene.background = new THREE.Color(TIME_PRESETS[next].background);
+  if (activeBackdrop) stage.scene.background = new THREE.Color('#000000');
   stage.setTimeOfDay(next);
   if (activeBackdrop) stage.scene.background = activeBackdrop;
 });

@@ -774,6 +774,16 @@ export const DECORATIONS: Record<string, DecorationDef> = {
   },
 };
 
+export const GROUNDED_HOUSE_IDS = ["farmland-photographic-014-store-house", "farmland-photographic-014-villagers-house", "farmland-photographic-013-inn-house", "farmland-photographic-013-tavern-house", "farmland-photographic-013-smith-house", "farmland-photographic-013-apothecary-house"] as const;
+const GROUNDED_HOUSE_ASPECT: Record<string, number> = {"farmland-photographic-014-store-house": 1.2270318021201414, "farmland-photographic-014-villagers-house": 1.0942452043369475, "farmland-photographic-013-inn-house": 1.2057793345008756, "farmland-photographic-013-tavern-house": 1.2270318021201414, "farmland-photographic-013-smith-house": 1.5, "farmland-photographic-013-apothecary-house": 1.5};
+for (const id of GROUNDED_HOUSE_IDS) {
+  const original = DECORATIONS[id]!;
+  DECORATIONS[id + "-original-v1"] = { ...original, id: id + "-original-v1", name: original.name + " · Original V1" };
+  const grounded = { ...original, artAspect: GROUNDED_HOUSE_ASPECT[id], name: original.name + " · Base reta V2" };
+  DECORATIONS[id] = grounded;
+  DECORATIONS[id + "-grounded-v2"] = { ...grounded, id: id + "-grounded-v2" };
+}
+
 /** Original EmberClassic 2D decoration catalog ids, kept separate from later Engine2-only props. */
 export const EMBER_CLASSIC_DECOR_IDS = new Set([
   "mountain-ridge", "spike-rocks", "dead-tree-large", "dense-forest", "broken-cliff-wall",
@@ -835,6 +845,7 @@ export const BIG_HOUSE_DECOR_IDS = new Set(["abandoned-mansion"]);
  * impassable and never faded by fog, same as HOUSE_DECOR_IDS. This also includes the gatehouse
  * and watchtower: both are solid buildings whose full footprint must stay out of movement range. */
 export const SOLID_HOUSE_DECOR_IDS = new Set(["farmland-photographic-014-villagers-house", "farmland-photographic-014-store-house","farmland-photographic-013-smith-house", "farmland-photographic-013-apothecary-house", "farmland-photographic-013-tavern-house", "farmland-photographic-013-inn-house", "burning-hamlet", "gatehouse", "watchtower"]);
+for (const id of GROUNDED_HOUSE_IDS) { SOLID_HOUSE_DECOR_IDS.add(id + "-original-v1"); SOLID_HOUSE_DECOR_IDS.add(id + "-grounded-v2"); }
 
 /** Carts, wagons and handcarts are solid scenery: their complete authored footprint
  * blocks movement, arrows and line of sight, including placements saved on older maps. */
@@ -965,6 +976,7 @@ const DECORATION_ALPHA_CLEAN = new Set([
 ]);
 
 function decorationImagePath(id: string, ext: "png" | "webp"): string {
+  if ((GROUNDED_HOUSE_IDS as readonly string[]).includes(id)) id += "-grounded-v2";
   if (id === "floor-connector") id = "floor-connector-down-red-v1";
   id = DECORATIONS[id]?.propModel ?? id;
   const file = DECORATION_ALPHA_CLEAN.has(id) ? `${id}-alpha-001` : id;

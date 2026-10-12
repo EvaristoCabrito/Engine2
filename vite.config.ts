@@ -63,12 +63,35 @@ function mapsPlugin(): Plugin {
   };
 }
 
+/** Newly added terrain images must be served even when the large asset tree is not watched. */
+function terrainImagesPlugin(): Plugin {
+  return {
+    name: 'engine2-live-terrain-images',
+    configureServer(server) {
+      for (const folder of ['ground-variant-tiles', 'decorations']) {
+      const directory = resolve('public/game', folder);
+      server.middlewares.use(`/game/${folder}/`, (req, res, next) => {
+        let file: string;
+        try { file = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\//, '')); }
+        catch { res.statusCode = 400; res.end(); return; }
+        if (!/^[^/\\]+\.png$/i.test(file) || file.includes('..')) { next(); return; }
+        const path = resolve(directory, file);
+        if (!existsSync(path)) { next(); return; }
+        res.setHeader('Content-Type', 'image/png');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.end(readFileSync(path));
+      });
+      }
+    },
+  };
+}
+
 // Engine2's own dev server. Port 5300 only — never Ember's 8080.
 export default defineConfig({
   // React + Tailwind: Ember's own menus are built with them and are brought over as-is.
   plugins: [
     { name: 'engine2-release-version', transformIndexHtml: renderReleaseVersion },
-    mapsPlugin(), mapSavePlugin(), react(), tailwindcss(),
+    terrainImagesPlugin(), mapsPlugin(), mapSavePlugin(), react(), tailwindcss(),
   ],
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   // `@/` is Ember's src alias; Ember's shared UI pieces live in src/ember-ui.

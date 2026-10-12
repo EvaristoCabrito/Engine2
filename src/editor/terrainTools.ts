@@ -139,7 +139,7 @@ export class TerrainTools {
       grass: 'linear-gradient(135deg,#3d7329,#79ab47 58%,#a39f55)', forest: 'linear-gradient(135deg,#263f1d,#55783a 62%,#7a5a2c)',
       pavers: 'repeating-linear-gradient(0deg,#4a4641 0 8px,#302d2a 8px 10px,#777168 10px 18px)', snow: 'linear-gradient(135deg,#aebfce,#f5f7f8)',
       rock: 'linear-gradient(135deg,#4f4b47,#a19a8f 55%,#5a554e)', gravel: 'radial-gradient(circle at 25% 30%,#aaa397 0 1px,#706b62 2px,#4d4a44 5px)',
-      ash: 'radial-gradient(circle at 70% 35%,#ff7a2a 0 1px,#5b534d 3px,#2a2624 9px)', void: 'linear-gradient(135deg,#141414,#292522)',
+      ash: 'radial-gradient(circle at 70% 35%,#ff7a2a 0 1px,#5b534d 3px,#2a2624 9px)', void: '#000000',
       water: 'linear-gradient(145deg,#87c7d8,#2f86a8 58%,#174b69)',
     };
     for (const [id, info] of Object.entries(TERRAIN_INFO) as [TerrainId, typeof TERRAIN_INFO[TerrainId]][]) {
