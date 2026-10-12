@@ -47,6 +47,21 @@ function grassAt(x: number, y: number): RGB {
   return mul(c, grain(x, y, 0.1));
 }
 
+let grassThumb: string | null = null;
+/** Plains 001's picker image: the same painted grass the 3D ground draws. */
+export function grassThumbnail(): string {
+  if (grassThumb) return grassThumb;
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = S;
+  const g = cv.getContext('2d')!, img = g.createImageData(S, S);
+  for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+    const c = grassAt(x, y), o = (y * S + x) * 4;
+    img.data[o] = c[0]; img.data[o + 1] = c[1]; img.data[o + 2] = c[2]; img.data[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return (grassThumb = cv.toDataURL());
+}
+
 function rockAt(x: number, y: number, strata: boolean): RGB {
   const layers = strata ? pfbm(x / 64, y / 9, S / 64, S / 9, 4) : pfbm(x / 24, y / 24, S / 24, S / 24, 4);
   let c = mix(C.r1, C.r2, sstep(layers));

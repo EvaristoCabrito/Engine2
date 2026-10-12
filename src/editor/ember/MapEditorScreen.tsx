@@ -3,6 +3,7 @@
 // GPT's campaign port (src/campaign); Engine2's 3D map stands in for MapPreviewCanvas.
 // Left out on purpose (user decision): the old tile art and the elemental 2D map FX.
 import { hasSquareMapBorder } from "../../ember/mapFloor";
+import { grassThumbnail } from "../../render/textures";
 import { removeWallsUnderWatchtowerEntrances } from "../../campaign/watchtowerDungeon";
 import { uiText } from "../../ember/gamePreferences";
 import { type CSSProperties, type PointerEvent as ReactPointerEvent, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -31,7 +32,8 @@ import { footprint, hexNeighbors } from "../../campaign/pathfinding";
 /** A tile's picker image. Every terrain's base tile (001) is its painted diorama surface, drawn by
  * the same painter as the 3D ground, so the thumbnail always matches what the map shows. */
 function thumbFor(terrain: TerrainId, variant: number): string {
-  return tileVariantSrc(terrain, variant);
+  // Plains 001 shows the green grass the map actually draws, not a photo
+  return terrain === "plains" && variant === 0 ? grassThumbnail() : tileVariantSrc(terrain, variant);
 }
 
 /** Baked ground variants appear beside the original surface and keep their own saved indices. */
