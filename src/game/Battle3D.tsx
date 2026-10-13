@@ -290,7 +290,11 @@ export function Battle3D({
       const feet = actor.mesh.position.clone();
       return [feet, actor.pickMesh.localToWorld(new THREE.Vector3(0, 1, 0))];
     });
-    const spells = new BattleSpells3D(view, engine);
+    // a unit's body centre: the middle of its card (the trimmed frame of what it shows)
+    const spells = new BattleSpells3D(view, engine, (unitId) => {
+      const entry = actors.get(unitId);
+      return entry?.actor.mesh.visible ? entry.actor.pickMesh.localToWorld(new THREE.Vector3(0, 0.5, 0)) : null;
+    });
     const spellOverlay = new BattleSpellOverlay3D(spellArtRef.current!, spellFxRef.current!, view, engine);
     const unitHud = new BattleHud3D(hudRef.current!, view, engine);
     // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
@@ -332,7 +336,7 @@ export function Battle3D({
       // the cinematic camera moves first, so cards, effects and the HUD all face/project onto this frame's view
       cinematics.director.update(dt);
       const yaw = view.rig.facingYaw;
-      for (const { actor } of actors.values()) actor.update(dt, yaw, view.groundAt, view.flatTop);
+      for (const { actor } of actors.values()) actor.update(dt, yaw, view.unitGroundAt, view.flatTop);
       view.setGrid(gridMarks());
       atmosphere.sync(dt);
       arrows.sync();
@@ -379,7 +383,8 @@ export function Battle3D({
       if ((ev.target as HTMLElement | null)?.closest("input, textarea, select")) return;
       // C skips a cinematic shot (the engine already uses Escape and Space); the action plays on
       if (ev.code === "KeyC" && cinematics.director.active) { cinematics.director.skip(); return; }
-      if (pausedRef.current) return;
+      // Esc is the options menu's (GameApp); right-click cancels an action
+      if (ev.code === "Escape" || pausedRef.current) return;
       engine.keyDown(ev.code);
     };
     const canvas = view.stage.renderer.domElement;

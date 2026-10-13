@@ -27,18 +27,18 @@ export const TIME_PRESETS: Record<TimeOfDay, LightPreset> = {
   noon: { sun: '#ffffff', sunIntensity: 3.5, azimuth: -0.6, elevation: 1.25, sky: '#dcecff', ground: '#64523a', hemi: 1.1, background: '#000000', spriteFloor: 0 },
   dawn: { sun: '#ffd2a6', sunIntensity: 3.0, azimuth: -1.6, elevation: 0.45, sky: '#e2d0de', ground: '#6a5848', hemi: 1.05, background: '#000000', spriteFloor: 0.3 },
   dusk: { sun: '#ffb47e', sunIntensity: 2.9, azimuth: 1.6, elevation: 0.42, sky: '#c4b2d4', ground: '#5e4840', hemi: 1.0, background: '#000000', spriteFloor: 0.3 },
-  brightNight: { sun: '#c2d0ff', sunIntensity: 2.2, azimuth: -0.7, elevation: 0.9, sky: '#7d90ba', ground: '#3a3a48', hemi: 1.0, background: '#000000', spriteFloor: 0.55 },
-  darkNight: { sun: '#b0c0f4', sunIntensity: 1.7, azimuth: -0.7, elevation: 0.9, sky: '#62759e', ground: '#2e2e3a', hemi: 0.85, background: '#000000', spriteFloor: 0.5 },
+  // Nights are lit for real: only the moon (from its disc, moveMoon) and the lamps and spells on
+  // the board. No sky fill and no sprite brightness floor.
+  brightNight: { sun: '#c2d0ff', sunIntensity: 2.2, azimuth: -0.7, elevation: 0.9, sky: '#7d90ba', ground: '#3a3a48', hemi: 0, background: '#000000', spriteFloor: 0 },
+  darkNight: { sun: '#b0c0f4', sunIntensity: 1.7, azimuth: -0.7, elevation: 0.9, sky: '#62759e', ground: '#2e2e3a', hemi: 0, background: '#000000', spriteFloor: 0 },
 };
 
 /** Tonight's moon: light strength (x the night preset), colour, and the disc's phase. */
 export interface MoonLight { strength: number; color?: string; sky?: string; background?: string; lit?: number; waxing?: boolean; icon?: string }
 /** Real seconds for the moon to cross the sky (rise to set); then the next night's moon rises. */
 const MOON_CROSSING_SECONDS = 600;
-/** Moonlight at rise/set, as a share of its strength overhead. */
-const MOON_LOW_LIGHT = 0.55;
-/** The moonlight's angle the board is lit as if from (the visible moon itself sits lower). */
-const MOON_LIT_AS = 0.6;
+/** The moon's light x the night preset's strength: a bright, playable moon (still x tonight's phase). */
+const MOON_BRIGHTNESS = 1.5;
 
 const FULLSCREEN_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 
@@ -235,7 +235,7 @@ export class Stage {
       sunIntensity: base.sunIntensity * this.moon.strength,
       sky: this.moon.sky ?? base.sky,
       background: this.moon.background ?? base.background,
-      hemi: base.hemi * (0.7 + 0.3 * Math.min(this.moon.strength, 1.3)),
+      hemi: base.hemi,
     } : base;
     this.timeOfDay = t;
     this.sun.color.set(p.sun);
@@ -263,15 +263,13 @@ export class Stage {
     this.sun.position.set(Math.sin(azimuth) * ce * d, Math.sin(elevation) * d, Math.cos(azimuth) * ce * d);
   }
 
-  /** The disc, the moonlight's direction and its strength, from where the moon is now. */
+  /** The moonlight comes from the disc itself: from exactly where it stands, at tonight's
+   * strength, with nothing added — a low moon grazes the ground, as a real one does. */
   private moveMoon(): void {
     const pose = Moon.pose(this.moonProgress);
     this.moonDisc.place(pose, this.camera, this.half);
-    this.placeLight(pose.azimuth, pose.lightElevation);
-    // a low moon only grazes the ground: lift its strength so the board is lit as by a moon at
-    // MOON_LIT_AS (direction and shadows still come from the disc)
-    const graze = Math.min(Math.sin(MOON_LIT_AS) / Math.sin(pose.lightElevation), 5);
-    this.sun.intensity = this.keyIntensity * graze * (MOON_LOW_LIGHT + (1 - MOON_LOW_LIGHT) * pose.height);
+    this.sun.position.copy(this.moonDisc.position);
+    this.sun.intensity = this.keyIntensity * MOON_BRIGHTNESS;
   }
 
   get tiltShift(): boolean { return this.tilt[0].enabled; }

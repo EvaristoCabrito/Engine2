@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { MeshLambertNodeMaterial, PhongLightingModel } from 'three/webgpu';
 import type { LightingModelDirectInput } from 'three/src/nodes/core/LightingModel.js';
-import { BRDF_Lambert, diffuseColor, faceDirection, normalView, transformNormalToView, uniform, vec3, max, min, smoothstep } from 'three/tsl';
+import { BRDF_Lambert, diffuseColor, faceDirection, normalView, transformNormalToView, uniform, uv, vec2, vec3, max, min, smoothstep } from 'three/tsl';
 import { WEBGPU } from '../render/gpu';
 
 /** Shared by every sprite: tune daylight calibration in one place. */
@@ -29,7 +29,25 @@ const LAMBERT_WRAPPED = THREE.ShaderChunk.lights_lambert_pars_fragment.replace(
 /** A light-emitting decoration's painted flame: pixels close to the light's colour, bright and
  * saturated, glow above 1 like the prototype's HDR flame (diorama.html M.flame), so bloom (0.9
  * threshold) starts at the fire itself instead of the light coming from nowhere. */
-export interface SpriteEmit { color: [number, number, number]; level: { value: number } }
+export interface SpriteEmit {
+  color: [number, number, number]; level: { value: number };
+  /** Where the painted light sits on the card (uv) and the card's width/height: the lantern
+   * glass or brazier bowl around it glows too, not only its brightest flame pixels. */
+  at?: { u: number; v: number; aspect: number };
+  /** Which pixels glow: brightness, saturation and closeness to `color`, each eased in from its
+   * `lo` to its `hi`. Default: a flame's bright saturated core (FLAME_MASK). */
+  mask?: { lo: [number, number, number]; hi: [number, number, number] };
+}
+const FLAME_MASK = { lo: [0.45, 0.4, 0.9], hi: [0.8, 0.7, 0.97] } as const;
+
+/** Units whose art is painted as glowing (magic crystal, spirit light), by sprite: those pixels
+ * light themselves, so they read in the dark like any light source. Cobalt Blue Deer: its
+ * crystal antlers — saturated cool blues and violets; its white body and dark eyes don't glow. */
+export const UNIT_GLOW: Record<string, SpriteEmit> = {
+  'cobalt-blue-deer': { color: [0.55, 0.62, 1.0], level: { value: 0.85 }, mask: { lo: [0.22, 0.18, 0.84], hi: [0.55, 0.42, 0.94] } },
+};
+/** The lit glass around a flame, in card heights. */
+const GLOW_RADIUS = 0.1;
 /** A lit card is at most this many times its painted colour: a card standing at a light (its
  * own brazier, a unit beside a fire) was lit hundreds of times over and bloom smeared it across
  * the screen as a blinding halo. */
@@ -43,7 +61,10 @@ const EMIT_GLSL = `
   float eMax = max( eC.r, max( eC.g, eC.b ) );
   float eSat = ( eMax - min( eC.r, min( eC.g, eC.b ) ) ) / max( eMax, 1e-4 );
   float eSim = dot( normalize( eC + 1e-4 ), normalize( uEmitColor ) );
-  float eMask = smoothstep( 0.45, 0.8, eMax ) * smoothstep( 0.4, 0.7, eSat ) * smoothstep( 0.9, 0.97, eSim );
+  float eMask = smoothstep( uEmitLo.x, uEmitHi.x, eMax ) * smoothstep( uEmitLo.y, uEmitHi.y, eSat ) * smoothstep( uEmitLo.z, uEmitHi.z, eSim );
+  // the glass lit by the flame: warm pixels near where the light sits on the card
+  float eNear = 1.0 - smoothstep( uEmitR * 0.6, uEmitR, length( ( vMapUv - uEmitAt.xy ) * vec2( uEmitAt.z, 1.0 ) ) );
+  eMask = max( eMask, smoothstep( 0.12, 0.4, eMax ) * smoothstep( 0.08, 0.3, eSat ) * smoothstep( 0.75, 0.9, eSim ) * eNear * 0.75 );
   outgoingLight += eC * eMask * uEmitLevel;`;
 
 export function makeSpriteMaterial(pointLightsOnBothSides = false, emit?: SpriteEmit): THREE.MeshLambertMaterial {
@@ -67,8 +88,13 @@ export function makeSpriteMaterial(pointLightsOnBothSides = false, emit?: Sprite
       // after the cap: only the flame itself goes above it
       sh.uniforms.uEmitColor = { value: new THREE.Vector3(...emit.color) };
       sh.uniforms.uEmitLevel = emit.level;
+      sh.uniforms.uEmitAt = { value: new THREE.Vector3(emit.at?.u ?? 0, emit.at?.v ?? 0, emit.at?.aspect ?? 1) };
+      sh.uniforms.uEmitR = { value: emit.at ? GLOW_RADIUS : 0 };
+      const mask = emit.mask ?? FLAME_MASK;
+      sh.uniforms.uEmitLo = { value: new THREE.Vector3(...mask.lo) };
+      sh.uniforms.uEmitHi = { value: new THREE.Vector3(...mask.hi) };
       sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform vec3 uEmitColor;\nuniform float uEmitLevel;')
+        .replace('#include <common>', '#include <common>\nuniform vec3 uEmitColor;\nuniform float uEmitLevel;\nuniform vec3 uEmitAt;\nuniform float uEmitR;\nuniform vec3 uEmitLo;\nuniform vec3 uEmitHi;')
         .replace('#include <opaque_fragment>', `${EMIT_GLSL}\n#include <opaque_fragment>`);
     }
     if (pointLightsOnBothSides) {
@@ -125,7 +151,11 @@ class SpriteNodeMaterial extends MeshLambertNodeMaterial {
     const c = diffuseColor.rgb, hi = max(c.r, max(c.g, c.b)), lo = min(c.r, min(c.g, c.b));
     const sat = hi.sub(lo).div(max(hi, 1e-4));
     const sim = c.add(1e-4).normalize().dot(vec3(...this.emit.color).normalize());
-    const mask = smoothstep(0.45, 0.8, hi).mul(smoothstep(0.4, 0.7, sat)).mul(smoothstep(0.9, 0.97, sim));
-    return lit.add(c.mul(mask).mul(uniform(level.value).onObjectUpdate(() => level.value)));
+    const m = this.emit.mask ?? FLAME_MASK;
+    const flame = smoothstep(m.lo[0], m.hi[0], hi).mul(smoothstep(m.lo[1], m.hi[1], sat)).mul(smoothstep(m.lo[2], m.hi[2], sim));
+    const at = this.emit.at ?? { u: 0, v: 0, aspect: 1 }, r = this.emit.at ? GLOW_RADIUS : 0;
+    const near = smoothstep(r * 0.6, r, uv().sub(vec2(at.u, at.v)).mul(vec2(at.aspect, 1)).length()).oneMinus();
+    const glass = smoothstep(0.12, 0.4, hi).mul(smoothstep(0.08, 0.3, sat)).mul(smoothstep(0.75, 0.9, sim)).mul(near).mul(0.75);
+    return lit.add(c.mul(max(flame, glass)).mul(uniform(level.value).onObjectUpdate(() => level.value)));
   }
 }

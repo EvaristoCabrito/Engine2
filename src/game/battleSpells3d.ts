@@ -30,7 +30,8 @@ export class BattleSpells3D {
   private readonly pending: MagicMissileV2VfxRequest[] = [];
   private missileId: string | null = null;
 
-  constructor(private readonly view: DioramaView, private readonly engine: BattleEngine) {
+  /** `bodyAt`: a unit's body centre in the world (Battle3D's card), where Magic Missile strikes. */
+  constructor(private readonly view: DioramaView, private readonly engine: BattleEngine, private readonly bodyAt?: (unitId: string) => THREE.Vector3 | null) {
     this.adapter = new EmberVfxAdapter(view.stage.scene);
     this.camera = this.adapter.cameraToEmber(view.stage.camera);
     const root = this.adapter.root;
@@ -120,7 +121,9 @@ export class BattleSpells3D {
         engine.magicMissileV2VfxEvents.push({ id: request.id, phase: "impact", index: 0 }, { id: request.id, phase: "complete" }); continue;
       }
       this.missileId = request.id;
-      this.missile.castSpell({ id: request.id, origin: this.unit(caster), target: this.unit(target), missileCount: 1, worldScale: 1,
+      // it strikes the middle of the target's body, not a fixed height (low on a tall foe)
+      const body = this.bodyAt?.(target.id);
+      this.missile.castSpell({ id: request.id, origin: this.unit(caster), target: body ? this.adapter.toEmber(body) : this.unit(target), missileCount: 1, worldScale: 1,
         onImpact: index => engine.magicMissileV2VfxEvents.push({ id: request.id, phase: "impact", index }),
         onComplete: () => { engine.magicMissileV2VfxEvents.push({ id: request.id, phase: "complete" }); this.missileId = null; },
         onTimelineEvent: (event, index) => engine.magicMissileV2TimelineEvents.push({ id: request.id, event, index }) });

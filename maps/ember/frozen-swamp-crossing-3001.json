@@ -10,7 +10,7 @@
     "objective": "Reach the pale beacon and the exit; explore the optional ruins.",
     "win": "escape",
     "hub": false,
-    "explore": true,
+    "explore": false,
     "autoTactics": false,
     "fog": true,
     "environment": "outdoor",

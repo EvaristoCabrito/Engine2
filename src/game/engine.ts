@@ -862,7 +862,8 @@ function remainingTier(classId: ClassId, tier: SpellTier, key: TierKey, level: n
 // caster can wield any arcane staff), so this bonus can't live on the weapon without also
 // handing it to conjurer/sorcerer/necromancer. It's a trait of the mage class itself:
 // applied after weapon-or-class range is resolved below, on top of either source.
-const MAGE_RANGE_BONUS_CLASSES: ReadonlySet<ClassId> = new Set(["mage", "voss", "elementalist", "warlock"]);
+// Voss is not in it: his attack reaches 2, his staff's own range.
+const MAGE_RANGE_BONUS_CLASSES: ReadonlySet<ClassId> = new Set(["mage", "elementalist", "warlock"]);
 
 // A named hero's own permanent look, independent of whatever classId they currently carry.
 // Without this, a promoted hero (see PROMOTIONS — Aldric to Sentinel/Templar, Neera to

@@ -12,6 +12,9 @@ type PortalItem = { live: boolean; x: number; y: number; body: { dx: number; dy:
 /** After the ground and terrain fog, before unit/decoration cards: portals sit under the units. */
 const PORTAL_RENDER_ORDER = (FOG_RENDER_ORDER + CARD_RENDER_ORDER) / 2;
 const PORTAL_TEX_W = 512, PORTAL_TEX_H = 512;
+/** Frost's strike: an icy flash on each hex as the ice lands, about a strong lantern's light,
+ * fading in a fraction of a second (the pulse decay in sync). */
+const FROST_FLASH = 8;
 
 export class BattleSpellOverlay3D {
   private readonly legacy: WebGL2DRenderer;
@@ -28,11 +31,12 @@ export class BattleSpellOverlay3D {
     this.fxTexture = new THREE.CanvasTexture(fxCanvas);
     for (const pulse of this.pulses) view.stage.scene.add(pulse.light);
   }
-  private pulse(cell: { x: number; y: number }, dx: number, dy: number, strength: number): void {
+  /** `intensity` overrides the blizzard-scaled 0.012 x strength (Frost's strike is a real flash). */
+  private pulse(cell: { x: number; y: number }, dx: number, dy: number, strength: number, intensity = 0.012 * strength): void {
     const pulse = this.pulses.reduce((old, p) => p.age > old.age ? p : old);
     const point = this.view.board!.cell(cell.x, cell.y);
     pulse.light.position.set(point.x + dx, this.view.groundAt(point.x, point.z) + 0.5, point.z + dy);
-    pulse.light.intensity = 0.012 * strength; pulse.age = 0;
+    pulse.light.intensity = intensity; pulse.age = 0;
   }
   private projected(x: number, y: number): THREE.Vector3 {
     const a = this.engine.effectAnchor(0, 0), p = this.view.board!.cell(0, 0);
@@ -257,7 +261,7 @@ export class BattleSpellOverlay3D {
       const edge = center.clone().add(right).project(camera);
       return { ...original, x: (s.x + 1) * width / 2, y: (1 - s.y) * height / 2, tile: Math.hypot((edge.x - s.x) * width / 2, (edge.y - s.y) * height / 2) };
     };
-    for (const request of this.engine.frostVfxRequests.splice(0)) this.effects.spawnFrost({ ...request, onImpact: cell => this.pulse(cell, 0, 0, 0.55) });
+    for (const request of this.engine.frostVfxRequests.splice(0)) this.effects.spawnFrost({ ...request, onImpact: cell => this.pulse(cell, 0, 0, 0, FROST_FLASH) });
     const live = new Set(this.engine.iceStormZones.map(zone => zone.createdAt));
     for (const [key, id] of this.blizzards) if (!live.has(key)) { this.effects.removeBlizzard(id); this.blizzards.delete(key); }
     for (const zone of this.engine.iceStormZones) if (!this.blizzards.has(zone.createdAt)) {

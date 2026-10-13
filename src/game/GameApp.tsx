@@ -1016,6 +1016,18 @@ export function GameApp() {
   const [innEntry, setInnEntry] = useState<DialogAction | null>(null);
   const [hud, setHud] = useState<HudSnapshot>(hudBlank);
   const [paused, setPaused] = useState(false);
+  // Esc opens and closes the options menu in battle (right-click still cancels an action).
+  useEffect(() => {
+    if (screen !== "battle") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || (e.target as HTMLElement | null)?.closest("input, textarea, select")) return;
+      e.preventDefault();
+      if (paused) { setSlotMode(null); setOverwrite(null); setPaused(false); resumeMusic(); }
+      else { pauseMusic(); setPaused(true); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [screen, paused]);
   const [companionConversationsOpen, setCompanionConversationsOpen] = useState(false);
   // The mission's outro dialog (see hud.result effect below) — opens once, right when
   // victory is confirmed, and never reopens after being closed even though hud.result
@@ -1471,9 +1483,12 @@ export function GameApp() {
       const equipment = save.equipment;
       const statPointAllocations = save.statPointAllocations;
       const ownedWeaponIds = Object.keys(save.weapons);
-      // Loading or re-entering a mission must carry saved expenditure, including
-      // first missions and the tutorial. Replenishment happens at explicit rest/reset events.
-      const spellSpent = testMode ? undefined : save.spellUses;
+      // Loading or re-entering a mission must carry saved expenditure. Replenishment happens at
+      // explicit rest/reset events — and at the start of each of the four Stone Bridge tutorial
+      // battles (O Vau, Bosque, Aldeia, A Ponte), which always open with every skill use back.
+      // (A resumed battle still restores its own mid-fight state from the snapshot.)
+      const tutorialBattle = locationForMission(m.id)?.id === "stonebridge";
+      const spellSpent = testMode ? undefined : tutorialBattle ? {} : save.spellUses;
       const hungerPenaltyPct = hungerPenaltyFor(save.hungerStreak);
       const heroHunger = save.heroHunger;
       const heroDiseases = save.heroDiseases;

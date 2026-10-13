@@ -106,7 +106,7 @@ export class DioramaView {
       const yaw = this.rig.facingYaw;
       this.decor.face(yaw, this.flatTop);
       this.decor.updateLights(time);
-      for (const u of this.units) u.actor.update(dt, yaw, this.groundAt, this.flatTop);
+      for (const u of this.units) u.actor.update(dt, yaw, this.unitGroundAt, this.flatTop);
     });
   }
 
@@ -131,6 +131,8 @@ export class DioramaView {
   get surfaces(): THREE.Mesh[] { return [this.ground, this.water].filter((m): m is THREE.Mesh => !!m); }
 
   readonly groundAt = (x: number, z: number): number => (this.board ? groundHeightAt(this.board, EDGES, x, z) : 0);
+  /** Where a unit's feet are: the ground, or the top of a fallen trunk it stands on (decor.standAt). */
+  readonly unitGroundAt = (x: number, z: number): number => this.groundAt(x, z) + this.decor.standAt(x, z);
 
   /** Draw the editor's current mission. The camera is kept while the same map is being edited. */
   async setMission(m: Mission, onDecorProgress?: (loaded: number, total: number) => void): Promise<void> {

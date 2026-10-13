@@ -8,7 +8,7 @@ import type { Pose, UnitDef } from './catalog';
 import { loadPose, type PoseFrames } from './frames';
 import { unitBox, framePace } from './visual';
 import { playPoseSound, stopWalkSound } from './sounds';
-import { makeSpriteMaterial } from './spriteMaterial';
+import { makeSpriteMaterial, UNIT_GLOW } from './spriteMaterial';
 import { UNIT_LIGHT_DEFS } from '../ember/lighting';
 import { CarriedLight } from '../render/carriedLight';
 import { alignUnitLights } from './lightFrame';
@@ -57,7 +57,8 @@ export class UnitActor {
 
   constructor(def: UnitDef) {
     this.def = def;
-    this.mat = makeSpriteMaterial(true);
+    // art painted as glowing (the deer's crystal antlers) lights itself (UNIT_GLOW)
+    this.mat = makeSpriteMaterial(true, UNIT_GLOW[def.sprite]);
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5 });
     this.card = new THREE.Mesh(cardGeo, this.mat);
     this.card.castShadow = true;

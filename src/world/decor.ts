@@ -54,7 +54,19 @@ function decorSize(id: string, def: DecorationDef, tile = 1): { w: number; h: nu
 const fileOf = (url: string) => url.split('?')[0].split('/').pop()!;
 const hasArt = (file: string) => FILES.has(fileOf(decorationImage(file)));
 
-interface Art { texture: THREE.Texture; base: { u: number; v: number }; flame: { u: number; v: number } }
+interface Art {
+  texture: THREE.Texture; base: { u: number; v: number }; flame: { u: number; v: number }; flameFound: boolean;
+  /** Per column of a 256-wide copy: the art's highest opaque v (v up), -1 where empty. */
+  tops: Float32Array;
+}
+
+/** Fallen trunks a unit stands on top of (its feet on the trunk, not in it). */
+const STAND_ON_DECOR = new Set([
+  'fallen-log', 'wilds-fallen-log', 'forest-photographic-011-log', 'forest-mossy-trunk', 'wilds-snowy-log',
+  'wilds-mossy-log', 'wilds-mossy-charred-log', 'wilds-hollow-log', 'wilds-winter-mossy-log',
+]);
+/** The trunk's painted top is its far upper edge; feet land a little below it, on the top. */
+const STAND_ON_TOP = 0.85;
 const artCache = new Map<string, Promise<Art>>();
 
 /** Load an image at full resolution and measure its opaque base (Ember's artBase idea). */
@@ -87,7 +99,9 @@ function loadArt(url: string, anisotropy: number): Promise<Art> {
       const t = new THREE.Texture(bm);
       t.flipY = false; t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = anisotropy;
       t.minFilter = THREE.LinearMipmapLinearFilter; t.magFilter = THREE.LinearFilter; t.needsUpdate = true;
-      return { texture: t, base: { u: n ? (sx / n + 0.5) / sw : 0.5, v: bottom / sh }, flame };
+      const tops = new Float32Array(sw).fill(-1);
+      for (let x = 0; x < sw; x++) for (let y = sh - 1; y >= 0; y--) if (d[(y * sw + x) * 4 + 3] > 128) { tops[x] = (y + 0.5) / sh; break; }
+      return { texture: t, base: { u: n ? (sx / n + 0.5) / sw : 0.5, v: bottom / sh }, flame, flameFound: weight > 4, tops };
     })();
     artCache.set(url, p);
   }
@@ -103,6 +117,8 @@ export class DecorLayer {
   /** Hexes decorations block ("c,r"), from Ember's blocking footprints. */
   blocked = new Set<string>();
   stats: DecorStats = { placed: 0, skippedArchitecture: 0, missingArt: [] };
+  /** Hex centres on a fallen trunk, and how high above that hex's ground its top is. */
+  private pads: { x: number; z: number; h: number }[] = [];
   private cards: THREE.Group[] = [];
   private gen = 0;
 
@@ -112,6 +128,7 @@ export class DecorLayer {
     this.gen++;
     for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); if (o instanceof CarriedLight) o.dispose(); }); }
     this.cards = [];
+    this.pads = [];
     this.blocked.clear();
     this.stats = { placed: 0, skippedArchitecture: 0, missingArt: [] };
   }
@@ -145,7 +162,8 @@ export class DecorLayer {
       jobs.push(loadArt(decorationImage(file), aniso).then(art => {
         if (gen !== this.gen) return;
         const lightDef = LIGHT_DEFS[p.id];
-        const emit = lightDef ? { color: lightDef.color, level: { value: FLAME_EMIT } } : undefined;
+        // the lantern glass around the painted flame glows too (spriteMaterial GLOW_RADIUS)
+        const emit = lightDef ? { color: lightDef.color, level: { value: FLAME_EMIT }, at: art.flameFound ? { u: art.flame.u, v: art.flame.v, aspect: w / h } : undefined } : undefined;
         const mat = makeSpriteMaterial(false, emit);
         mat.map = art.texture;
         const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5, map: art.texture });
@@ -181,8 +199,21 @@ export class DecorLayer {
         // lights furthest forward; a tiny per-column step keeps any two cards out of one plane.
         // All under half a row, so the next row (and its units) stays in front.
         holder.userData.card = card;
-        holder.userData.nudge = (def.unitLayer === 'behind' ? -0.35 : lightDef ? 0.4 : def.foreground || def.unitLayer === 'front' ? 0.2 : 0) + (p.x % 20) * 0.002;
+        // a trunk steps back too: the unit standing on it is drawn in front of it
+        holder.userData.nudge = (def.unitLayer === 'behind' || STAND_ON_DECOR.has(p.id) ? -0.35 : lightDef ? 0.4 : def.foreground || def.unitLayer === 'front' ? 0.2 : 0) + (p.x % 20) * 0.002;
         holder.userData.hexes = placedFootprint(p).map(({ dx, dy }) => ({ x: p.x + dx, y: p.y + dy }));
+        // A unit on a trunk's hex stands on its top: the art's opaque top over that hex's spot on
+        // the card (cards stand square to the rows, LOCK_PROPS), relative to that hex's ground.
+        if (STAND_ON_DECOR.has(p.id)) for (const { dx, dy } of placedFootprint(p)) {
+          if (!inBoard(p.x + dx, p.y + dy)) continue;
+          const c = b.cell(p.x + dx, p.y + dy), u = ((c.x - x) * (mirror ? -1 : 1)) / w + art.base.u;
+          const n = art.tops.length, cols: number[] = [];
+          for (let k = Math.floor((u - 0.06) * n); k <= Math.ceil((u + 0.06) * n); k++) if (k >= 0 && k < n && art.tops[k] >= 0) cols.push(art.tops[k]);
+          if (!cols.length) continue;
+          cols.sort((a, z) => a - z);
+          const top = holder.position.y + (cols[cols.length >> 1] - art.base.v) * h * STAND_ON_TOP;
+          this.pads.push({ x: c.x, z: c.z, h: Math.max(0, top - groundAt(c.x, c.z)) });
+        }
         this.group.add(holder);
         this.cards.push(holder);
         this.stats.placed++;
@@ -219,6 +250,17 @@ export class DecorLayer {
       c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); if (o instanceof CarriedLight) o.dispose(); });
       return false;
     });
+  }
+
+  /** How high above the ground a unit at (x, z) stands because it is on a fallen trunk: the
+   * trunk's top on its hex, easing in over the hex's edge so a step up is not a jump. */
+  standAt(x: number, z: number): number {
+    let best = 0;
+    for (const p of this.pads) {
+      const d = Math.hypot(x - p.x, z - p.z);
+      if (d < 0.95) best = Math.max(best, p.h * (1 - THREE.MathUtils.smoothstep(d, 0.55, 0.95)));
+    }
+    return best;
   }
 
   /** How many decoration cards are placed (they load in after the board). */

@@ -1904,16 +1904,24 @@ export function MapEditorScreen({
    * replacement file: activation is a local campaign pointer to this exact draft. */
   const doActivateFile = (f: { serial: number; draft: MapDraft; file?: string }) => {
     const next = { ...activeVersions, [draft.id]: f.serial };
+    // A repository file is on disk, so the browser copy is only a convenience: when browser
+    // storage is full it activates from the file itself (this scenario's old copy is dropped
+    // rather than left behind to shadow it).
+    let copyNote = "";
     if (!saveActiveDrafts({ ...loadActiveDrafts(), [draft.id]: f.draft })) {
-      setNote(`NÃO ATIVOU ${f.file ?? mapFileName(draft.id, f.serial)}: o navegador recusou salvar a cópia da campanha.`);
-      return;
+      const { [draft.id]: _stale, ...others } = loadActiveDrafts();
+      if (!saveActiveDrafts(others)) {
+        setNote(`NÃO ATIVOU ${f.file ?? mapFileName(draft.id, f.serial)}: o navegador recusou salvar a cópia da campanha.`);
+        return;
+      }
+      copyNote = " (armazenamento do navegador cheio: usa o arquivo direto do repositório)";
     }
     setActiveVersions(next);
     saveActiveVersions(next);
     setDraft(f.draft);
     registerSessionMapOverride(f.draft);
     window.dispatchEvent(new CustomEvent("ember:missions-saved"));
-    setNote(`${f.file ?? mapFileName(draft.id, f.serial)} agora é a cópia exata ativa na campanha.`);
+    setNote(`${f.file ?? mapFileName(draft.id, f.serial)} agora é a cópia exata ativa na campanha.${copyNote}`);
   };
 
   /** Deletes a saved file. Two clicks: the first arms the button, so a misclick on a

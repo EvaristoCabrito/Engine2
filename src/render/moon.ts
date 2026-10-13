@@ -3,9 +3,9 @@
 // far side and setting on the other. The stage's moonlight follows it (direction, height,
 // strength), so light and shadows always match where the player sees the moon.
 // The disc IS the light's source: it stands on the moonlight's own line from the board's centre,
-// so the light, shadows and water reflection all point exactly at it. The normal view looks 20°
-// down from ~0.6 board-halves up and ~1.55 back, so a moon it can see keeps low (3°–11°), just
-// beyond the board's far edge (measured: cemetery-ground-part-ii and O Vau give the same ratios).
+// so the light, shadows and water reflection all point exactly at it. It rides high (see
+// LIGHT_LOW/HIGH) so the board is really lit by it; the normal view (20° down) sees only up to
+// ~5° below its own eye line, so the disc shows when the camera tilts up.
 
 import * as THREE from 'three';
 import { START_YAW } from './cameraRig';
@@ -14,8 +14,10 @@ import { START_YAW } from './cameraRig';
 const AHEAD = Math.atan2(-Math.sin(START_YAW), -Math.cos(START_YAW));
 /** The disc's path: from this far to one side of ahead to as far to the other (radians). */
 const SWEEP = 0.5;
-/** The moon's angle above the horizon (radians): low at rise/set, highest at mid-night. */
-const LIGHT_LOW = 0.06, LIGHT_HIGH = 0.2;
+/** The moon's angle above the horizon (radians): low at rise/set, highest at mid-night. High
+ * enough (26°–43°) that its light reaches the ground instead of skimming it; the normal view's
+ * frame then mostly sits below the disc (tilt the camera up to see it). */
+const LIGHT_LOW = 0.45, LIGHT_HIGH = 0.75;
 /** Its distance from the board's centre and its radius, as multiples of the board's half size. */
 const DISTANCE = 1.2, RADIUS = 0.14;
 /** Its brightest parts just cross bloom's threshold (2): a soft glow, surface still readable. */
