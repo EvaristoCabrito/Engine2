@@ -14,6 +14,8 @@ import { GROUND_LAYER_COUNT, GROUND_WEIGHT_ATTRIBUTES } from '../map/board';
 export type EdgeStyle = 'smooth' | 'hard';
 
 const WARP = 1.25;
+/** How far the board's cut edge drops below its ground: a thin lip, no underground on show. */
+const EDGE_LIP = 0.35;
 export function warp(x: number, z: number): [number, number] {
   return [x + (fbm(x * 0.42 + 3.1, z * 0.42, 3) - 0.5) * WARP, z + (fbm(x * 0.42, z * 0.42 + 7.7, 3) - 0.5) * WARP];
 }
@@ -65,14 +67,19 @@ export function buildSmoothGround(b: Board): THREE.BufferGeometry {
     const gi = i - 1, gj = j - 1, edge = gi < 0 || gj < 0 || gi > nx || gj > nz;
     const x = Math.min(x1, Math.max(x0, x0 + gi * res)), z = Math.min(z1, Math.max(z0, z0 + gj * res));
     const [wx, wz] = warp(x, z);
-    let h = 0;
-    for (const [ox, oz] of SM) h += cellAt(b, L, wx + ox, wz + oz).groundY;
+    // void holes have no ground: averaging their height 0 in hung a cliff down into every hole,
+    // so only real ground counts, and the hole's rim just bevels a thin lip
+    let h = 0, solid = 0;
+    for (const [ox, oz] of SM) { const s = cellAt(b, L, wx + ox, wz + oz); if (s.surface >= 0) { h += s.groundY; solid++; } }
+    h = solid ? h / solid - EDGE_LIP * (1 - solid / SM.length) : 0;
     const v = j * VX + i;
     pos[v * 3] = x; pos[v * 3 + 2] = z;
     // Only the new smooth plains version omits decorative vertex noise.
     const cell = cellAt(b, L, wx, wz);
     const flatPlains = cell.type === 'plains' && (b.draft.tileVariants?.[cell.i] === 56 || b.draft.tileVariants?.[cell.i] === 57 || b.draft.tileVariants?.[cell.i] === 58 || b.draft.tileVariants?.[cell.i] === 59 || b.draft.tileVariants?.[cell.i] === 60 || b.draft.tileVariants?.[cell.i] === 61);
-    pos[v * 3 + 1] = edge ? 0 : h / SM.length + (flatPlains ? 0 : (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04) + terrainReliefAt(b, x, z);
+    // the cut wall is a short lip under the ground at the board's edge, never a cliff hanging down to 0
+    const top = h + terrainReliefAt(b, x, z);
+    pos[v * 3 + 1] = edge ? top - EDGE_LIP : top + (flatPlains ? 0 : (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04);
     splat(b, L, wx, wz, 0.3, splats, v);
   }
   const index = new Uint32Array((VX - 1) * (VZ - 1) * 6);
@@ -158,7 +165,9 @@ export function buildWater(b: Board, style: EdgeStyle): THREE.BufferGeometry | n
     const a = j * VX + i, bb = a + 1, c = a + VX, d = c + 1;
     const x = (pos[a * 3] + pos[d * 3]) / 2, z = (pos[a * 3 + 2] + pos[d * 3 + 2]) / 2;
     const [sx, sz] = style === 'smooth' ? warp(x, z) : [x, z];
-    if (cellAt(b, L, sx, sz).surface < 0) continue;
+    const cell = cellAt(b, L, sx, sz);
+    // only real water and the banks beside it: never a sheet under dry land
+    if (cell.surface < 0 || (!cell.water && !nearWater.has(cell))) continue;
     index[t++] = a; index[t++] = c; index[t++] = bb; index[t++] = bb; index[t++] = c; index[t++] = d;
   }
   const g = new THREE.BufferGeometry();

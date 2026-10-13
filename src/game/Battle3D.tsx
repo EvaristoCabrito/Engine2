@@ -89,9 +89,12 @@ export function Battle3D({
         // Compile the preserved spell materials and upload existing textures before the
         // gameplay loading screen lifts; a first cast must not initialize GPU state mid-frame.
         await view.stage.prepareMaterials((done, total) => loadStep("shaders", done, total));
-        // camera testing: zoom from right up against a unit to far beyond the whole board
+        // gameplay limits: zoom in right up against a unit, zoom out and pan no further than the
+        // user's Tática reference view (see CameraRig.maxViewWidth / panBounds)
         view.rig.minDist = 1;
         view.rig.maxDist = Math.max(view.rig.maxDist * 4, 400);
+        view.rig.maxViewWidth = 58;
+        view.rig.panBounds = view.board!.bounds();
         const party = (engine.units as Unit[]).filter(unit => unit.side === 'player' && unit.alive);
         const points = party.map(unit => {
           const cell = view.board!.cell(unit.x, unit.y);
@@ -100,7 +103,7 @@ export function Battle3D({
         const opening = openingPartyCamera(points, view.stage.camera.aspect, view.rig.yaw, view.rig.pitch);
         if (opening) {
           view.rig.target.set(opening.target.x, opening.target.y, opening.target.z);
-          view.rig.dist = Math.min(view.rig.maxDist, Math.max(view.rig.minDist, opening.distance));
+          view.rig.dist = Math.min(view.rig.farthest, Math.max(view.rig.minDist, opening.distance));
           view.rig.apply();
         }
 

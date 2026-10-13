@@ -3514,7 +3514,9 @@ export class BattleEngine {
       a.hit = true;
       if (a.spellKind === "turnUndead") this.turnUndeadFx.push({ tiles: a.tiles.map((p) => ({ ...p })), t: 0.001 });
       const usedElement = spellElement(a.spellKind);
-      if (usedElement && (a.spellKind === "magicMissile" || a.spellKind === "magicMissileV2")) {
+      // Every elemental spell trains its caster's matching resistance ("improves by using"),
+      // not just Magic Missile: once per cast, against the first enemy it reaches.
+      if (usedElement) {
         const enemy = a.ids.map(id => this.units.find(u => u.id === id && u.alive && u.side === "enemy")).find(Boolean);
         if (enemy) this.trainElementUse(att, usedElement, enemy.level);
       }

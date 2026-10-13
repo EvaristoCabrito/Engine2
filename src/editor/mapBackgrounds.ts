@@ -72,11 +72,12 @@ export function resolvedMapBackground(draft: EmberMapDraft): MapBackground | nul
   if (typeof draft.backgroundImage === 'string') {
     return draft.backgroundImage ? BY_ID.get(draft.backgroundImage) ?? null : null;
   }
-  return null;
+  // nothing picked by hand: the map's own Ember backdrop (wisp forest crossing → wisp forest, ...)
+  return automaticMapBackground(draft);
 }
 
 export function selectedMapBackground(draft: EmberMapDraft): string {
-  return typeof draft.backgroundImage === 'string' ? (draft.backgroundImage || 'none') : 'none';
+  return typeof draft.backgroundImage === 'string' ? (draft.backgroundImage || 'none') : 'auto';
 }
 
 export function mapBackgroundUrl(item: MapBackground): string {

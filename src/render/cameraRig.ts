@@ -47,6 +47,13 @@ export class CameraRig {
   flat = false;
   minDist = 6;
   maxDist = 150;
+  /** Gameplay limits (battles; null = free, as in the editor). The farthest zoom shows at most
+   * this many world units across the screen (the user's Tática reference: ~58, about 33 hex
+   * columns), and panning keeps the board's edge from coming further in than that reference:
+   * ~14% of the screen width at the sides, ~23% of its height top and bottom (Tática: twice
+   * that up and down). */
+  maxViewWidth: number | null = null;
+  panBounds: RigBounds | null = null;
   private holdTimer = 0;
   private panning = false;
   private turning = false;
@@ -76,8 +83,29 @@ export class CameraRig {
     el.addEventListener('pointerup', e => this.pointerUp(e));
     el.addEventListener('pointercancel', () => this.endPan());
     window.addEventListener('keydown', this.onKey);
-    el.addEventListener('wheel', e => { e.preventDefault(); if (this.inputLocked) { this.onCameraInput(); return; } this.dist = THREE.MathUtils.clamp(this.dist * Math.pow(1.12, Math.sign(e.deltaY)), this.minDist, this.maxDist); this.apply(); }, { passive: false });
+    el.addEventListener('wheel', e => { e.preventDefault(); if (this.inputLocked) { this.onCameraInput(); return; } this.dist = THREE.MathUtils.clamp(this.dist * Math.pow(1.12, Math.sign(e.deltaY)), this.minDist, this.farthest); this.clampTarget(); this.apply(); }, { passive: false });
     this.apply();
+  }
+
+  /** The farthest zoom allowed right now (maxViewWidth depends on the screen's aspect). */
+  get farthest(): number {
+    if (this.maxViewWidth == null) return this.maxDist;
+    const tan = Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2));
+    return Math.min(this.maxDist, this.maxViewWidth / (2 * tan * Math.max(0.25, this.camera.aspect)));
+  }
+
+  /** Keep the aim point where the board's edge stays within the reference strip (panBounds). */
+  clampTarget(): void {
+    const b = this.panBounds;
+    if (!b) return;
+    const halfH = this.dist * Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2)), halfW = halfH * Math.max(0.25, this.camera.aspect);
+    // a tilted camera sees the ground stretched in depth by 1/sin(tilt) (straight down = 1)
+    const depth = this.flat ? 1 : 1 / Math.max(0.2, Math.abs(Math.sin(this.pitch)));
+    // Tática pans twice as far up and down as the normal view (user's call)
+    const ix = halfW * (1 - 2 * 0.14), iz = halfH * depth * (1 - 2 * 0.23 * (this.flat ? 2 : 1));
+    const span = (lo: number, hi: number, inset: number, v: number) => lo + inset > hi - inset ? (lo + hi) / 2 : THREE.MathUtils.clamp(v, lo + inset, hi - inset);
+    this.target.x = span(b.x0, b.x1, ix, this.target.x);
+    this.target.z = span(b.z0, b.z1, iz, this.target.z);
   }
 
   /** Frame a board: centre on it, far enough back to see it whole. */
@@ -213,6 +241,7 @@ export class CameraRig {
     // Do not clamp to the board AABB: that made screen-axis panning stop or skew at angled edges.
     this.target.x += moveX;
     this.target.z += moveZ;
+    this.clampTarget();
     this.apply();
   }
 }
