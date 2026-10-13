@@ -277,6 +277,8 @@ const CITY_DECORATIONS = decorationSet([
 // not as full-size terrain pieces. Stool's combined multiplier below halves its
 // previous on-screen size while the shared decoration scale is brought down.
 CITY_DECORATIONS["city-stool"] = { ...CITY_DECORATIONS["city-stool"]!, artScale: 2 / 3 };
+// Workbench tables: twice their old size (user's call, 2026-10-13).
+CITY_DECORATIONS["city-workbench"] = { ...CITY_DECORATIONS["city-workbench"]!, artScale: 2 };
 
 // 2026-09-16 art drop: 49 items cut from 11 AI-generated reference sheets (already
 // alpha-matted per item — plain crops, no background editing). Grouped by source folder
@@ -297,7 +299,7 @@ export const HOUSE_ART_SCALE = 1.35;
 
 const NEW_DECOR_2026: Record<string, DecorationDef> = {
   "wall-3d-farmland-aged-plaster-014": { id: "wall-3d-farmland-aged-plaster-014", name: "Farmlands — Parede de Cal Envelhecida", footprint: DECO_ONE, model3d: "wall", wallThicknessScale: 1, wallTexture: "/game/textures/walls/farmland-aged-plaster-014.png" },
-  "farmland-photographic-014-table": { id: "farmland-photographic-014-table", name: "Farmlands — Mesa de Provisões", footprint: DECO_QUAD, artScale: 0.5, artAspect: 1.5, lightReflectance: 0.8 },
+  "farmland-photographic-014-table": { id: "farmland-photographic-014-table", name: "Farmlands — Mesa de Provisões", footprint: DECO_QUAD, artScale: 1, artAspect: 1.5, lightReflectance: 0.8 },
   "farmland-photographic-014-bed": { id: "farmland-photographic-014-bed", name: "Farmlands — Cama da Pousada", footprint: DECO_PAIR, artScale: 0.65, artAspect: 1.5, lightReflectance: 0.8 },
   "farmland-photographic-014-store-house": { id: "farmland-photographic-014-store-house", name: "Farmlands — Armazém dos Campos", footprint: DECO_QUAD, artScale: 2, artAspect: 1.2270318021201414, lightReflectance: 0.75 },
   "farmland-photographic-014-villagers-house": { id: "farmland-photographic-014-villagers-house", name: "Farmlands — Casa dos Moradores", footprint: DECO_QUAD, artScale: 2, artAspect: 1.1886956521739132, lightReflectance: 0.7 },
@@ -308,7 +310,7 @@ const NEW_DECOR_2026: Record<string, DecorationDef> = {
   "farmland-photographic-013-inn-house": { id: "farmland-photographic-013-inn-house", name: "Farmlands — Pousada Fotográfica", footprint: DECO_QUAD, artScale: 2, artAspect: 1.2057793345008756, lightReflectance: 0.75 },
   "farmland-photographic-013-forge": { id: "farmland-photographic-013-forge", name: "Farmlands — Forja Fotográfica", footprint: DECO_PAIR, artScale: 0.95, artAspect: 1.0942452043369475, lightReflectance: 0.8 },
   "farmland-photographic-013-cabinet": { id: "farmland-photographic-013-cabinet", name: "Farmlands — Armário da Botica", footprint: DECO_PAIR, artScale: 0.95, artAspect: 0.9525291828793774, lightReflectance: 0.8 },
-  "farmland-photographic-013-table": { id: "farmland-photographic-013-table", name: "Farmlands — Mesa de Provisões", footprint: DECO_QUAD, artScale: 1, artAspect: 1.5, lightReflectance: 0.8 },
+  "farmland-photographic-013-table": { id: "farmland-photographic-013-table", name: "Farmlands — Mesa de Provisões", footprint: DECO_QUAD, artScale: 2, artAspect: 1.5, lightReflectance: 0.8 },
   "farmland-photographic-013-bed": { id: "farmland-photographic-013-bed", name: "Farmlands — Cama da Pousada", footprint: DECO_PAIR, artScale: 1, artAspect: 1.5, lightReflectance: 0.8 },
   "wall-3d-farmland-plaster-013": { id: "wall-3d-farmland-plaster-013", name: "Farmlands — Parede de Cal", footprint: DECO_ONE, model3d: "wall", wallThicknessScale: 0.6, wallTexture: "/game/textures/walls/farmland-plaster-013.png" },
 
@@ -545,7 +547,7 @@ const NEW_DECOR_2026: Record<string, DecorationDef> = {
   "wilds-cave-mushrooms": { id: "wilds-cave-mushrooms", name: "Cogumelos de Caverna", footprint: DECO_ONE },
   "wilds-cave-crystal-rubble": { id: "wilds-cave-crystal-rubble", name: "Escombros com Cristais", footprint: DECO_PAIR },
   "city-inn-barrel": { id: "city-inn-barrel", name: "Barril da Taverna", footprint: DECO_ONE, heightScale: 1.15 },
-  "city-inn-table": { id: "city-inn-table", name: "Mesa da Taverna", footprint: DECO_ONE },
+  "city-inn-table": { id: "city-inn-table", name: "Mesa da Taverna", footprint: DECO_ONE, artScale: 2 },
   "city-inn-chair": { id: "city-inn-chair", name: "Cadeira da Taverna", footprint: DECO_ONE, heightScale: 1.2 },
   "city-inn-tankard": { id: "city-inn-tankard", name: "Caneca de Estanho", footprint: DECO_ONE },
   "city-inn-candle-sconce": { id: "city-inn-candle-sconce", name: "Castiçal de Parede", footprint: DECO_ONE, heightScale: 1.25 },

@@ -2,9 +2,10 @@
 // lit by the world, real shadows, full native resolution, facing the camera.
 // Sizing is Ember's own decorSize (ThreeBattleRenderer.ts), anchoring is Ember's: footprint centroid,
 // with the art's opaque base set on the ground. Side files and mirroring follow decorationFacing.
-// Ember's 3D architecture (model3d walls/doors) has no art and is skipped for now.
+// Ember's 3D architecture (model3d walls/doors) is real 3D, built by Ember's own wall builder.
 
 import * as THREE from 'three';
+import { createWallGeometry } from '../game/gfx/three/ThreeWalls';
 import { fitHouseToHumans } from './houseScale';
 import {
   DECORATIONS, CHEST_DECOR_IDS, HOUSE_DECOR_IDS, BIG_HOUSE_DECOR_IDS, DECOR_ART_SCALE, HOUSE_ART_SCALE,
@@ -48,6 +49,24 @@ function decorSize(id: string, def: DecorationDef, tile = 1): { w: number; h: nu
   const h = def.artAspect ? w / def.artAspect : baseH * (def.heightScale ?? 1);
   const s = waypoint ? 1 : (anyHouse ? HOUSE_ART_SCALE : DECOR_ART_SCALE) * (def.artScale ?? 1);
   return fitHouseToHumans(id, { w: w * s, h: h * s }, tile);
+}
+
+type WallDef = Parameters<typeof createWallGeometry>[0];
+/** Walls and doors next to Engine2's human units: Ember's height read about one human tall. */
+const WALL_HUMAN_SCALE = 1.6;
+
+/** Ember's wall textures, loaded once and shared (repeating masonry, mipmapped). */
+const WALL_TEXTURES = new Map<string, THREE.Texture>();
+function wallTexture(url: string, aniso: number): THREE.Texture {
+  let t = WALL_TEXTURES.get(url);
+  if (!t) {
+    t = new THREE.TextureLoader().load(url);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.anisotropy = aniso;
+    WALL_TEXTURES.set(url, t);
+  }
+  return t;
 }
 
 /** URL → file name on disk (decorationImage adds cache-busting queries). */
@@ -126,11 +145,48 @@ export class DecorLayer {
 
   clear(): void {
     this.gen++;
-    for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) (m.material as THREE.Material).dispose(); if (o instanceof CarriedLight) o.dispose(); }); }
+    for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { (m.material as THREE.Material).dispose(); if (m.userData.ownGeometry) m.geometry.dispose(); } if (o instanceof CarriedLight) o.dispose(); }); }
     this.cards = [];
     this.pads = [];
     this.blocked.clear();
     this.stats = { placed: 0, skippedArchitecture: 0, missingArt: [] };
+  }
+
+  /** Ember's 3D architecture (walls, doorways, doors, secret doors), built by Ember's own
+   * createWallGeometry in its physical (Tática) form: real height, no camera shear. Ember works
+   * Z-up with screen-up as +Y; here Y is up and rows run along +Z, so the piece is turned
+   * upright (rotateX −90°) and Ember's +Y becomes our −Z. */
+  private addArchitecture(b: Board, p: DecorationPlacement, def: DecorationDef, all: DecorationPlacement[], groundAt: (x: number, z: number) => number): void {
+    const L = b.layout, inBoard = (c: number, r: number) => c >= 0 && r >= 0 && c < L.cols && r < L.rows;
+    // Ember lines architecture up on a square grid (architectureWorld): every row at the same x,
+    // no odd-row half-hex shift, so walls run straight and their joins meet
+    const archAt = (c: number, r: number) => ({ x: SQRT3 * c - L.ox, z: b.cell(c, r).z });
+    const cells = placedFootprint(p).filter(f => inBoard(p.x + f.dx, p.y + f.dy)).map(f => archAt(p.x + f.dx, p.y + f.dy));
+    if (!cells.length) return;
+    const x = cells.reduce((s, c) => s + c.x, 0) / cells.length, z = cells.reduce((s, c) => s + c.z, 0) / cells.length;
+    // join every neighbouring architecture cell (Ember: left/right/up/down in its grid)
+    const arch = new Set(all.filter(o => { const d = DECORATIONS[o.id]; return d?.model3d && !d.rockStyle && !d.treeModel && !d.propModel; })
+      .flatMap(o => o.id === 'watchtower-stone-open-door-2hex' ? placedFootprint(o).map(f => `${o.x + f.dx},${o.y + f.dy}`) : [`${o.x},${o.y}`]));
+    const connections = [[p.x - 1, p.y], [p.x + 1, p.y], [p.x, p.y - 1], [p.x, p.y + 1]]
+      .filter(([c, r]) => inBoard(c, r) && arch.has(`${c},${r}`))
+      .map(([c, r]) => { const n = archAt(c, r); return { x: n.x - x, y: -(n.z - z) }; });
+    // Ember's physical height (×3.5), then sized to the human units: a door ~1.6 humans tall
+    const spatial = { ...def, heightScale: (def.heightScale ?? 1) * 3.5 * WALL_HUMAN_SCALE } as unknown as WallDef;
+    const geometry = createWallGeometry(spatial, 1, p.rot ?? 0, connections, { x, y: -z }, false, 3.5).rotateX(-Math.PI / 2);
+    const metal = def.doorStyle === 'iron' || def.doorStyle === 'steel';
+    const color = metal ? (def.doorStyle === 'iron' ? 0x555b60 : 0x9ca7b0) : def.model3d === 'door' ? 0x925b32 : def.model3d === 'doorway' ? 0xb7a27c : 0x8b8b86;
+    const map = def.wallTexture ? wallTexture(def.wallTexture, maxAnisotropy(this.renderer)) : undefined;
+    const material = new THREE.MeshStandardMaterial({ map, color: map ? 0xffffff : color, roughness: metal ? 0.52 : 0.94, metalness: metal ? 0.5 : 0, flatShading: true });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.set(x, groundAt(x, z), z);
+    mesh.castShadow = mesh.receiveShadow = true;
+    mesh.userData.ownGeometry = true;
+    const holder = new THREE.Group();
+    holder.userData = { wall: true, decor: p.id, at: { x: p.x, y: p.y }, hexes: placedFootprint(p).map(f => ({ x: p.x + f.dx, y: p.y + f.dy })) };
+    holder.add(mesh);
+    this.group.add(holder);
+    this.cards.push(holder);
+    this.stats.placed++;
   }
 
   async populate(b: Board, groundAt: (x: number, z: number) => number, onProgress?: (loaded: number, total: number) => void): Promise<void> {
@@ -147,7 +203,7 @@ export class DecorLayer {
       const def = DECORATIONS[p.id];
       if (!def) { this.stats.missingArt.push(p.id); continue; }
       for (const { dx, dy } of placedBlockingFootprint(p)) if (inBoard(p.x + dx, p.y + dy)) this.blocked.add(`${p.x + dx},${p.y + dy}`);
-      if (def.model3d && ARCHITECTURE.has(def.model3d) && !def.propModel) { this.stats.skippedArchitecture++; continue; }
+      if (def.model3d && ARCHITECTURE.has(def.model3d) && !def.propModel) { this.addArchitecture(b, p, def, placements, groundAt); continue; }
       const rot = ((p.rot ?? 0) + (def.mirrorAlternate && p.x >= d.cols / 2 ? 3 : 0)) % 6;
       const artId = decorationPlacementArt(p);
       const facing = decorationFacing(artId, rot, hasArt);
@@ -230,6 +286,7 @@ export class DecorLayer {
    * facing straight up like 2D sprites, raised over the terrain, nearer rows drawn on top. */
   face(yaw: number, flatTop: number | null = null): void {
     for (const c of this.cards) {
+      if (c.userData.wall) continue; // 3D walls stand as built
       const locked = (c.userData.lockedYaw as number | null) ?? (LOCK_PROPS ? 0 : null);
       c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, locked !== null && flatTop === null ? locked : yaw, 0, 'YXZ');
       c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;
@@ -273,6 +330,7 @@ export class DecorLayer {
     for (const c of this.cards) {
       const dark = fog ? Math.min(...(c.userData.hexes as { x: number; y: number }[]).map(h => fog(h.x, h.y))) : 0;
       c.visible = dark < 1;
+      if (c.userData.wall) continue; // walls keep their own colour
       for (const o of c.children) {
         const m = (o as THREE.Mesh).material as THREE.MeshLambertMaterial | undefined;
         if ((o as THREE.Mesh).isMesh && m) m.color.setScalar(1 - dark);

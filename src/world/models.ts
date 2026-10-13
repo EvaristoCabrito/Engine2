@@ -14,7 +14,7 @@ export interface ModelDef {
 export const MODELS: Record<string, ModelDef> = {
   // Ember's tavern props, sized to human scale
   'tavern-barrel': { file: 'props/tavern-barrel.glb', height: 1.3 },      // ≈ 0.9 m
-  'tavern-table': { file: 'props/tavern-table.glb', height: 1.1 },        // ≈ 75 cm
+  'tavern-table': { file: 'props/tavern-table.glb', height: 2.2 },        // ≈ 1.5 m: twice Ember's 75 cm (user's call)
   'tavern-chair': { file: 'props/tavern-chair.glb', height: 1.45 },       // ≈ 1 m to the top of the back
   'tavern-candlestick': { file: 'props/tavern-candlestick.glb', height: 0.4 }, // ≈ 27 cm
   'tavern-mug': { file: 'props/tavern-mug.glb', height: 0.15 },           // ≈ 10 cm

@@ -103,7 +103,8 @@ export class CameraRig {
     const depth = this.flat ? 1 : 1 / Math.max(0.2, Math.abs(Math.sin(this.pitch)));
     // Tática pans twice as far up and down as the normal view (user's call)
     const ix = halfW * (1 - 2 * 0.14), iz = halfH * depth * (1 - 2 * 0.23 * (this.flat ? 2 : 1));
-    const span = (lo: number, hi: number, inset: number, v: number) => lo + inset > hi - inset ? (lo + hi) / 2 : THREE.MathUtils.clamp(v, lo + inset, hi - inset);
+    // a board smaller than the view still pans edge to edge (aim anywhere over it), never locks
+    const span = (lo: number, hi: number, inset: number, v: number) => lo + inset > hi - inset ? THREE.MathUtils.clamp(v, lo, hi) : THREE.MathUtils.clamp(v, lo + inset, hi - inset);
     this.target.x = span(b.x0, b.x1, ix, this.target.x);
     this.target.z = span(b.z0, b.z1, iz, this.target.z);
   }
