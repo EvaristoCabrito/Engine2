@@ -209,7 +209,7 @@ function spriteFrameSrc(id: SpriteId, frame: string, cacheBust = ""): string {
     const currentFrame = /^\d+$/.test(frame) ? `idle-${frame}` : frame;
     // Every frame here was rebuilt in place from Attachments/Nerra V2 (feet on one ground line,
     // centred, same body size per pose), so they carry their own version.
-    return `/game/sprites/neera/neera-v2-001/${currentFrame}.png?v=neera-v2-003`;
+    return `/game/sprites/neera/neera-v2-001/${currentFrame}.png?v=neera-v2-004`;
   }
   return `/game/sprites/${directory}/${frame}.png${cacheBust}`;
 }

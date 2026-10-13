@@ -264,6 +264,8 @@ const MONSTER_SFX: Record<string, Partial<Record<MonsterSfxKind, string>>> = {
   // Salazar V2: the sounds supplied with his sheets (Attachments/Salazar), file names kept. Cast is
   // for damage spells, heal for every other spell (heals, Bless, Create Food and Water, ...).
   salazar: { attack: "Blunt2.mp3", cast: "ElecticCasting01-Balanced-High.mp3", heal: "Healing01-Balanced-High.mp3", walk: "SalazarWalk-Balanced-High.mp3" },
+  // Neera: her walk sound (Attachments/WalkRight/NeeraWalk.mp3), for both walk directions.
+  neera: { walk: "NeeraWalk.mp3" },
 };
 for (const cues of Object.values(MONSTER_SFX)) for (const file of Object.values(cues)) preloadExclusiveSfx(file);
 

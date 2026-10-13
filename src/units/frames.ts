@@ -70,9 +70,12 @@ async function bitmap(url: string): Promise<ImageBitmap> {
 }
 
 /** Body centre per frame: median x of opaque pixels in the bottom quarter of the frame (the
- * legs — arms, a swung weapon and a flaring cape sit higher and would skew it), relative to
- * frame 1. Bitmaps are flipped (flipY), so the bottom is the top rows here. */
-function measureBodyShift(bitmaps: ImageBitmap[]): number[] {
+ * legs — arms, a swung weapon and a flaring cape sit higher and would skew it). `perFrame`
+ * (centerBody sheets) follows each frame's drift relative to frame 1; otherwise the whole pose
+ * gets one fixed shift, its median body centre onto `axis` (the x, prepared-frame pixels, that
+ * stands on the hex centre) — per-frame centring of every pose made units slide non-stop.
+ * Bitmaps are flipped (flipY), so the bottom is the top rows here. */
+function measureBodyShift(bitmaps: ImageBitmap[], axis: number, perFrame: boolean): number[] {
   const centre = (bm: ImageBitmap): number => {
     const c = new OffscreenCanvas(bm.width, bm.height), g = c.getContext('2d', { willReadFrequently: true })!;
     g.drawImage(bm, 0, 0);
@@ -84,7 +87,9 @@ function measureBodyShift(bitmaps: ImageBitmap[]): number[] {
     return xs[xs.length >> 1];
   };
   const centres = bitmaps.map(centre);
-  return centres.map(x => x - centres[0]);
+  if (perFrame) return centres.map(x => x - centres[0]);
+  const fixed = [...centres].sort((a, b) => a - b)[centres.length >> 1] - axis;
+  return centres.map(() => fixed);
 }
 
 export function loadPose(src: PoseSrc, keep: Set<string> = new Set()): Promise<PoseFrames> {
@@ -98,7 +103,9 @@ export function loadPose(src: PoseSrc, keep: Set<string> = new Set()): Promise<P
       const base = info ? `/game/sprites-e2/${src.dir}/${src.prefix}` : `/game/sprites/${src.dir}/${src.prefix}`;
       const bitmaps = await Promise.all(Array.from({ length: src.n }, (_, i) => bitmap(src.still ? `${base}.png` : `${base}${i + 1}.png`)));
       const w = bitmaps[0].width, h = bitmaps[0].height;
-      const bodyShift = src.centerBody ? measureBodyShift(bitmaps) : undefined;
+      // every pose stands its legs on the hex centre (art is rarely centred in its own canvas:
+      // Malrec/Conjurer sat 16 px right); one shift per pose, so the animation plays as drawn
+      const bodyShift = src.still ? undefined : measureBodyShift(bitmaps, (info?.natW ?? w) / 2 - (info?.x ?? 0), !!src.centerBody);
       const bytes = Math.round(w * h * 4 * 1.34) * src.n; // RGBA + mip chain
       evictFor(bytes, new Set([...keep, key]));
       const textures = bitmaps.map(bm => {

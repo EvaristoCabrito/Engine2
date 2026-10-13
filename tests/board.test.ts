@@ -42,6 +42,7 @@ describe('Ember board loading', () => {
     const board = new Board(draft);
     const cityLayer = GROUND_LAYERS.length + 3 + GROUND_VARIANT_LAYERS.findIndex(entry => entry.key === 'city-stone-paving');
     const slabLayer = GROUND_LAYERS.length + 3 + GROUND_VARIANT_LAYERS.findIndex(entry => entry.key === 'laje-021-stone-slabs');
-    expect(board.cells.map((cell) => cell.ground)).toEqual([3, 1, 4, 6, cityLayer, 5, 7, slabLayer, 0, 10, 2, 13, 14]);
+    // Coluna, Ruínas, Água, Bosque, Brasa, Planície, Água rasa and Pedras do vau V3 entries were deleted
+    expect(board.cells.map((cell) => cell.ground)).toEqual([6, cityLayer, 5, slabLayer, 10]);
   });
 });

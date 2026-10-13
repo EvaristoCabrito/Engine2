@@ -110,6 +110,9 @@ export class UnitActor {
   async ready(): Promise<void> {
     await this.ensure('idle');
     this.mesh.visible = true;
+    // every other pose loads now, not on first use: a 64-frame walk started mid-move glided on
+    // frames still uploading (3 per screen frame) for its first hexes
+    void this.preloadAll();
   }
 
   async preloadAll(): Promise<void> {
@@ -204,7 +207,7 @@ export class UnitActor {
     const box = unitBox(this.def, this.shown, frame, f.natW, f.natH);
     const cw = f.crop.w / f.natW, ch = f.crop.h / f.natH, u0 = f.crop.x / f.natW, vBottom = 1 - (f.crop.y + f.crop.h) / f.natH;
     this.card.scale.set(box.w * cw, box.h * ch, 1);
-    // a centerBody sheet: shift each frame back by its body's drift, so she stays on her hex
+    // the pose's body shift (frames.ts measureBodyShift), so the legs stand on the hex
     const drift = f.bodyShift ? (f.bodyShift[frame] ?? 0) * (box.w * cw) / f.crop.w : 0;
     this.card.position.set(box.w * (u0 + cw / 2 - 0.5) - drift, box.h * vBottom - box.foot, 0);
 

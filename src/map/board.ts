@@ -105,9 +105,7 @@ export class Board {
         const engine2V3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.terrain === type && entry.variant === variant);
         const cityTile = type === 'plains' && (variant === ENGINE2_V3_CITY_VARIANT || (variant >= 21 && variant <= 38 && variant !== 22));
         const v3Layer = engine2V3?.key === 'city' ? GROUND_LAYERS.length
-          : engine2V3?.key === 'shallow-water' ? GROUND_LAYERS.length + 1
-            : engine2V3?.key === 'river-rocks' ? GROUND_LAYERS.length + 2
-              : engine2V3 ? GROUND_LAYERS.indexOf(type) : -1;
+          : engine2V3 ? GROUND_LAYERS.indexOf(type) : -1;
         const variantLayer = groundVariantLayer(type, variant);
         // HEAD's rule for every tile that existed before (only Claude's version per terrain is
         // baked; the rest keep the painted ground), plus GPT's appended variant layers.

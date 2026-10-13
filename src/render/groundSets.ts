@@ -38,6 +38,8 @@ const folders = (set: Exclude<GroundSet, 'proto'>, terrain: string): string[] =>
     const v3 = ENGINE2_V3_GROUND_VARIANTS.find((entry) => entry.key === terrain);
     const version = set === 'engine2-v4' ? 'v4' : 'v3';
     if (v3) return [`/game/ground-engine2-${version}/${v3.folder}`];
+    // base terrain textures of the set (their picker entries were deleted, the textures stay the terrain's look)
+    if (terrain === 'plains' || terrain === 'woods' || terrain === 'water' || terrain === 'ember') return [`/game/ground-engine2-${version}/${terrain}`];
     // The generated V3/V4 packs do not include snow or barricade. Keep those authored tiles
     // visible in full 3D with the existing photoreal Claude PBR materials instead of silently
     // dropping them back to the prototype shader.

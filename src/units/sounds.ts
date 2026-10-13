@@ -31,7 +31,7 @@ const MONSTER_SFX: Record<string, Partial<Record<Kind, string>>> = {
 // Heroes use Ember's generic cues: Kael's blade, Neera's bow, spellcasting for casters.
 const HERO_SFX: Record<string, Partial<Record<Kind, [string, number?]>>> = {
   kaelFinal: { attack: ['BladeSlash1Dagger.mp3', 1.12] },
-  neera: { attack: ['NeeraBowRelease.mp3'], attack2: ['NeeraBowRelease.mp3'], cast: ['Spellcast01.mp3'] },
+  neera: { attack: ['NeeraBowRelease.mp3'], attack2: ['NeeraBowRelease.mp3'], cast: ['Spellcast01.mp3'], walk: ['NeeraWalk.mp3'] },
   aldric: { attack: ['ATT01Blunt.mp3'], cast: ['ATT01Blunt.mp3'] },
   voss: { attack: ['Spellcast01.mp3'], cast: ['Spellcast01.mp3'] },
   malrec: { attack: ['ATT01Blunt.mp3'], cast: ['Spellcast01.mp3'] },

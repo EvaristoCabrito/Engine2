@@ -39,7 +39,6 @@ export const GROUND_VARIANT_LAYERS = [
   { key: 'photo-city', terrain: 'plains', variant: 54, file: '../ground-engine2-v4/city/color.png', label: 'City · Photo 3D', relief: 0.06 },
   { key: 'photo-woods', terrain: 'woods', variant: 15, file: '../ground-engine2-v4/woods/color.png', label: 'Bosque · Photo 3D', relief: 0.12 },
   { key: 'photo-ruins', terrain: 'ruins', variant: 10, file: '../ground-engine2-v4/ruins/color.png', label: 'Ruínas · Photo 3D', relief: 0.16 },
-  { key: 'photo-water', terrain: 'water', variant: 28, file: '../ground-engine2-v4/water/color.png', label: 'Leito · Photo 3D', relief: 0.12 },
   { key: 'photo-shallow-water', terrain: 'water', variant: 29, file: '../ground-engine2-v4/shallow-water/color.png', label: 'Água rasa · Photo 3D', relief: 0.10 },
   { key: 'photo-river-rocks', terrain: 'water', variant: 30, file: '../ground-engine2-v4/river-rocks/color.png', label: 'Pedras do vau · Photo 3D', relief: 0.24 },
   { key: 'photo-ember', terrain: 'ember', variant: 8, file: '../ground-engine2-v4/ember/color.png', label: 'Brasa · Photo 3D', relief: 0.10 },
@@ -74,17 +73,11 @@ export function groundVariantMaps(entry: (typeof GROUND_VARIANT_LAYERS)[number])
 
 /** New Engine2-generated, seamless Blender PBR tiles. City is a dedicated plains brush group. */
 export const ENGINE2_V3_GROUND_VARIANTS = [
-  { key: "water", terrain: "water", variant: 25, folder: "water", label: "Água" },
-  { key: "woods", terrain: "woods", variant: 13, folder: "woods", label: "Bosque" },
-  { key: "ember", terrain: "ember", variant: 7, folder: "ember", label: "Brasa" },
   { key: "flame", terrain: "flame", variant: 5, folder: "flame", label: "Chama" },
   { key: "city", terrain: "plains", variant: 50, folder: "city", label: "City" },
   { key: "hill", terrain: "hill", variant: 6, folder: "hill", label: "Colina" },
   { key: "nave", terrain: "nave", variant: 20, folder: "nave", label: "Laje" },
-  { key: "plains", terrain: "plains", variant: 51, folder: "plains", label: "Planície" },
   { key: "door", terrain: "door", variant: 2, folder: "door", label: "Porta trancada" },
-  { key: "shallow-water", terrain: "water", variant: 26, folder: "shallow-water", label: "Água rasa" },
-  { key: "river-rocks", terrain: "water", variant: 27, folder: "river-rocks", label: "Pedras do vau" },
 ] as const;
 
 export type Engine2V3GroundKey = (typeof ENGINE2_V3_GROUND_VARIANTS)[number]["key"];
@@ -109,7 +102,7 @@ export function isGroundTileVariant(id: TerrainId, variant: number): boolean {
 /** Claude's baked tile per terrain (public/game/ground-claude/<terrain>/): appended after every
  * existing index, so saved maps keep their tiles; painted per hex from the editor's Versões. */
 export const CLAUDE_VARIANT: Partial<Record<TerrainId, number>> = {
-  plains: 49, woods: 12, ruins: 8, water: 24, ember: 6, hill: 5, flame: 4,
+  plains: 49, woods: 12, ruins: 8, ember: 6, hill: 5, flame: 4,
   column: 3, nave: 19, barricade: 1, door: 1, snow: 21,
 };
 
@@ -208,8 +201,6 @@ export function tileVariantSrc(id: TerrainId, variant: number): string {
   if (id === 'plains' && variant === 48) return '/game/ground-claude/049-plains/color.png';
   if (CLAUDE_VARIANT[id] === variant) return `/game/ground-claude/${id === 'plains' ? 'plains-v2' : id}/color.png`;
   if (id === 'plains' && variant >= 21 && variant <= 38 && variant !== 22) return '/game/ground-engine2-v4/city/color.png';
-  if (id === 'water' && variant === 26) return '/game/ground-engine2-v4/shallow-water/color.png';
-  if (id === 'water' && variant === 27) return '/game/ground-engine2-v4/river-rocks/color.png';
   const root = id === 'snow' || id === 'barricade' ? 'ground-claude' : 'ground-engine2-v4';
   return `/game/${root}/${id}/color.png`;
 }

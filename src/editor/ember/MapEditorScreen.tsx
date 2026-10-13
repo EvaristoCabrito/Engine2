@@ -54,17 +54,11 @@ function groundVersions(terrain: TerrainId): { label: string; variant: number; t
   if (terrain === "plains") list.push({ variant: 48, thumb: thumbFor("plains", 48) });
   const claude = CLAUDE_VARIANT[terrain];
   if (claude !== undefined) list.push({ variant: claude, thumb: thumbFor(terrain, claude) });
-  // plains052 (V3 "plains", index 51) duplicates another tile: hidden here, still valid in saved maps
-  for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city" && !(terrain === "plains" && item.variant === 51) && !(terrain === "woods" && item.variant === 13) && !(terrain === "ember" && item.variant === 7))) {
+  for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city")) {
     list.push({ variant: entry.variant, thumb: thumbFor(terrain, entry.variant) });
   }
   for (const entry of GROUND_VARIANT_LAYERS.filter(item => item.terrain === terrain && item.key !== 'photo-city' && item.key !== 'city-stone-paving' && item.key !== 'city-indoor-wood' && item.key !== 'variant-flame-005-fire' && item.key !== 'laje-021-stone-slabs')) {
     list.push({ variant: entry.variant, thumb: thumbFor(terrain, entry.variant) });
-  }
-  // Água 025, 026, 027, 028 and Leito · Photo 3D removed from the picker on request (saved maps keep them)
-  if (terrain === "water") {
-    const removed = new Set([24, 25, 26, 27, 28]);
-    for (let i = list.length - 1; i >= 0; i--) if (removed.has(list[i]!.variant)) list.splice(i, 1);
   }
   // Plains 02 is the vivid flat grass (saved index 55)
   if (terrain === "plains") { const k = list.findIndex(v => v.variant === 55); if (k > 1) list.splice(1, 0, ...list.splice(k, 1)); }
