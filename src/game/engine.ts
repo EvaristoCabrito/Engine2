@@ -2641,7 +2641,10 @@ export class BattleEngine {
         if (arrowSpell) sfxPlay.arrowAttack(caster?.sprite === "neera", this.reducedMotion ? 0 : LONG_ANIM_SECONDS);
         else if (step.spellKind === "tendrilSwipe") sfxPlay.carnivorousPlantAttack();
         else if (meleeSkill && caster) this.playMeleeCue(caster, false, step.spellKind);
-        else if (step.spellKind !== "webOfDreams" && step.spellKind !== "bless" && !meleeSkill) {
+        // Rule: every cast sound plays with the casting animation, so Bless's heal cue is here at the
+        // start of the sheet too, not after the wind-up.
+        else if (step.spellKind === "bless") sfxPlay.healBy(caster?.sprite);
+        else if (!meleeSkill) {
           if (isSupportCast(step) && hasMonsterSfx(caster?.sprite, "heal")) sfxPlay.healBy(caster?.sprite);
           else if (caster?.sprite === "minor-horror-001") sfxPlay.minorHorrorCast();
           else if (caster?.sprite === "carnivorous-plant-001") sfxPlay.carnivorousPlantCast();
@@ -2863,7 +2866,8 @@ export class BattleEngine {
         }
       }
       this.banner = step.label ?? "";
-      if (step.spellKind === "bless") sfxPlay.healBy(this.units.find((u) => u.id === step.att)?.sprite);
+      // (Bless's cue already played with the casting animation, in startSeq.)
+      if (step.spellKind === "bless") { /* no second cue at the release */ }
       else if (step.spellKind !== "longShot" && step.spellKind !== "multiShot" && step.spellKind !== "piercing") sfxPlay.crit();
       if(step.spellKind === "frost"){const caster=this.units.find(u=>u.id===step.att);if(caster)this.frostVfxRequests.push({origin:{x:caster.x,y:caster.y},cells:step.tiles.map(c=>({...c})),seed:Math.floor(this.time*1000)});}
       if (step.spellKind === "magicMissile") {

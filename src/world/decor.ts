@@ -23,6 +23,11 @@ import { maxAnisotropy } from '../render/gpu';
 const SQRT3 = Math.sqrt(3);
 const FILES = new Set(decorFiles as string[]);
 const ARCHITECTURE = new Set(['wall', 'doorway', 'door', 'secretDoor']);
+/** Experiment (2026-10-13): every prop card stays put, standing square to the map's hex rows (as
+ * the straight-on view sees it, never on a diagonal), instead of turning with the camera. All stay parallel, so whatever is in front stays in front; seen from
+ * behind they show their backs, the art mirrored (cards are double-sided). false = cards face the
+ * camera again. Barricades keep their own authored turn. */
+const LOCK_PROPS = true;
 
 /** Ember's decorSize, ported exactly (tile = hex radius = 1 world unit here). */
 function decorSize(id: string, def: DecorationDef, tile = 1): { w: number; h: number } {
@@ -171,6 +176,12 @@ export class DecorLayer {
         // world direction — along the map, turned by the placement's rot in sixths — instead of
         // swivelling toward the camera, which would break a continuous fence line.
         holder.userData.lockedYaw = BARRICADE_LIKE_DECOR.has(p.id) ? -((p.rot ?? 0) * Math.PI) / 3 : null;
+        // Cards of one row stand in one plane (LOCK_PROPS) and cut into each other. Ember's layers
+        // say who is in front: "behind" walls step back, foreground pieces forward, lamps and other
+        // lights furthest forward; a tiny per-column step keeps any two cards out of one plane.
+        // All under half a row, so the next row (and its units) stays in front.
+        holder.userData.card = card;
+        holder.userData.nudge = (def.unitLayer === 'behind' ? -0.35 : lightDef ? 0.4 : def.foreground || def.unitLayer === 'front' ? 0.2 : 0) + (p.x % 20) * 0.002;
         holder.userData.hexes = placedFootprint(p).map(({ dx, dy }) => ({ x: p.x + dx, y: p.y + dy }));
         this.group.add(holder);
         this.cards.push(holder);
@@ -184,13 +195,15 @@ export class DecorLayer {
     await Promise.all(jobs);
   }
 
-  /** Cards face the camera like the units. `flatTop` set = the old-school 2D view: cards lie flat
+  /** Cards stand locked in place (LOCK_PROPS), or face the camera like the units. `flatTop` set = the old-school 2D view: cards lie flat
    * facing straight up like 2D sprites, raised over the terrain, nearer rows drawn on top. */
   face(yaw: number, flatTop: number | null = null): void {
     for (const c of this.cards) {
-      const locked = c.userData.lockedYaw as number | null;
+      const locked = (c.userData.lockedYaw as number | null) ?? (LOCK_PROPS ? 0 : null);
       c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, locked !== null && flatTop === null ? locked : yaw, 0, 'YXZ');
       c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;
+      // the layer step (populate) is along the card's facing; the flat 2D view keeps its row order
+      (c.userData.card as THREE.Mesh).position.z = flatTop === null && LOCK_PROPS ? c.userData.nudge as number : 0;
       for (const o of c.children) if ((o as THREE.Mesh).isMesh) o.castShadow = flatTop === null && !!o.userData.castsShadow;
     }
   }

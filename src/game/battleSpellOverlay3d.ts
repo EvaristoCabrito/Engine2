@@ -19,10 +19,13 @@ export class BattleSpellOverlay3D {
   private readonly blizzards = new Map<number, number>();
   private webShot: number | null = null;
   private readonly portalSheets = new Map<PortalItem, { mesh: THREE.Mesh; canvas: HTMLCanvasElement; texture: THREE.CanvasTexture }>();
+  /** The effects canvas as a texture, while an Ice Storm puts it in the board's layers. */
+  private readonly fxTexture: THREE.CanvasTexture;
   private readonly pulses =Array.from({ length: 4 }, () => ({ age: 1, light: new THREE.PointLight(0xb6e7ff, 0, 3.2, 1.8) }));
   constructor(private readonly artCanvas: HTMLCanvasElement, private readonly fxCanvas: HTMLCanvasElement, private readonly view: DioramaView, private readonly engine: BattleEngine) {
     this.legacy = new WebGL2DRenderer(artCanvas, true);
     this.effects = new EffectsRenderer(fxCanvas, true);
+    this.fxTexture = new THREE.CanvasTexture(fxCanvas);
     for (const pulse of this.pulses) view.stage.scene.add(pulse.light);
   }
   private pulse(cell: { x: number; y: number }, dx: number, dy: number, strength: number): void {
@@ -271,6 +274,30 @@ export class BattleSpellOverlay3D {
     for (const request of this.engine.elementalFxRequests.splice(0)) if (!this.engine.fogged || this.engine.visible(request.x, request.y)) this.effects.spawnEffect(request.kind, request.x, request.y, { duration: request.duration });
     if (this.effects.hasEffects()) { this.fxCanvas.style.display = "block"; this.effects.render(this.view.stage.renderer.domElement, dt, anchor); }
     else this.fxCanvas.style.display = "none";
+    // An Ice Storm stands in the board's layers: the effects canvas is laid over the frame by the
+    // stage, hidden wherever a unit or prop is nearer the camera than the storm's front row
+    // (half a hex of margin, so a unit inside the storm is still covered by it).
+    const stormDist = this.blizzards.size && this.effects.hasEffects() ? this.stormFront() : null;
+    if (stormDist !== null) {
+      this.fxCanvas.style.visibility = "hidden";
+      this.fxTexture.needsUpdate = true;
+      this.view.stage.setDepthOverlay(this.fxTexture, stormDist);
+    } else {
+      this.fxCanvas.style.visibility = "";
+      this.view.stage.setDepthOverlay(null);
+    }
   }
-  dispose(): void { for (const sheet of this.portalSheets.values()) this.disposePortal(sheet); this.portalSheets.clear(); this.effects.dispose(); this.legacy.dispose(); for (const pulse of this.pulses) pulse.light.removeFromParent(); }
+  /** Distance from the camera of the nearest Ice Storm hex, less half a hex; null if none is on the board. */
+  private stormFront(): number | null {
+    const camera = this.view.stage.camera, p = new THREE.Vector3();
+    let near = Infinity;
+    for (const zone of this.engine.iceStormZones) for (const key of zone.cells) {
+      const [x, y] = key.split(",").map(Number);
+      if (x < 0 || y < 0 || x >= this.engine.cols || y >= this.engine.rows) continue;
+      const c = this.view.board!.cell(x, y);
+      near = Math.min(near, -p.set(c.x, this.view.groundAt(c.x, c.z), c.z).applyMatrix4(camera.matrixWorldInverse).z);
+    }
+    return Number.isFinite(near) ? near - 0.5 : null;
+  }
+  dispose(): void { this.view.stage.setDepthOverlay(null); this.fxTexture.dispose();for (const sheet of this.portalSheets.values()) this.disposePortal(sheet); this.portalSheets.clear(); this.effects.dispose(); this.legacy.dispose(); for (const pulse of this.pulses) pulse.light.removeFromParent(); }
 }

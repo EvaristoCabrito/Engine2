@@ -6,6 +6,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 
 import { SPRITE_FLOOR } from '../units/spriteMaterial';
 import { VolumetricFogPass } from './volumetricFog';
@@ -72,6 +73,43 @@ const GradeShader = {
     }`,
 };
 
+/** Right after the scene: copies its depth, as distance from the camera, for the depth overlay
+ * (the scene's own depth buffer is written over by the passes that follow). */
+class DepthGrabPass extends Pass {
+  readonly target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.FloatType, depthBuffer: false });
+  private readonly quad = new FullScreenQuad(new THREE.ShaderMaterial({
+    uniforms: { tDepth: { value: null }, cameraNear: { value: 0.1 }, cameraFar: { value: 100 } },
+    vertexShader: FULLSCREEN_VS,
+    fragmentShader: `#include <packing>
+      uniform sampler2D tDepth; uniform float cameraNear, cameraFar; varying vec2 vUv;
+      void main(){ gl_FragColor = vec4(-perspectiveDepthToViewZ(texture2D(tDepth, vUv).x, cameraNear, cameraFar), 0., 0., 1.); }`,
+    depthTest: false, depthWrite: false,
+  }));
+  constructor(private readonly camera: THREE.PerspectiveCamera) { super(); this.needsSwap = false; this.enabled = false; }
+  setSize(w: number, h: number): void { this.target.setSize(w, h); }
+  render(renderer: THREE.WebGLRenderer, _write: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget): void {
+    const m = this.quad.material as THREE.ShaderMaterial;
+    m.uniforms.tDepth.value = readBuffer.depthTexture;
+    m.uniforms.cameraNear.value = this.camera.near; m.uniforms.cameraFar.value = this.camera.far;
+    renderer.setRenderTarget(this.target);
+    this.quad.render(renderer);
+  }
+}
+
+/** Last, after the grade: a screen-sized picture (Ember's 2D effects canvas) laid over the frame
+ * exactly as drawn, except where the scene is nearer the camera than `dist` — so a unit or prop
+ * in front of a spell covers it, as in the board's layers. */
+const DepthOverlayShader = {
+  uniforms: { tDiffuse: { value: null }, tOverlay: { value: null }, tDist: { value: null }, dist: { value: 0 } },
+  vertexShader: FULLSCREEN_VS,
+  fragmentShader: `uniform sampler2D tDiffuse, tOverlay, tDist; uniform float dist; varying vec2 vUv;
+    void main(){
+      vec4 c = texture2D(tDiffuse, vUv), o = texture2D(tOverlay, vUv);
+      float show = step(dist, texture2D(tDist, vUv).r);
+      gl_FragColor = vec4(mix(c.rgb, o.rgb, o.a * show), c.a);
+    }`,
+};
+
 export class Stage {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -85,6 +123,8 @@ export class Stage {
   /** The moon in the night sky; the night presets' key light comes from it. */
   readonly moonDisc = new Moon();
   private readonly tilt: ShaderPass[] = [];
+  private readonly depthGrab: DepthGrabPass;
+  private readonly depthOverlay = new ShaderPass(DepthOverlayShader);
   private readonly frameHooks: ((dt: number, t: number) => void)[] = [];
   private readonly clock = new THREE.Clock();
 
@@ -121,7 +161,9 @@ export class Stage {
     msaa.depthTexture = new THREE.DepthTexture(1, 1, THREE.UnsignedIntType);
     this.composer = new EffectComposer(this.renderer, msaa);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.mist = new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
+    this.depthGrab = new DepthGrabPass(this.camera);
+    this.composer.addPass(this.depthGrab);
+    this.mist =new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
     this.composer.addPass(this.mist);
     // gentle: bright fires and spells glow a little, they don't flare (0.3 / 0.9 was too much)
     // threshold 2: surfaces lit by torches stay unbloomed; only the flames themselves (emissive,
@@ -138,6 +180,9 @@ export class Stage {
     }
     this.composer.addPass(new ShaderPass(GradeShader));
     this.composer.addPass(new OutputPass());
+    this.depthOverlay.enabled = false;
+    this.depthOverlay.uniforms.tDist.value = this.depthGrab.target.texture;
+    this.composer.addPass(this.depthOverlay);
 
     this.resizer.observe(host);
     this.resize();
@@ -234,11 +279,20 @@ export class Stage {
 
   onFrame(hook: (dt: number, t: number) => void): void { this.frameHooks.push(hook); }
 
+  /** Lay `picture` (a screen-sized texture, e.g. Ember's 2D effects canvas) over the finished
+   * frame, hidden wherever the scene is nearer than `dist` (distance from the camera); null = off. */
+  setDepthOverlay(picture: THREE.Texture | null, dist = 0): void {
+    this.depthGrab.enabled = this.depthOverlay.enabled = !!picture;
+    this.depthOverlay.uniforms.tOverlay.value = picture;
+    this.depthOverlay.uniforms.dist.value = dist;
+  }
+
   private resize(): void {
     const w = Math.max(1, this.host.clientWidth), h = Math.max(1, this.host.clientHeight);
     this.renderer.setSize(w, h);
     this.composer.setSize(w, h);
     this.composer.setPixelRatio(this.renderer.getPixelRatio());
+    this.depthGrab.setSize(Math.floor(w * this.renderer.getPixelRatio()), Math.floor(h * this.renderer.getPixelRatio()));
     this.bloom.resolution.set(w, h);
     for (const p of this.tilt) p.uniforms.res.value.set(w, h);
     this.camera.aspect = w / h;

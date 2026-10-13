@@ -222,6 +222,9 @@ export class MagicMissileV2VFX {
       const shellScale = this.settings.missileScale * this.worldScale * formationGrowth * (bolt.hit ? Math.max(0.02, 1 - (t - bolt.impactStarted) * 2.2) : 1 + progress * 0.2);
       bolt.core.position.copy(pos); bolt.shell.position.copy(pos);
       if (velocity.lengthSq() > 0.001) { bolt.core.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), velocity); bolt.shell.quaternion.copy(bolt.core.quaternion); }
+      // Charging (no velocity yet): stand upright (+z is up on the 3D map). Ember's top-down view
+      // left it on +y, which on the 3D map lies flat along the ground, sideways.
+      else if (!bolt.launched) { bolt.core.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 1)); bolt.shell.quaternion.copy(bolt.core.quaternion); }
       const approach = progress > 0.74 ? 1 + (progress - 0.74) * 1.6 : 1;
       core.uniforms.uTime!.value = t; core.uniforms.uDistort!.value = this.settings.distortion ? this.settings.turbulence * 0.4 : 0; core.uniforms.uScale!.value = this.settings.geometry ? shellScale * 0.8 : 0; core.uniforms.uGlow!.value = this.settings.emissiveEnabled ? this.settings.emissive * (0.55 + buildup * 0.4 + progress * 0.35) * approach : 0;
       shell.uniforms.uTime!.value = t; shell.uniforms.uDistort!.value = this.settings.distortion ? this.settings.shellDistortion : 0; shell.uniforms.uScale!.value = this.settings.geometry ? shellScale * 1.2 : 0; shell.uniforms.uGlow!.value = this.settings.emissiveEnabled ? this.settings.emissive * 0.7 : 0; shell.uniforms.uOpacity!.value = bolt.hit ? Math.max(0, 1 - (t - bolt.impactStarted) * 1.3) : this.settings.geometry ? 0.92 : 0;
