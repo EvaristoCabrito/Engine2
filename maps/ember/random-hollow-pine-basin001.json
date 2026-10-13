@@ -2838,41 +2838,6 @@
         "rot": 3
       },
       {
-        "id": "rock-3d-broken",
-        "x": 2,
-        "y": 2,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 6,
-        "y": 2,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 10,
-        "y": 2,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 14,
-        "y": 2,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 22,
-        "y": 2,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
         "id": "wilds-weathered-signpost",
         "x": 5,
         "y": 20

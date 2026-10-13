@@ -13,7 +13,7 @@ import { UNIT_LIGHT_DEFS } from '../ember/lighting';
 import { CarriedLight } from '../render/carriedLight';
 import { alignUnitLights } from './lightFrame';
 import { FLAT_ROW_STEP } from '../render/cameraRig';
-import { CARD_RENDER_ORDER } from '../render/drawOrder';
+import { UNIT_RENDER_ORDER } from '../render/drawOrder';
 
 const LEFT_CUT: Partial<Record<Pose, Pose>> = { walk: 'walkLeft', attack: 'attackLeft', attack2: 'attack2Left', cast: 'castLeft' };
 /** Authored left-facing cuts: shown as drawn, never mirrored. */
@@ -59,10 +59,12 @@ export class UnitActor {
     this.def = def;
     // art painted as glowing (the deer's crystal antlers) lights itself (UNIT_GLOW)
     this.mat = makeSpriteMaterial(true, UNIT_GLOW[def.sprite]);
+    // frames.ts loads unit frames premultiplied: blend them as such (no second multiply by alpha)
+    Object.assign(this.mat, { blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendSrcAlpha: THREE.OneFactor, blendDstAlpha: THREE.OneMinusSrcAlphaFactor });
     this.depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5 });
     this.card = new THREE.Mesh(cardGeo, this.mat);
     this.card.castShadow = true;
-    this.card.renderOrder = CARD_RENDER_ORDER;
+    this.card.renderOrder = UNIT_RENDER_ORDER;
     // Cards don't receive shadow-map shadows: a flat card shadows itself whenever the sun is behind it.
     // Standing in a building's or tree's shadow will be tested at the unit's position instead (TODO).
     this.card.receiveShadow = false;

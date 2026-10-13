@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { createWallGeometry } from '../game/gfx/three/ThreeWalls';
+import { MODELS, loadModel } from './models';
 import { fitHouseToHumans } from './houseScale';
 import {
   DECORATIONS, CHEST_DECOR_IDS, HOUSE_DECOR_IDS, BIG_HOUSE_DECOR_IDS, DECOR_ART_SCALE, HOUSE_ART_SCALE,
@@ -140,12 +141,14 @@ export class DecorLayer {
   private pads: { x: number; z: number; h: number }[] = [];
   private cards: THREE.Group[] = [];
   private gen = 0;
+  /** Draw Ember's GLB props as real 3D models, in the editor and the game (never their flat pictures). */
+  realModels = true;
 
   constructor(private readonly renderer: THREE.WebGLRenderer, scene: THREE.Scene) { scene.add(this.group); }
 
   clear(): void {
     this.gen++;
-    for (const c of this.cards) { this.group.remove(c); c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { (m.material as THREE.Material).dispose(); if (m.userData.ownGeometry) m.geometry.dispose(); } if (o instanceof CarriedLight) o.dispose(); }); }
+    for (const c of this.cards) { this.group.remove(c); if (c.userData.shared) continue; c.traverse(o => { const m = o as THREE.Mesh; if (m.isMesh) { (m.material as THREE.Material).dispose(); if (m.userData.ownGeometry) m.geometry.dispose(); } if (o instanceof CarriedLight) o.dispose(); }); }
     this.cards = [];
     this.pads = [];
     this.blocked.clear();
@@ -189,6 +192,25 @@ export class DecorLayer {
     this.stats.placed++;
   }
 
+  /** One of Ember's GLB models standing on its footprint, turned like Ember (quarter turns). */
+  private async addModel(b: Board, p: DecorationPlacement, model: string, groundAt: (x: number, z: number) => number, gen: number): Promise<void> {
+    const L = b.layout;
+    const cells = placedFootprint(p).filter(f => p.x + f.dx >= 0 && p.y + f.dy >= 0 && p.x + f.dx < L.cols && p.y + f.dy < L.rows).map(f => b.cell(p.x + f.dx, p.y + f.dy));
+    if (!cells.length) return;
+    const x = cells.reduce((s, c) => s + c.x, 0) / cells.length, z = cells.reduce((s, c) => s + c.z, 0) / cells.length;
+    const object = await loadModel(model).catch(() => null);
+    if (!object || gen !== this.gen) return;
+    object.position.set(x, groundAt(x, z), z);
+    object.rotation.y = -(p.rot ?? 0) * Math.PI / 2;
+    // shared geometry and materials: clear() must not dispose them (models.ts caches the source)
+    const holder = new THREE.Group();
+    holder.userData = { wall: true, shared: true, decor: p.id, at: { x: p.x, y: p.y }, hexes: placedFootprint(p).map(f => ({ x: p.x + f.dx, y: p.y + f.dy })) };
+    holder.add(object);
+    this.group.add(holder);
+    this.cards.push(holder);
+    this.stats.placed++;
+  }
+
   async populate(b: Board, groundAt: (x: number, z: number) => number, onProgress?: (loaded: number, total: number) => void): Promise<void> {
     this.clear();
     const gen = this.gen, d = b.draft, L = b.layout;
@@ -204,6 +226,9 @@ export class DecorLayer {
       if (!def) { this.stats.missingArt.push(p.id); continue; }
       for (const { dx, dy } of placedBlockingFootprint(p)) if (inBoard(p.x + dx, p.y + dy)) this.blocked.add(`${p.x + dx},${p.y + dy}`);
       if (def.model3d && ARCHITECTURE.has(def.model3d) && !def.propModel) { this.addArchitecture(b, p, def, placements, groundAt); continue; }
+      // editor only (realModels): Ember's real 3D models (trees, grey outcrop, tavern props), never a card
+      const model = def.treeModel ?? def.propModel;
+      if (this.realModels && model && MODELS[model]) { jobs.push(this.addModel(b, p, model, groundAt, gen)); continue; }
       const rot = ((p.rot ?? 0) + (def.mirrorAlternate && p.x >= d.cols / 2 ? 3 : 0)) % 6;
       const artId = decorationPlacementArt(p);
       const facing = decorationFacing(artId, rot, hasArt);

@@ -18,6 +18,13 @@ export const MODELS: Record<string, ModelDef> = {
   'tavern-chair': { file: 'props/tavern-chair.glb', height: 1.45 },       // ≈ 1 m to the top of the back
   'tavern-candlestick': { file: 'props/tavern-candlestick.glb', height: 0.4 }, // ≈ 27 cm
   'tavern-mug': { file: 'props/tavern-mug.glb', height: 0.15 },           // ≈ 10 cm
+  // Ember's trees and grey outcrop, at Ember's own size (hex radii: trees 4.8, outcrop 2.3)
+  'broadleaf': { file: 'trees/broadleaf.glb', height: 4.8 },
+  'snowy-pine': { file: 'trees/snowy-pine.glb', height: 4.8 },
+  'dead-oak': { file: 'trees/dead-oak.glb', height: 4.8 },
+  'dead-snag': { file: 'trees/dead-snag.glb', height: 4.8 },
+  'twisted-stump': { file: 'trees/twisted-stump.glb', height: 4.8 },
+  'grey-outcrop': { file: 'rocks/grey-outcrop.glb', height: 2.3 },
 };
 
 const loader = new GLTFLoader();

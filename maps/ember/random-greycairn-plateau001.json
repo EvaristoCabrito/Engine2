@@ -2326,111 +2326,6 @@
     "baseVariant": 16,
     "decorations": [
       {
-        "id": "rock-3d-broken",
-        "x": 11,
-        "y": 6,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 12,
-        "y": 6,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 13,
-        "y": 6,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 9,
-        "y": 7,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 10,
-        "y": 7,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 9,
-        "y": 8,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 17,
-        "y": 8,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 18,
-        "y": 8,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 17,
-        "y": 9,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 9,
-        "y": 13,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 10,
-        "y": 13,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 11,
-        "y": 14,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 12,
-        "y": 14,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 13,
-        "y": 14,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 14,
-        "y": 14,
-        "rot": 0,
-        "wallOrientation": "horizontal"
-      },
-      {
         "id": "rune-stone",
         "x": 13,
         "y": 10,
@@ -2868,29 +2763,10 @@
         "rot": 4
       },
       {
-        "id": "rocks-3d-outcrop",
-        "x": 21,
-        "y": 18,
-        "rot": 2
-      },
-      {
         "id": "rocks-3d-grey-outcrop",
         "x": 10,
         "y": 1,
         "rot": 0
-      },
-      {
-        "id": "rocks-3d-outcrop",
-        "x": 13,
-        "y": 2,
-        "rot": 3
-      },
-      {
-        "id": "rock-3d-arch",
-        "x": 20,
-        "y": 4,
-        "rot": 0,
-        "wallOrientation": "horizontal"
       },
       {
         "id": "cave-rock-pile",

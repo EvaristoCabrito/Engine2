@@ -63,6 +63,7 @@ export function MapPreviewCanvas({
 
   useEffect(() => {
     const view = new DioramaView(hostRef.current!);
+    view.decor.realModels = true; // the editor shows Ember's real 3D props, not their pictures
     viewRef.current = view;
     view.rig.onClick = (event) => {
       const cell = view.cellAt(event.clientX, event.clientY);

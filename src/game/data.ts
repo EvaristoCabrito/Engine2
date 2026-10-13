@@ -347,7 +347,6 @@ const NEW_DECOR_2026: Record<string, DecorationDef> = {
   "cave-basalt-006-pillar-short": { id: "cave-basalt-006-pillar-short", name: "Gruta VI — Pilar Baixo da Referência", footprint: DECO_ONE, artScale: 1.6, artAspect: 1.5, lightReflectance: 0.5 },
   "cave-basalt-006-shore": { id: "cave-basalt-006-shore", name: "Gruta VI — Pedras de Margem", footprint: DECO_ONE, artScale: 1.25, artAspect: 1.5, lightReflectance: 0.6 },
   "cave-limestone-007-wall": { id: "cave-limestone-007-wall", name: "Gruta VII — Parede Calcária Fotográfica", footprint: DECO_ROW_TRIO, artScale: 1.05, artAspect: 1.5, lightReflectance: 0.7 },
-  "wall-3d-cave-photographic-007": { id: "wall-3d-cave-photographic-007", name: "Parede de Caverna Fotográfica VII", footprint: DECO_ONE, model3d: "wall", rockStyle: "layered", wallThicknessScale: 1.5, wallTexture: "/game/textures/walls/cave-photographic-007.png" },
 
   "cave-basalt-004-original-wall": { id: "cave-basalt-004-original-wall", name: "Gruta IV Original — Parede de Basalto", footprint: DECO_ROW_TRIO, heightScale: 1.25, artScale: 1.05, lightReflectance: 0.24 },
   "cave-basalt-004-original-pillar": { id: "cave-basalt-004-original-pillar", name: "Gruta IV Original — Pilar de Basalto", footprint: DECO_ONE, heightScale: 1.3, artScale: 1.5, lightReflectance: 0.24 },
@@ -609,8 +608,6 @@ export const DECORATIONS: Record<string, DecorationDef> = {
   "castle-3d-thick": { id: "castle-3d-thick", name: "Muralha espessa com ameias 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", castleStyle: "battlement", thickWall: true, wallThicknessScale: 1.8, wallTexture: "/game/textures/walls/castle-thick.jpg" },
   "castle-3d-thick-tower": { id: "castle-3d-thick-tower", name: "Torre quadrada espessa 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", castleStyle: "tower", thickWall: true, heightScale: 1.15, wallTexture: "/game/textures/walls/castle-thick.jpg" },
   "castle-3d-thick-ruined": { id: "castle-3d-thick-ruined", name: "Muralha espessa arruinada 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", castleStyle: "ruined", thickWall: true, wallThicknessScale: 1.8, wallTexture: "/game/textures/walls/castle-thick.jpg" },
-  "house-3d-vau": { id: "house-3d-vau", name: "Casa clássica do Vau 3D", footprint: DECO_BLOCK_5, model3d: "prop", propModel: "small-house" },
-  "rocks-3d-outcrop": { id: "rocks-3d-outcrop", name: "Afloramento rochoso realista 3D", footprint: DECO_PAIR, model3d: "prop", propModel: "rocky-outcrop" },
   "rocks-3d-grey-outcrop": { id: "rocks-3d-grey-outcrop", name: "Afloramento rochoso cinzento 3D II", footprint: DECO_PAIR, model3d: "prop", propModel: "grey-outcrop" },
   "prop-3d-tavern-barrel": { id: "prop-3d-tavern-barrel", name: "Barril da taverna 3D", footprint: DECO_ONE, model3d: "prop", propModel: "tavern-barrel" },
   "prop-3d-tavern-chair": { id: "prop-3d-tavern-chair", name: "Cadeira da taverna 3D", footprint: DECO_ONE, model3d: "prop", propModel: "tavern-chair" },
@@ -624,9 +621,6 @@ export const DECORATIONS: Record<string, DecorationDef> = {
   "tree-3d-dead-oak": { id: "tree-3d-dead-oak", name: "Carvalho morto 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "tree", treeModel: "dead-oak" },
   "tree-3d-dead-snag": { id: "tree-3d-dead-snag", name: "Árvore morta 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "tree", treeModel: "dead-snag" },
   "tree-3d-twisted-stump": { id: "tree-3d-twisted-stump", name: "Árvore retorcida 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "tree", treeModel: "twisted-stump" },
-  "rock-3d-layered": { id: "rock-3d-layered", name: "Rochas — parede estratificada 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", rockStyle: "layered", heightScale: 0.55, wallTexture: "/game/textures/walls/rock-formation.jpg" },
-  "rock-3d-arch": { id: "rock-3d-arch", name: "Rochas — arco natural 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "doorway", rockStyle: "arch", wallTexture: "/game/textures/walls/rock-formation.jpg" },
-  "rock-3d-broken": { id: "rock-3d-broken", name: "Rochas — parede desmoronada 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", rockStyle: "broken", heightScale: 0.75, wallTexture: "/game/textures/walls/rock-formation.jpg" },
   "temple-3d-plain": { id: "temple-3d-plain", name: "Templo — muralha de pedra 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", templeStyle: "plain", wallTexture: "/game/textures/walls/temple-plain.jpg" },
   "temple-3d-niche": { id: "temple-3d-niche", name: "Templo — nicho arqueado 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", templeStyle: "niche", wallTexture: "/game/textures/walls/temple-niche.jpg" },
   "temple-3d-relief": { id: "temple-3d-relief", name: "Templo — arco com relevo floral 3D", footprint: [{ dx: 0, dy: 0 }], model3d: "wall", templeStyle: "relief", wallTexture: "/game/textures/walls/temple-relief.jpg" },
@@ -827,14 +821,14 @@ export const SOLID_CART_DECOR_IDS = new Set([
 /** Low props: "Bloquear caminho" stops walking through them, but arrows and sight pass over (a well is knee-high). */
 export const LOW_BLOCKER_DECOR_IDS = new Set<string>(["well", "wilds-wishing-well", "tombstones"]);
 export const SOLID_ROCK_DECOR_IDS = new Set(["farmland-photographic-014-table", "farmland-photographic-014-bed","farmland-photographic-013-forge", "farmland-photographic-013-cabinet", "farmland-photographic-013-table", "farmland-photographic-013-bed", "forest-photographic-012-cedar", "forest-photographic-012-hemlock","forest-photographic-011-cedar", "forest-photographic-011-hemlock", "forest-photographic-011-log","ice-photographic-010-boulders", "ice-photographic-010-ridge","cave-basalt-008-overhang", "cave-basalt-008-moss-rock",
-  "cave-basalt-006-wall", "cave-basalt-006-pillar", "cave-basalt-006-rubble", "cave-basalt-006-stalagmites", "cave-basalt-006-overhang", "cave-basalt-006-crystals", "cave-basalt-006-moss-rock", "cave-basalt-006-edge-pillar", "cave-basalt-006-cliff", "cave-basalt-006-pillar-short", "cave-limestone-007-wall", "wall-3d-cave-photographic-007",
+  "cave-basalt-006-wall", "cave-basalt-006-pillar", "cave-basalt-006-rubble", "cave-basalt-006-stalagmites", "cave-basalt-006-overhang", "cave-basalt-006-crystals", "cave-basalt-006-moss-rock", "cave-basalt-006-edge-pillar", "cave-basalt-006-cliff", "cave-basalt-006-pillar-short", "cave-limestone-007-wall",
   "cave-basalt-004-original-wall", "cave-basalt-004-original-pillar", "cave-basalt-004-original-rubble", "cave-basalt-004-original-stalagmites", "cave-basalt-004-original-overhang", "cave-basalt-004-original-crystals", "cave-basalt-004-original-moss-rock",
   "cave-basalt-005-wall", "cave-basalt-005-pillar", "cave-basalt-005-rubble", "cave-basalt-005-stalagmites", "cave-basalt-005-overhang",
   "cave-basalt-004-crystals", "cave-basalt-004-moss-rock",
   "cave-basalt-004-wall", "cave-basalt-004-cliff", "cave-basalt-004-edge-pillar", "cave-basalt-004-pillar", "cave-basalt-004-rubble", "cave-basalt-004-stalagmites", "cave-basalt-004-overhang",
   "cave-wall-stalagmites-002", "cave-wall-shelf-002", "cave-wall-boulders-002",
   "cave-slate-shelf-001", "cave-fractured-boulders-001", "cave-limestone-spires-001",
-  "rocks-3d-grey-outcrop", "rocks-3d-outcrop", "spike-rocks", "rocky-outcrop", "boulder-pile", "twin-spires",
+  "rocks-3d-grey-outcrop", "spike-rocks", "rocky-outcrop", "boulder-pile", "twin-spires",
   "large-boulder", "spike-rocks-2", "mossy-rocks", "mossy-boulder", "boulder-mound", "spike-crown",
 ]);
 

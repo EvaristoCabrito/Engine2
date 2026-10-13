@@ -2760,20 +2760,6 @@
         "rot": 5
       },
       {
-        "id": "rock-3d-broken",
-        "x": 2,
-        "y": 4,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
-        "id": "rock-3d-broken",
-        "x": 6,
-        "y": 4,
-        "blocksPath": true,
-        "wallOrientation": "horizontal"
-      },
-      {
         "id": "wilds-hollow-log",
         "x": 8,
         "y": 3,

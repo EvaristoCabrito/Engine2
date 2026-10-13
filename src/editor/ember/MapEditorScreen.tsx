@@ -2686,7 +2686,7 @@ export function MapEditorScreen({
                   setMode(m === "props3d" ? "architecture" : m);
                   if (m === "architecture" || m === "props3d") {
                     setArchitectureDecorations(m === "props3d");
-                    setDecoBrush(m === "props3d" ? "rock-3d-layered" : thickWalls ? "castle-3d-thick" : "wall-3d-stone");
+                    setDecoBrush(m === "props3d" ? "prop-3d-tavern-table" : thickWalls ? "castle-3d-thick" : "wall-3d-stone");
                   }
                   if (m === "elevation" || m === "water") setTerrain3D(true);
                   if (m === "decoration" && DECORATIONS[decoBrush]?.model3d) setDecoBrush(decorOptions[0]!.id);

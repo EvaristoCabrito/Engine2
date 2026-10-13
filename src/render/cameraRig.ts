@@ -27,6 +27,8 @@ const NORMAL_FOV = 30, NORMAL_NEAR = 0.5, NORMAL_FAR = 600;
 /** The old-school 2D view (Ember's original battle camera: straight overhead, no perspective)
  * uses a very long lens from far away, so it stays a perspective camera for picking and panning. */
 const FLAT_FOV = 1;
+/** The 3D view's farthest zoom as a share of Tática's (user's reference shot, 2026-10-13). */
+const MAX_3D_WIDTH_SHARE = 42 / 58;
 /** In the 2D view each world unit of depth (z) raises a flat card this much, so nearer rows are
  * drawn over farther ones, like a 2D game's painter order. */
 export const FLAT_ROW_STEP = 0.002;
@@ -91,13 +93,16 @@ export class CameraRig {
   get farthest(): number {
     if (this.maxViewWidth == null) return this.maxDist;
     const tan = Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2));
-    return Math.min(this.maxDist, this.maxViewWidth / (2 * tan * Math.max(0.25, this.camera.aspect)));
+    // the 3D view stops closer than Tática: the user's 3D reference shows ~42 units across, not 58
+    const width = this.flat ? this.maxViewWidth : this.maxViewWidth * MAX_3D_WIDTH_SHARE;
+    return Math.min(this.maxDist, width / (2 * tan * Math.max(0.25, this.camera.aspect)));
   }
 
   /** Keep the aim point where the board's edge stays within the reference strip (panBounds). */
   clampTarget(): void {
     const b = this.panBounds;
-    if (!b) return;
+    // only Tática is held to the board; the 3D view pans freely to every corner (user's call)
+    if (!b || !this.flat) return;
     const halfH = this.dist * Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2)), halfW = halfH * Math.max(0.25, this.camera.aspect);
     // a tilted camera sees the ground stretched in depth by 1/sin(tilt) (straight down = 1)
     const depth = this.flat ? 1 : 1 / Math.max(0.2, Math.abs(Math.sin(this.pitch)));

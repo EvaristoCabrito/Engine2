@@ -52,6 +52,8 @@ const GLOW_RADIUS = 0.1;
  * own brazier, a unit beside a fire) was lit hundreds of times over and bloom smeared it across
  * the screen as a blinding halo. */
 const MAX_LIT = 2;
+/** How far (world units) unit cards are drawn toward the camera to win against props in their hex. */
+const UNIT_FRONT = 1.2;
 /** Emission at full flicker, x the painted colour: pushes the flame past bloom's threshold
  * (stage.ts, 2.0) so the glow starts at the fire; lit surfaces stay under it. */
 export const FLAME_EMIT = 2.5;
@@ -98,6 +100,13 @@ export function makeSpriteMaterial(pointLightsOnBothSides = false, emit?: Sprite
         .replace('#include <opaque_fragment>', `${EMIT_GLSL}\n#include <opaque_fragment>`);
     }
     if (pointLightsOnBothSides) {
+      // Units read in front of a prop card that stands through their own hex (a cart, a stall):
+      // each vertex slides UNIT_FRONT units toward the camera along its own line of sight, so it
+      // lands on exactly the same pixel and only its depth changes. Props a hex or more in front
+      // still cover the unit; shadows use the separate depth material and are unaffected.
+      sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+        mvPosition.xyz *= 1.0 - min( ${UNIT_FRONT.toFixed(2)} / max( length( mvPosition.xyz ), 1e-3 ), 0.9 );
+        gl_Position = projectionMatrix * mvPosition;`);
       // A photographic character card represents a body, not a one-sided wall.
       // Face its lighting normal toward each point source so billboard yaw/mirroring
       // cannot reject nearby light. The first RE_Direct call belongs to point lights;
@@ -109,7 +118,7 @@ export function makeSpriteMaterial(pointLightsOnBothSides = false, emit?: Sprite
       sh.fragmentShader = sh.fragmentShader.replace('#include <lights_fragment_begin>', localLights);
     }
   };
-  m.customProgramCacheKey = () => (pointLightsOnBothSides ? 'engine2-unit-sprite-lit-v3' : 'engine2-sprite-lit-v2') + (emit ? '-emit' : '');
+  m.customProgramCacheKey = () => (pointLightsOnBothSides ? 'engine2-unit-sprite-lit-v5' : 'engine2-sprite-lit-v2') + (emit ? '-emit' : '');
   return m;
 }
 

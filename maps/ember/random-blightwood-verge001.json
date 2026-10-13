@@ -2336,18 +2336,6 @@
         "rot": 4
       },
       {
-        "id": "rocks-3d-outcrop",
-        "x": 11,
-        "y": 4,
-        "rot": 2
-      },
-      {
-        "id": "rocks-3d-outcrop",
-        "x": 12,
-        "y": 17,
-        "rot": 5
-      },
-      {
         "id": "rocks-3d-grey-outcrop",
         "x": 25,
         "y": 15,

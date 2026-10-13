@@ -71,7 +71,9 @@ function evictFor(incoming: number, keep: Set<string>): void {
 async function bitmap(url: string): Promise<ImageBitmap> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`missing frame ${url}`);
-  return createImageBitmap(await res.blob(), { imageOrientation: 'flipY', premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+  // premultiplied: fully see-through pixels carry no colour, so leftover red/green under the
+  // matte can't bleed into the figure's edge as a coloured border (unit cards blend to match)
+  return createImageBitmap(await res.blob(), { imageOrientation: 'flipY', premultiplyAlpha: 'premultiply', colorSpaceConversion: 'none' });
 }
 
 /** Body centre per frame: median x of opaque pixels in the bottom quarter of the frame (the
