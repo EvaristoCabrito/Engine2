@@ -9,7 +9,8 @@
     "dev": "vite --host 127.0.0.1 --port 8080 --strictPort --open /",
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run --maxWorkers=1 --minWorkers=1 --no-file-parallelism"
+    "test": "vitest run --maxWorkers=1 --minWorkers=1 --no-file-parallelism --exclude \"src/game/**\" --exclude tests/titleNavigation.test.mjs && npm run test:node",
+    "test:node": "node --test \"src/game/**/*.test.ts\" tests/titleNavigation.test.mjs"
   },
   "dependencies": {
     "class-variance-authority": "0.7.1",

@@ -37,7 +37,9 @@ describe('preserved Ember VFX boundary', () => {
     expect(activeVfxCount(scene)).toBe(0); expect(scene.children).toHaveLength(0);
   });
   it('explicitly rejects spells without a corresponding original 3D renderer', async () => {
-    await expect(playSpell('createFoodAndWater', new THREE.Vector3(), [], new THREE.Scene())).rejects.toThrow('No preserved 3D effect');
+    // every real spell has an effect now (createFoodAndWater plays the holy flipbook); only an
+    // unknown kind is rejected
+    await expect(playSpell('notARealSpell' as Parameters<typeof playSpell>[0], new THREE.Vector3(), [], new THREE.Scene())).rejects.toThrow('No preserved 3D effect');
   });
   it('uses the distinct original Cleave and Sweep per-target arrival formulas', async () => {
     for (const [kind, beforeFrames] of [['cleave', 15], ['sweep', 9]] as const) {

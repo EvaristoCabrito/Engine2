@@ -1,0 +1,12 @@
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+const b=await chromium.launch({headless:true,channel:'msedge'}),p=await b.newPage({viewport:{width:1440,height:1000}});
+const errors=[];p.on('pageerror',e=>errors.push(e.message));
+await p.goto('http://localhost:8080/game.html?start=test');await p.waitForTimeout(8000);
+await p.getByRole('button',{name:/^Debug/}).click();await p.waitForTimeout(2000);
+await p.getByRole('button',{name:/^Classic Tactical/}).click();await p.waitForTimeout(2000);
+await p.getByRole('button',{name:'Farm',exact:true}).click();await p.waitForTimeout(1500);
+await p.getByRole('button',{name:'Entrar em combate',exact:true}).click();await p.waitForTimeout(25000);
+await p.screenshot({path:'C:/Engine2/Attachments/party-opening-camera-verified.png'});
+console.log((await p.locator('body').innerText()).slice(0,5000));
+console.log(await p.locator('button').evaluateAll(es=>es.map(e=>({text:e.textContent,title:e.title,aria:e.getAttribute('aria-label')}))));
+console.log(JSON.stringify({buttons:await p.getByRole('button').allTextContents(),selects:await p.locator('select').evaluateAll(es=>es.map(e=>Array.from(e.options).slice(0,12).map(o=>({label:o.text,value:o.value})))),errors}));await b.close();

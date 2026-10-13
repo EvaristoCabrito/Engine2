@@ -1,7 +1,7 @@
 // Headless, muted: enters a test battle and fires Ember's 2D Magic Missile (and Phantasmal
 // Force) from an enemy at a hero, screenshotting mid-flight and at impact.
 //   node qa/enemy-missile.mjs [tag]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/enemy-missile', tag = process.argv[2] || 'a';
 mkdirSync(out, { recursive: true });

@@ -1,5 +1,5 @@
 // Screenshots qa/models.html (Ember's old 3D models) — trees and props, day and night.
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/models';
 mkdirSync(out, { recursive: true });
@@ -13,7 +13,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     page.on('pageerror', e => errors.push(e.message));
     page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
-    await page.goto(`http://127.0.0.1:5300/qa/models.html?light=${light}&view=${view}`);
+    await page.goto(`http://127.0.0.1:8080/qa/models.html?light=${light}&view=${view}`);
     await page.waitForFunction(() => window.__models?.ready, null, { timeout: 180000 });
     await page.waitForTimeout(1500);
     await page.screenshot({ path: `${out}/${view}-${light}.png` });

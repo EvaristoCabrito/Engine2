@@ -1,8 +1,11 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import * as THREE from 'three';
 import { ThreeAtmosphere } from '../src/game/gfx/three/ThreeAtmosphere';
 import { CARD_RENDER_ORDER } from '../src/render/drawOrder';
 import { FogOfWar, FOG_VISIBLE } from '../src/render/fogOfWar';
+
+// no DOM under Node: the board fog's artwork loads as a blank texture
+vi.spyOn(THREE.TextureLoader.prototype, 'load').mockImplementation(() => new THREE.Texture());
 
 it('places authored wisp anchors through the parent and billboards in camera space', () => {
   const atmosphere = new ThreeAtmosphere();

@@ -1,6 +1,6 @@
 // Sprite lighting check: one hero in daylight (front and sun-behind), at night, and at night by a torch.
 // Usage: node qa/lighting.mjs [tag] [unit]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/lighting';
 mkdirSync(out, { recursive: true });
@@ -11,7 +11,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   page.on('pageerror', e => errors.push(e.message));
   page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
-  await page.goto('http://127.0.0.1:5300/editor.html?map=zona-de-teste');
+  await page.goto('http://127.0.0.1:8080/editor.html?map=zona-de-teste');
   await page.waitForFunction(() => window.__cast?.units?.length > 0, null, { timeout: 180000 });
   await page.waitForTimeout(2000);
   const shot = async (name, setup) => {

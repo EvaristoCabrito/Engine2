@@ -1,7 +1,7 @@
 // Headless, muted check of the campaign page (game.html): loads with no errors, shows which screen
 // it reached, and screenshots it. Never opens a visible browser.
 //   node qa/campaign3d.mjs [path]   (default /game.html?start=new)
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 
 const path = process.argv[2] ?? '/game.html?start=new';

@@ -10,7 +10,8 @@ describe('restored Ember environmental lights', () => {
     const light = new CarriedLight(def, 0, 3, 1);
     expect(light.color.toArray()).toEqual(def.color);
     expect(light.decay).toBe(MAP_LIGHT_DECAY);
-    expect(light.distance).toBeCloseTo(Math.sqrt(10));
+    // reach sqrt(3² + 1²), with a 2.5x soft tail so the pool fades out instead of ending in a disc
+    expect(light.distance).toBeCloseTo(Math.sqrt(10) * 2.5);
     light.update(0, 1); const full = light.intensity;
     light.update(0, 0.5); expect(light.intensity).toBeCloseTo(full / 2);
     light.update(0, 0); expect(light.intensity).toBe(0);

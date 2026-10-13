@@ -39,12 +39,12 @@ test('gameplay cannot mount its legacy title and every internal title transition
   assert.match(handoff.getText(ast), /return null/);
 });
 
-test('the normal title HTML and gameplay build share Version 0.034.3 before painting', () => {
-  assert.equal(APP_VERSION, '0.034.3'); assert.equal(DISPLAY_VERSION, '0.034.3');
+test('the normal title HTML and gameplay build share Version 0.034.4 before painting', () => {
+  assert.equal(APP_VERSION, '0.034.4'); assert.equal(DISPLAY_VERSION, '0.034.4');
   const html = renderReleaseVersion(readFileSync('index.html', 'utf8'));
   assert.equal((html.match(/id="title-screen"/g) ?? []).length, 1);
-  assert.equal((html.match(/Version 0\.034\.3/g) ?? []).length, 1);
-  assert.doesNotMatch(html, /Version 0\.034\.2</);
+  assert.equal((html.match(/Version 0\.034\.4/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /Version 0\.034\.3</);
   assert.doesNotMatch(html, /%APP_DISPLAY_VERSION%/);
   assert.match(readFileSync('vite.config.ts', 'utf8'), /transformIndexHtml: renderReleaseVersion/);
   assert.match(readFileSync('src/game/version.ts', 'utf8'), /export \{ APP_VERSION, DISPLAY_VERSION \} from "\.\.\/version"/);

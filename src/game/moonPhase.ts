@@ -55,10 +55,14 @@ export function daysToMoon(gameClock: number, phase: MoonPhase): number {
 }
 
 /** Night lighting for a phase: the moonlight's strength (× the night preset's), and for the
- * blood moon its red colour plus a red-tinted sky and backdrop. */
-export function moonlightFor(phase: MoonPhase): { strength: number; color?: string; sky?: string; background?: string } {
-  if (phase === "blood") return { strength: 1.35, color: "#ff4a3a", sky: "#5a1e26", background: "#2a0a10" };
-  return { strength: 0.2 + 1.1 * moonIllumination(phase).lit };
+ * blood moon its red cast; `icon` is the phase art drawn on the moon in the sky. */
+export function moonlightFor(phase: MoonPhase): { strength: number; color?: string; sky?: string; background?: string; lit: number; waxing: boolean; icon: string } {
+  const { lit, waxing } = moonIllumination(phase);
+  const icon = moonPhaseIcon(phase);
+  // the light follows the phase: new moon dim (but readable; 0.2 left it pitch black), full bright.
+  // Blood moon: moonlight with a red cast, not red paint (pure red turned the ground into flat red).
+  if (phase === "blood") return { strength: 1.35, color: "#e0a49c", sky: "#86707c", lit, waxing, icon };
+  return { strength: 0.5 + 0.9 * lit, lit, waxing, icon };
 }
 
 /** Lit share of the disc, 0 (new) … 1 (full and blood), and which side is lit — for the placeholder icon. */

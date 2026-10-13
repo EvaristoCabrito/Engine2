@@ -12,9 +12,9 @@ import {
 } from '../ember/data';
 import type { DecorationDef, DecorationPlacement, TerrainId } from '../ember/types';
 import type { Board } from '../map/board';
-import { makeSpriteMaterial } from '../units/spriteMaterial';
+import { makeSpriteMaterial, FLAME_EMIT, type SpriteEmit } from '../units/spriteMaterial';
 import decorFiles from './decor-files.json';
-import { LIGHT_DEFS, LIGHT_RADIUS_MUL, MAP_LIGHT_MIN_HEIGHT } from '../ember/lighting';
+import { LIGHT_DEFS, LIGHT_RADIUS_MUL, MAP_LIGHT_MIN_HEIGHT, flickerAt } from '../ember/lighting';
 import { CarriedLight } from '../render/carriedLight';
 import { FLAT_ROW_STEP } from '../render/cameraRig';
 import { CARD_RENDER_ORDER } from '../render/drawOrder';
@@ -139,7 +139,9 @@ export class DecorLayer {
       const mirror = facing.mirror !== !!p.mirrorX;
       jobs.push(loadArt(decorationImage(file), aniso).then(art => {
         if (gen !== this.gen) return;
-        const mat = makeSpriteMaterial();
+        const lightDef = LIGHT_DEFS[p.id];
+        const emit = lightDef ? { color: lightDef.color, level: { value: FLAME_EMIT } } : undefined;
+        const mat = makeSpriteMaterial(false, emit);
         mat.map = art.texture;
         const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, alphaTest: 0.5, map: art.texture });
         const card = new THREE.Mesh(cardGeo, mat);
@@ -150,11 +152,11 @@ export class DecorLayer {
         card.position.set((0.5 - art.base.u) * w, -art.base.v * h, 0); // opaque base onto the anchor
         const holder = new THREE.Group();
         holder.add(card);
-        const lightDef = LIGHT_DEFS[p.id];
         if (lightDef) {
           const height = Math.max(MAP_LIGHT_MIN_HEIGHT, (art.flame.v - art.base.v) * h);
           const light = new CarriedLight(lightDef, (p.x * 7.31 + p.y * 3.17) % 6.28, lightDef.radius * LIGHT_RADIUS_MUL, height);
           light.position.x = (art.flame.u - art.base.u) * w;
+          light.userData.emit = emit;
           holder.add(light);
           // A flame card must not block its own light.
           card.castShadow = false;
@@ -224,5 +226,13 @@ export class DecorLayer {
     }
   }
 
-  updateLights(time: number): void { this.group.traverse(o => { if (o instanceof CarriedLight) o.update(time); }); }
+  updateLights(time: number): void {
+    this.group.traverse(o => {
+      if (!(o instanceof CarriedLight)) return;
+      o.update(time);
+      // the painted flame flickers with its own light
+      const emit = o.userData.emit as SpriteEmit | undefined;
+      if (emit) emit.level.value = FLAME_EMIT * flickerAt(time, o.seed, o.definition.flicker);
+    });
+  }
 }

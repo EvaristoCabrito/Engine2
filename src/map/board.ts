@@ -113,7 +113,7 @@ export class Board {
         // baked; the rest keep the painted ground), plus GPT's appended variant layers.
         const claudeTile = CLAUDE_VARIANT[type] !== undefined && variant === CLAUDE_VARIANT[type];
         const ground = surf === 'void' ? -1
-          : type === 'plains' && variant === 50 && variantLayer >= 0 ? GROUND_LAYERS.length + 3 + variantLayer
+          : ((type === 'plains' && variant === 50) || (type === 'nave' && variant === 20)) && variantLayer >= 0 ? GROUND_LAYERS.length + 3 + variantLayer
           : cityTile ? GROUND_LAYERS.length
             : engine2V3 ? v3Layer
               : variantLayer >= 0 ? GROUND_LAYERS.length + 3 + variantLayer

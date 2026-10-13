@@ -56,9 +56,9 @@ function groundVersions(terrain: TerrainId): { label: string; variant: number; t
   if (claude !== undefined) list.push({ variant: claude, thumb: thumbFor(terrain, claude) });
   // plains052 (V3 "plains", index 51) duplicates another tile: hidden here, still valid in saved maps
   for (const entry of ENGINE2_V3_GROUND_VARIANTS.filter((item) => item.terrain === terrain && item.key !== "city" && !(terrain === "plains" && item.variant === 51) && !(terrain === "woods" && item.variant === 13) && !(terrain === "ember" && item.variant === 7))) {
-    list.push({ variant: entry.variant, thumb: `/game/ground-engine2-v3/${entry.folder}/color.png` });
+    list.push({ variant: entry.variant, thumb: thumbFor(terrain, entry.variant) });
   }
-  for (const entry of GROUND_VARIANT_LAYERS.filter(item => item.terrain === terrain && item.key !== 'photo-city' && item.key !== 'city-stone-paving' && item.key !== 'city-indoor-wood' && item.key !== 'variant-flame-005-fire')) {
+  for (const entry of GROUND_VARIANT_LAYERS.filter(item => item.terrain === terrain && item.key !== 'photo-city' && item.key !== 'city-stone-paving' && item.key !== 'city-indoor-wood' && item.key !== 'variant-flame-005-fire' && item.key !== 'laje-021-stone-slabs')) {
     list.push({ variant: entry.variant, thumb: thumbFor(terrain, entry.variant) });
   }
   // Água 025, 026, 027, 028 and Leito · Photo 3D removed from the picker on request (saved maps keep them)

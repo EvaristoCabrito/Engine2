@@ -1,6 +1,6 @@
 // Decorations check: open maps, wide shot at the default view plus a closer one, decoration stats.
 // Usage: node qa/decor.mjs [tag] [mapId ...]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/decor';
 mkdirSync(out, { recursive: true });
@@ -15,7 +15,7 @@ try {
     page.on('pageerror', e => errors.push(e.message));
     page.on('response', r => { if (r.status() >= 400) errors.push(`${r.status()} ${r.url()}`); });
     page.on('console', m => { if (m.text().includes('[engine2] decorations')) logs.push(m.text()); });
-    await page.goto(`http://127.0.0.1:5300/editor.html?map=${id}`);
+    await page.goto(`http://127.0.0.1:8080/editor.html?map=${id}`);
     await page.waitForFunction(i => window.__engine2?.map === i && window.__cast?.units?.length > 0, id, { timeout: 240000 }).catch(e => errors.push('not ready ' + e.message.split('\n')[0]));
     await page.waitForTimeout(2500);
     await page.screenshot({ path: `${out}/${tag}-${id}-wide.png` });

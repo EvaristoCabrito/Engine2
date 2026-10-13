@@ -1,5 +1,5 @@
 // Editing check with real mouse input: build mountains with the Elevar brush, drag a ridge, undo, save.
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync, readFileSync, readdirSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 const out = 'C:/Engine2/shots/sculpt';
@@ -14,7 +14,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
   page.on('pageerror', e => errors.push(e.message));
   page.on('dialog', d => d.accept());
-  await page.goto(`http://127.0.0.1:5300/editor.html?map=${MAP}`);
+  await page.goto(`http://127.0.0.1:8080/editor.html?map=${MAP}`);
   await page.waitForFunction(() => window.__engine2?.ready && window.__cast?.units?.length > 0, null, { timeout: 240000 });
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${out}/0-before.png` });

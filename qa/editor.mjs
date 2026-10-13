@@ -1,6 +1,6 @@
 // Opens Ember maps in the Engine2 editor (dev server on 5300) and screenshots smooth + hard edges.
 // Usage: node qa/editor.mjs [tag] [mapId ...]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/editor';
 mkdirSync(out, { recursive: true });
@@ -14,7 +14,7 @@ try {
     const errors = [], logs = [];
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); else if (m.text().includes('[engine2]')) logs.push(m.text()); });
-    await page.goto(`http://127.0.0.1:5300/editor.html?map=${id}`);
+    await page.goto(`http://127.0.0.1:8080/editor.html?map=${id}`);
     await page.waitForFunction(i => window.__engine2?.ready && window.__engine2.map === i, id, { timeout: 120000 }).catch(e => errors.push('not ready: ' + e.message.split('\n')[0]));
     await page.waitForTimeout(1200);
     await page.screenshot({ path: `${out}/${tag}-${id}-smooth.png` });

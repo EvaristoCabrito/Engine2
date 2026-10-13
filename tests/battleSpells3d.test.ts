@@ -7,6 +7,8 @@ const doubles = vi.hoisted(() => {
   const instances: any[] = [];
   class Effect {
     casts: any[] = []; finished = false;
+    // the real Fireball/Venom effects carry an arc axis and pixel size the battle sets on them
+    up = { set() {} }; pixel = 1;
     constructor(..._args: any[]) { instances.push(this); }
     update() {} setSettings() {} dispose() {}
     cast(options: any) { this.casts.push(options); }

@@ -1,5 +1,5 @@
 // Headless, muted: opening the game then reloading must land on the title screen.
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 const browser = await chromium.launch({ headless: true, args: ['--mute-audio'] });
 const page = await browser.newPage();
 const errors = [];

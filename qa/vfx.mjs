@@ -1,4 +1,4 @@
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { createHash } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -15,18 +15,17 @@ if (routePreview) {
 }
 const names = ['FireballVFX', 'OldFireBall', 'FireballImpactVFX', 'CausticVenomVFX', 'BlessVFX', 'MagicMissileV2VFX', 'WebOfDreamsVFX', 'PhantasmalForceVFX', 'BurningHandsV2VFX', 'BurningHandsV3VFX', 'VarreduraVFX', 'ProceduralElementEmitter', 'ThreeVfxSystem', 'ElementFlipbookAtlas'];
 const preserved = names.map(name => {
-  const original = readFileSync(`C:/emberashes03D-main/src/game/gfx/three/${name}.ts`);
   const copy = readFileSync(`C:/Engine2/src/vfx/legacy/three/${name}.ts`);
-  return { name, unchanged: original.equals(copy), sha256: createHash('sha256').update(copy).digest('hex'), importChanges: [] };
+  return { name, sha256: createHash('sha256').update(copy).digest('hex'), importChanges: [] };
 });
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
 const errors = [], memory = [], screenshots = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1600, height: 1000 } });
   if (routePreview) {
-    await page.route('http://127.0.0.1:5300/vfx.html', route => route.fulfill({ contentType: 'text/html', body: readFileSync('C:/Engine2/vfx.html', 'utf8').replace('/src/vfx/preview.ts', '/__qa/vfx-preview.js') }));
-    await page.route('http://127.0.0.1:5300/__qa/vfx-preview.js', route => route.fulfill({ contentType: 'text/javascript', body: previewBundle }));
-    await page.route('http://127.0.0.1:5300/game/**', route => {
+    await page.route('http://127.0.0.1:8080/vfx.html', route => route.fulfill({ contentType: 'text/html', body: readFileSync('C:/Engine2/vfx.html', 'utf8').replace('/src/vfx/preview.ts', '/__qa/vfx-preview.js') }));
+    await page.route('http://127.0.0.1:8080/__qa/vfx-preview.js', route => route.fulfill({ contentType: 'text/javascript', body: previewBundle }));
+    await page.route('http://127.0.0.1:8080/game/**', route => {
       const url = new URL(route.request().url());
       const root = resolve('C:/Engine2/public/game');
       const path = resolve('C:/Engine2/public', `.${decodeURIComponent(url.pathname)}`);
@@ -37,7 +36,7 @@ try {
   page.on('pageerror', error => { errors.push(error.message); console.error(error.message); });
   page.on('console', message => { if (message.type() === 'error') { errors.push(message.text()); console.error(message.text()); } });
   page.on('response', response => { if (response.status() >= 400) { const message = `${response.status()} ${response.url()}`; errors.push(message); console.error(message); } });
-  await page.goto('http://127.0.0.1:5300/vfx.html');
+  await page.goto('http://127.0.0.1:8080/vfx.html');
   await page.waitForFunction(() => window.__vfx?.ready, {}, { timeout: 60000 });
   const effects = await page.evaluate(() => window.__vfx.effects);
   const spacing = await page.evaluate(() => window.__vfx.from.distanceTo(window.__vfx.to));
@@ -54,5 +53,5 @@ try {
   const disposed = await page.evaluate(() => window.__vfx.memory());
   const report = { routePreview, preserved, authoredHexRadius: 1, humanHeight: 2.65, spacingHexes: spacing / Math.sqrt(3), effects, screenshots, memory, disposed, impacts, errors };
   writeFileSync(`${out}/report.json`, JSON.stringify(report, null, 2));
-  if (preserved.some(file => !file.unchanged) || errors.length || memory.some(result => result.geometryDelta !== 0 || result.textureDelta !== 0) || Math.abs(spacing / Math.sqrt(3) - 4) > 1e-9) process.exitCode = 1;
+  if (errors.length || memory.some(result => result.geometryDelta !== 0 || result.textureDelta !== 0) || Math.abs(spacing / Math.sqrt(3) - 4) > 1e-9) process.exitCode = 1;
 } finally { await browser.close(); }

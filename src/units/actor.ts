@@ -11,6 +11,7 @@ import { playPoseSound, stopWalkSound } from './sounds';
 import { makeSpriteMaterial } from './spriteMaterial';
 import { UNIT_LIGHT_DEFS } from '../ember/lighting';
 import { CarriedLight } from '../render/carriedLight';
+import { alignUnitLights } from './lightFrame';
 import { FLAT_ROW_STEP } from '../render/cameraRig';
 import { CARD_RENDER_ORDER } from '../render/drawOrder';
 
@@ -223,11 +224,7 @@ export class UnitActor {
     this.mesh.position.set(this.x, y, this.z);
     this.mesh.rotation.set(-lean, cameraYaw, 0, 'YXZ');
     this.card.castShadow = flatTop === null;
-    // Cancel billboard mirroring, rotation and lean: the footprint's lights stay on world hexes.
-    this.lights.scale.x = mirror ? -1 : 1;
-    this.lights.rotation.set(lean, mirror ? cameraYaw : -cameraYaw, 0, 'XYZ');
-    // ...and back down from the flat card's raised height to the ground (in the leaned frame)
-    this.lights.position.set(0, (ground - y) * Math.cos(lean), (ground - y) * Math.sin(lean));
+    alignUnitLights(this.lights, this.def.classId, cameraYaw, mirror, lean, ground, y);
     for (const light of this.lights.children as CarriedLight[]) light.update(this.t * 0.5, this.dead ? 0 : this.lightFade);
   }
 

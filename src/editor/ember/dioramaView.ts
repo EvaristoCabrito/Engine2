@@ -82,12 +82,15 @@ export class DioramaView {
 
   constructor(host: HTMLElement) {
     this.stage = new Stage(host);
+    // dev only: headless checks (tools/) drive the stage directly, e.g. moon phases
+    if (import.meta.env.DEV) (window as unknown as { __stage?: Stage }).__stage = this.stage;
     this.rig = new CameraRig(this.stage.camera, this.stage.renderer.domElement);
     this.rig.mode = 'free'; // the editor spins freely to test angles; the campaign stays locked
     const tex = groundTextures(this.stage.renderer);
     this.groundMat = makeTerrainMaterial(tex);
     this.waterMat = new THREE.MeshStandardMaterial({
-      color: '#2f86a8', roughness: 0.12, metalness: 0.05, transparent: true, opacity: 0.74,
+      // 0.12 focused a low moon's reflection into one blinding bloom blob; this is a soft shimmer
+      color: '#2f86a8', roughness: 0.5, metalness: 0.05, transparent: true, opacity: 0.74,
       normalMap: tex.ripple, normalScale: new THREE.Vector2(0.6, 0.6), depthWrite: false,
     });
     this.stage.onFrame((_dt, t) => tex.ripple.offset.set(t * 0.02, t * 0.013));
@@ -142,7 +145,7 @@ export class DioramaView {
       this.stage.timeOfDay = tod;
       this.stage.scene.background = new THREE.Color('#000000');
       this.stage.fitToBoard(w, depth);
-      if (m.environment === 'indoor') { this.stage.sun.intensity *= 0.4; this.stage.hemi.intensity *= 1.4; }
+      if (m.environment === 'indoor') { this.stage.sun.intensity *= 0.8; this.stage.hemi.intensity *= 1.6; }
     }
     await Promise.all([prepareTerrainRelief(board), ensureGroundSets()]);
     if (gen !== this.gen) return;

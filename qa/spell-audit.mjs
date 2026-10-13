@@ -1,7 +1,7 @@
 // Headless, muted audit of every 3D spell effect's placement: enters a test battle, frames the
 // camera on a real caster/target pair, marks caster (blue) and target (red) on screen, fires the
 // effect's VFX request and screenshots it over time.   node qa/spell-audit.mjs [tag] [mission] [only]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots/spell-audit', tag = process.argv[2] || 'a', mission = process.argv[3] || '14', only = process.argv[4];
 mkdirSync(out, { recursive: true });

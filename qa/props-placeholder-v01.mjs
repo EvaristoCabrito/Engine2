@@ -1,11 +1,11 @@
-import {chromium} from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import {chromium} from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 const out='C:/Engine2/shots/props';mkdirSync(out,{recursive:true});
 const tag=process.argv[2]||new Date().toISOString().replaceAll(':','-');
 const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']});
 try{
  const page=await browser.newPage({viewport:{width:1600,height:900}});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
- await page.goto('http://127.0.0.1:5300/props.html');await page.waitForFunction(()=>window.__props);
+ await page.goto('http://127.0.0.1:8080/props.html');await page.waitForFunction(()=>window.__props);
  const entries=await page.evaluate(()=>window.__props.entries);
  await page.evaluate(()=>window.__props.all());await page.screenshot({path:`${out}/${tag}-all.png`});
  for(let i=0;i<entries.length;i++){await page.evaluate(i=>window.__props.focus(i),i);await page.screenshot({path:`${out}/${tag}-${entries[i].label.replaceAll(' ','-')}.png`});}

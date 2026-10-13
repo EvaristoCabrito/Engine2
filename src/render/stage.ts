@@ -9,6 +9,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 
 import { SPRITE_FLOOR } from '../units/spriteMaterial';
 import { VolumetricFogPass } from './volumetricFog';
+import { Moon } from './moon';
 
 /** Ember's map time-of-day values (Mission.timeOfDay); undefined means "day". */
 export type TimeOfDay = 'day' | 'noon' | 'dawn' | 'dusk' | 'brightNight' | 'darkNight';
@@ -18,15 +19,25 @@ interface LightPreset {
   sky: string; ground: string; hemi: number; background: string; spriteFloor: number;
 }
 
-/** Night presets keep the dark readable: bluish moonlight plus a sprite readability floor. */
+/** Every preset stays clearly readable (user: as much light as possible): dawn/dusk are
+ * near-daylight with warm colour, nights are a bright blue moonlight plus a sprite floor. */
 export const TIME_PRESETS: Record<TimeOfDay, LightPreset> = {
   day: { sun: '#fff0d4', sunIntensity: 3.0, azimuth: -0.95, elevation: 0.95, sky: '#d4e6ff', ground: '#5d4b33', hemi: 1.0, background: '#000000', spriteFloor: 0 },
   noon: { sun: '#ffffff', sunIntensity: 3.5, azimuth: -0.6, elevation: 1.25, sky: '#dcecff', ground: '#64523a', hemi: 1.1, background: '#000000', spriteFloor: 0 },
-  dawn: { sun: '#ffc58f', sunIntensity: 2.3, azimuth: -1.6, elevation: 0.35, sky: '#c9b3c9', ground: '#4a3a30', hemi: 0.8, background: '#000000', spriteFloor: 0.05 },
-  dusk: { sun: '#ff9a5c', sunIntensity: 2.1, azimuth: 1.6, elevation: 0.3, sky: '#8a7aa8', ground: '#3b2a28', hemi: 0.7, background: '#000000', spriteFloor: 0.08 },
-  brightNight: { sun: '#a8bdff', sunIntensity: 1.1, azimuth: -0.7, elevation: 0.9, sky: '#3a4f7a', ground: '#181820', hemi: 0.45, background: '#000000', spriteFloor: 0.22 },
-  darkNight: { sun: '#8fa3e8', sunIntensity: 0.55, azimuth: -0.7, elevation: 0.9, sky: '#233353', ground: '#121218', hemi: 0.25, background: '#000000', spriteFloor: 0.16 },
+  dawn: { sun: '#ffd2a6', sunIntensity: 3.0, azimuth: -1.6, elevation: 0.45, sky: '#e2d0de', ground: '#6a5848', hemi: 1.05, background: '#000000', spriteFloor: 0.3 },
+  dusk: { sun: '#ffb47e', sunIntensity: 2.9, azimuth: 1.6, elevation: 0.42, sky: '#c4b2d4', ground: '#5e4840', hemi: 1.0, background: '#000000', spriteFloor: 0.3 },
+  brightNight: { sun: '#c2d0ff', sunIntensity: 2.2, azimuth: -0.7, elevation: 0.9, sky: '#7d90ba', ground: '#3a3a48', hemi: 1.0, background: '#000000', spriteFloor: 0.55 },
+  darkNight: { sun: '#b0c0f4', sunIntensity: 1.7, azimuth: -0.7, elevation: 0.9, sky: '#62759e', ground: '#2e2e3a', hemi: 0.85, background: '#000000', spriteFloor: 0.5 },
 };
+
+/** Tonight's moon: light strength (x the night preset), colour, and the disc's phase. */
+export interface MoonLight { strength: number; color?: string; sky?: string; background?: string; lit?: number; waxing?: boolean; icon?: string }
+/** Real seconds for the moon to cross the sky (rise to set); then the next night's moon rises. */
+const MOON_CROSSING_SECONDS = 600;
+/** Moonlight at rise/set, as a share of its strength overhead. */
+const MOON_LOW_LIGHT = 0.55;
+/** The moonlight's angle the board is lit as if from (the visible moon itself sits lower). */
+const MOON_LIT_AS = 0.6;
 
 const FULLSCREEN_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }';
 
@@ -49,7 +60,7 @@ const TiltShiftShader = {
 
 const GradeShader = {
   // neutral grade: the sprites keep their painted colours; only a soft vignette frames the diorama
-  uniforms: { tDiffuse: { value: null }, sat: { value: 1.0 }, tint: { value: new THREE.Vector3(1, 1, 1) }, vig: { value: 0.35 } },
+  uniforms: { tDiffuse: { value: null }, sat: { value: 1.0 }, tint: { value: new THREE.Vector3(1, 1, 1) }, vig: { value: 0.15 } },
   vertexShader: FULLSCREEN_VS,
   fragmentShader: `uniform sampler2D tDiffuse; uniform float sat, vig; uniform vec3 tint; varying vec2 vUv;
     void main(){
@@ -71,6 +82,8 @@ export class Stage {
   /** The 3D mist (volumetricFog.ts): off until a mission's Névoa turns it on. */
   readonly mist: VolumetricFogPass;
   private readonly bloom: UnrealBloomPass;
+  /** The moon in the night sky; the night presets' key light comes from it. */
+  readonly moonDisc = new Moon();
   private readonly tilt: ShaderPass[] = [];
   private readonly frameHooks: ((dt: number, t: number) => void)[] = [];
   private readonly clock = new THREE.Clock();
@@ -99,7 +112,8 @@ export class Stage {
     this.sun.shadow.bias = -0.001;
     this.sun.shadow.normalBias = 0.08;
     this.sun.shadow.radius = 3;
-    this.scene.add(this.hemi, this.sun, this.sun.target);
+    this.scene.add(this.hemi, this.sun, this.sun.target, this.moonDisc);
+    this.moonDisc.setIcon('/game/ui/moon/moon-full-v2.png');
 
     // Multisampled target: real anti-aliasing survives the post-processing chain.
     const msaa = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
@@ -110,7 +124,9 @@ export class Stage {
     this.mist = new VolumetricFogPass(this.camera, this.scene, this.sun, this.hemi);
     this.composer.addPass(this.mist);
     // gentle: bright fires and spells glow a little, they don't flare (0.3 / 0.9 was too much)
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.55, 0.9);
+    // threshold 2: surfaces lit by torches stay unbloomed; only the flames themselves (emissive,
+    // spriteMaterial FLAME_EMIT) cross it, so the glow sits on the source, not on the lit ground
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.3, 0.55, 2.0);
     this.composer.addPass(this.bloom);
     for (let i = 0; i < 2; i++) for (const d of [[1, 0], [0, 1]]) {
       const p = new ShaderPass(TiltShiftShader);
@@ -154,11 +170,12 @@ export class Stage {
   }
 
   /** Tonight's moon (the campaign's phase): scales and tints the night presets' moonlight. */
-  private moon: { strength: number; color?: string; sky?: string; background?: string } = { strength: 1 };
+  private moon: MoonLight = { strength: 1 };
 
   /** Set the moon (see moonPhase.ts's moonlightFor) and re-light; only night presets use it. */
-  setMoon(moon: { strength: number; color?: string; sky?: string; background?: string }): void {
+  setMoon(moon: MoonLight): void {
     this.moon = moon;
+    this.moonDisc.setIcon(moon.icon ?? '/game/ui/moon/moon-full-v2.png');
     this.setTimeOfDay(this.timeOfDay);
   }
 
@@ -178,8 +195,11 @@ export class Stage {
     this.timeOfDay = t;
     this.sun.color.set(p.sun);
     this.sun.intensity = p.sunIntensity;
-    const d = this.half * 2.2, ce = Math.cos(p.elevation);
-    this.sun.position.set(Math.sin(p.azimuth) * ce * d, Math.sin(p.elevation) * d, Math.cos(p.azimuth) * ce * d);
+    this.keyIntensity = p.sunIntensity;
+    this.placeLight(p.azimuth, p.elevation);
+    // at night the key light is the moon: placed (and dimmed near the horizon) every frame as it moves
+    this.moonDisc.visible = night;
+    if (night) this.moveMoon();
     this.hemi.color.set(p.sky);
     this.hemi.groundColor.set(p.ground);
     this.hemi.intensity = p.hemi;
@@ -187,6 +207,26 @@ export class Stage {
     if ((this.scene.background as THREE.Color | null)?.isColor) (this.scene.background as THREE.Color).set('#000000');
     if (this.scene.fog) (this.scene.fog as THREE.Fog).color.set('#000000');
     SPRITE_FLOOR.value = p.spriteFloor;
+  }
+
+  private keyIntensity = 3;
+  /** How far tonight's moon is across the sky: 0 rising, 0.5 highest, 1 setting. */
+  moonProgress = 0.35;
+
+  private placeLight(azimuth: number, elevation: number): void {
+    const d = this.half * 2.2, ce = Math.cos(elevation);
+    this.sun.position.set(Math.sin(azimuth) * ce * d, Math.sin(elevation) * d, Math.cos(azimuth) * ce * d);
+  }
+
+  /** The disc, the moonlight's direction and its strength, from where the moon is now. */
+  private moveMoon(): void {
+    const pose = Moon.pose(this.moonProgress);
+    this.moonDisc.place(pose, this.camera, this.half);
+    this.placeLight(pose.azimuth, pose.lightElevation);
+    // a low moon only grazes the ground: lift its strength so the board is lit as by a moon at
+    // MOON_LIT_AS (direction and shadows still come from the disc)
+    const graze = Math.min(Math.sin(MOON_LIT_AS) / Math.sin(pose.lightElevation), 5);
+    this.sun.intensity = this.keyIntensity * graze * (MOON_LOW_LIGHT + (1 - MOON_LOW_LIGHT) * pose.height);
   }
 
   get tiltShift(): boolean { return this.tilt[0].enabled; }
@@ -241,6 +281,10 @@ export class Stage {
   private frame(): void {
     const dt = Math.min(this.clock.getDelta(), 0.05), t = this.clock.elapsedTime;
     for (const h of this.frameHooks) h(dt, t);
+    if (this.moonDisc.visible) {
+      this.moonProgress = (this.moonProgress + dt / MOON_CROSSING_SECONDS) % 1;
+      this.moveMoon();
+    }
     // Ember's ThreeBattleRenderer fix, carried over: spell effects, fog of war and hidden units
     // switch point lights on and off, and any change in the number of lights recompiles every
     // lit material on screen (a visible stall or flash when a spell starts or ends). For the

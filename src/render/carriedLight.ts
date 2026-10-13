@@ -1,16 +1,23 @@
 import * as THREE from 'three';
-import { flickerAt, MAP_LIGHT_DECAY, type LightDef } from '../ember/lighting';
+import { flickerAt, type LightDef } from '../ember/lighting';
 
-/** Original Ember irradiance calibration, in Engine2's one-unit hex radius. */
+/** Softer than inverse-square so a fire lights several hexes, still brightest at the flame. */
+const DECAY = 1.25;
+/** Three's range window cuts light to zero at `distance`; set well past the def's radius so the
+ * tail fades out on its own instead of ending in a hard-edged disc. */
+const TAIL = 2.5;
+/** Irradiance scale (was 4.9 with decay 1.25: every pool saturated into a flat white disc). */
+const STRENGTH = 3.2;
+
 export class CarriedLight extends THREE.PointLight {
   constructor(readonly definition: LightDef, readonly seed: number, radius = definition.radius, height = 1) {
-    super(0xffffff, 0, Math.hypot(radius, height), MAP_LIGHT_DECAY);
+    super(0xffffff, 0, Math.hypot(radius, height) * TAIL, DECAY);
     this.color.setRGB(...definition.color);
     this.position.y = height;
     this.name = 'Ember environmental point light';
   }
 
   update(time: number, fade = 1): void {
-    this.intensity = this.definition.intensity * 4.9 * flickerAt(time, this.seed, this.definition.flicker) * Math.max(0, Math.min(1, fade));
+    this.intensity = this.definition.intensity * STRENGTH * flickerAt(time, this.seed, this.definition.flicker) * Math.max(0, Math.min(1, fade));
   }
 }

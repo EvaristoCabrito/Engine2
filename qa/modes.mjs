@@ -1,6 +1,6 @@
 // Screenshots each terrain look (1 smooth, 2 hard terraces, 3 tabletop tiles), wide and close-up at the bridge.
 // Runs headless Edge on the GPU (d3d11). Usage: node qa/modes.mjs [tag]
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 const out = 'C:/Engine2/shots';
 mkdirSync(out, { recursive: true });

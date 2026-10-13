@@ -1,6 +1,6 @@
 // Render the real blacksmith's SSR output with the production CSS and actual PNGs.
 // All browser requests are fulfilled from disk; this starts no preview/game server.
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import sharp from 'sharp';

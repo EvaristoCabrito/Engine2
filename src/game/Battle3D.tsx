@@ -1,3 +1,4 @@
+import { openingPartyCamera } from '../render/partyCamera';
 // Engine2's 3D battlefield, standing in for Ember's 2D BattleCanvas (same props). Ember's
 // BattleEngine still runs every rule, turn and AI decision; this only draws its state on the 3D
 // map (Engine2 terrain, decorations, full-resolution sprites) and feeds clicks back as hexes.
@@ -89,6 +90,18 @@ export function Battle3D({
         // camera testing: zoom from right up against a unit to far beyond the whole board
         view.rig.minDist = 1;
         view.rig.maxDist = Math.max(view.rig.maxDist * 4, 400);
+        const party = (engine.units as Unit[]).filter(unit => unit.side === 'player' && unit.alive);
+        const points = party.map(unit => {
+          const cell = view.board!.cell(unit.x, unit.y);
+          return { x: cell.x, y: view.groundAt(cell.x, cell.z), z: cell.z };
+        });
+        const opening = openingPartyCamera(points, view.stage.camera.aspect, view.rig.yaw, view.rig.pitch);
+        if (opening) {
+          view.rig.target.set(opening.target.x, opening.target.y, opening.target.z);
+          view.rig.dist = Math.min(view.rig.maxDist, Math.max(view.rig.minDist, opening.distance));
+          view.rig.apply();
+        }
+
         requestAnimationFrame(() => window.dispatchEvent(new Event("ember:battle-ready")));
       });
 

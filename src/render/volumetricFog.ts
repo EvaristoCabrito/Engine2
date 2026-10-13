@@ -128,7 +128,8 @@ const FRAGMENT = /* glsl */ `
     // per-pixel jitter (interleaved gradient noise) hides step banding
     float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
     float cosSun = dot(rd, uSunDir);
-    float sunPhase = 0.6 + 0.9 * pow(max(cosSun, 0.0), 6.0); // a little forward glow toward the sun
+    // a little forward glow toward the sun (0.9 flared a white blob under a low moon in view)
+    float sunPhase = 0.6 + 0.25 * pow(max(cosSun, 0.0), 6.0);
     vec3 T = vec3(1.0), glow = vec3(0.0);
     for (int i = 0; i < STEPS; i++) {
       vec3 p = uCamPos + rd * (t0 + (float(i) + jitter) * dt);
@@ -299,8 +300,9 @@ export class VolumetricFogPass extends Pass {
     u.uLightCount.value = lit.length;
     lit.forEach(({ l, p }, i) => {
       u.uLightPos.value[i].copy(p);
-      u.uLightColor.value[i].copy(l.color).multiplyScalar(Math.min(l.intensity, 60) * 0.015);
-      u.uLightRange.value[i] = Math.max(1.5, l.distance || 4) * 0.8;
+      // a tight, faint haze at the flame (0.015 / 0.8 spread a blinding amber cloud over hexes)
+      u.uLightColor.value[i].copy(l.color).multiplyScalar(Math.min(l.intensity, 60) * 0.006);
+      u.uLightRange.value[i] = Math.max(1.5, l.distance || 4) * 0.45;
     });
   }
 

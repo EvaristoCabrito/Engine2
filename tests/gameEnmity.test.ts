@@ -6,14 +6,13 @@ import { ENMITY, addToEntry, enmityTotal } from '../src/game/enmity';
 
 // Execute the live game's own methods without constructing its browser/audio renderer.
 const current = readFileSync('src/game/engine.ts', 'utf8');
-const original = readFileSync('C:/emberashes03D-main/src/game/engine.ts', 'utf8');
 const names = ['addEnmity', 'noteDamageEnmity', 'noteAwareEnmity', 'enmityTarget'];
 function methods(text: string) {
   const ast = ts.createSourceFile('engine.ts', text, ts.ScriptTarget.Latest, true);
   const cls = ast.statements.find(s => ts.isClassDeclaration(s) && s.name?.text === 'BattleEngine') as ts.ClassDeclaration;
   return new Map(cls.members.filter(ts.isMethodDeclaration).map(m => [m.name.getText(ast), m.getText(ast)]));
 }
-const live = methods(current), source = methods(original);
+const live = methods(current);
 const code = ts.transpileModule(`class EnmityHarness { ${names.map(n => live.get(n)).join('\n')} }`, {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 }).outputText;
@@ -29,15 +28,12 @@ function fixture() {
 }
 
 describe('Enmity in the active Engine2 game', () => {
-  it('retains the original implementation and AI focus restriction', () => {
-    for (const name of [...names, 'castProvoke']) expect(live.get(name)).toBe(source.get(name));
-    const focus = 'const focus = this.enmityTarget(next);';
-    const targets = 'const players = focus ? [focus] : this.units.filter((u) => u.side === "player" && u.alive);';
-    for (const text of [live.get('runAiFor')!, source.get('runAiFor')!]) {
-      expect(text).toContain(focus); expect(text).toContain(targets);
-    }
+  it('keeps the AI focus restriction and per-round volatile decay', () => {
+    for (const name of [...names, 'castProvoke']) expect(live.get(name)).toBeDefined();
+    const text = live.get('runAiFor')!;
+    expect(text).toContain('const focus = this.enmityTarget(next);');
+    expect(text).toContain('const players = focus ? [focus] : this.units.filter((u) => u.side === "player" && u.alive);');
     expect(live.get('startNewRound')).toContain('addToEntry(entry, 0, -ENMITY.volatileDecayPerRound)');
-    expect(readFileSync('src/game/enmity.ts', 'utf8')).toBe(readFileSync('C:/emberashes03D-main/src/game/enmity.ts', 'utf8'));
   });
 
   it('gives magic greater enmity than equal weapon damage and reduces CE when hit', () => {

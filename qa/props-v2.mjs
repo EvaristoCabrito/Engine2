@@ -1,11 +1,11 @@
-import {chromium} from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import {chromium} from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {mkdirSync,writeFileSync} from 'node:fs';
 const out='C:/Engine2/shots/props';mkdirSync(out,{recursive:true});
 const tag=process.argv[2]||'gothic-cottage-v01';
 const browser=await chromium.launch({channel:'msedge',headless:true,args:['--use-angle=d3d11','--enable-gpu','--ignore-gpu-blocklist']});
 try{
  const page=await browser.newPage({viewport:{width:1600,height:1100}});const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)errors.push(`${r.status()} ${r.url()}`);});
- await page.goto('http://127.0.0.1:5300/props.html');await page.waitForFunction(()=>window.__propsV2?.ready,{},{timeout:120000});
+ await page.goto('http://127.0.0.1:8080/props.html');await page.waitForFunction(()=>window.__propsV2?.ready,{},{timeout:120000});
  for(const mode of ['day','night']){await page.getByRole('button',{name:mode==='day'?'Overcast day':'Moonlit night'}).click();await page.screenshot({path:`${out}/${tag}-${mode}.png`});}
  await page.getByRole('button',{name:'Front'}).click();await page.getByRole('button',{name:'Overcast day'}).click();await page.screenshot({path:`${out}/${tag}-front-day.png`});
  await page.getByRole('button',{name:'Side',exact:true}).click();await page.screenshot({path:`${out}/${tag}-side-day.png`});

@@ -1,4 +1,4 @@
-import { chromium } from 'file:///C:/emberashes03D-main/node_modules/playwright/index.mjs';
+import { chromium } from 'file:///C:/Users/evari/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import { mkdirSync } from 'node:fs';
 mkdirSync('C:/Engine2/shots/restored-lights', { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true, args: ['--mute-audio', '--use-angle=d3d11', '--enable-gpu', '--ignore-gpu-blocklist'] });
@@ -6,7 +6,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1400, height: 900 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto('http://127.0.0.1:8082/diorama.html');
+  await page.goto('http://127.0.0.1:8080/diorama.html');
   const report = await page.evaluate(async () => {
     const { DioramaView } = await import('/src/editor/ember/dioramaView.ts');
     const { LIGHT_DEFS } = await import('/src/ember/lighting.ts');

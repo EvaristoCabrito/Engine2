@@ -57,6 +57,7 @@ export const GROUND_VARIANT_LAYERS = [
   { key: 'variant-flame-005-fire', terrain: 'flame', variant: 4, file: 'flame-005-fire.png', label: '005', relief: 0 },
   { key: 'city-stone-paving', terrain: 'plains', variant: 50, file: 'city-stone-paving.png', label: 'Stone paving', relief: 0 },
   { key: 'city-indoor-wood', terrain: 'plains', variant: 61, file: 'city-indoor-wood.png', label: 'Indoor wood', relief: 0 },
+  { key: 'laje-021-stone-slabs', terrain: 'nave', variant: 20, file: 'laje-021-stone-slabs.png', label: '021', relief: 0 },
 ] as const;
 
 /** Stable lookup for new per-variant 3D material layers. */
@@ -79,11 +80,9 @@ export const ENGINE2_V3_GROUND_VARIANTS = [
   { key: "flame", terrain: "flame", variant: 5, folder: "flame", label: "Chama" },
   { key: "city", terrain: "plains", variant: 50, folder: "city", label: "City" },
   { key: "hill", terrain: "hill", variant: 6, folder: "hill", label: "Colina" },
-  { key: "column", terrain: "column", variant: 4, folder: "column", label: "Coluna" },
   { key: "nave", terrain: "nave", variant: 20, folder: "nave", label: "Laje" },
   { key: "plains", terrain: "plains", variant: 51, folder: "plains", label: "Planície" },
   { key: "door", terrain: "door", variant: 2, folder: "door", label: "Porta trancada" },
-  { key: "ruins", terrain: "ruins", variant: 9, folder: "ruins", label: "Ruínas" },
   { key: "shallow-water", terrain: "water", variant: 26, folder: "shallow-water", label: "Água rasa" },
   { key: "river-rocks", terrain: "water", variant: 27, folder: "river-rocks", label: "Pedras do vau" },
 ] as const;

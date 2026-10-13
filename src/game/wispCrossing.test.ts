@@ -7,9 +7,10 @@ import { footprint, hexNeighbors, hexDist, clearShot } from "./pathfinding.ts";
 import { WISP_CROSSING_ID, WISP_BOSS_ID, completedAfterWispVictory, routeWispCrossing, wispCrossingCompleted } from "./wispCrossing.ts";
 import type { Mission, TerrainId } from "./types.ts";
 
-const readDraft = (name: string) => JSON.parse(readFileSync(new URL(`./maps/${name}`, import.meta.url), "utf8")).draft;
-const crossing = readDraft("wisp-forest-crossing007.json") as Mission;
-const room = readDraft("wisp-forest-crossing-boss002.json");
+// Engine2 keeps Ember's maps in maps/ember (src/game/maps was removed); the latest saves.
+const readDraft = (name: string) => JSON.parse(readFileSync(new URL(`../../maps/ember/${name}`, import.meta.url), "utf8")).draft;
+const crossing = readDraft("wisp-forest-crossing012.json") as Mission;
+const room = readDraft("wisp-forest-crossing-boss005.json");
 
 test("all forward exits lead to the boss only until the crossing is completed", () => {
   const first = routeWispCrossing(crossing, []);
@@ -68,17 +69,21 @@ test("the long decorated approach leaves ranged sight and room for sapling defen
   const plant = room.enemySpawns.find((p: { classId: string }) => p.classId === "carnivorousPlant");
   const saplings = room.enemySpawns.filter((p: { classId: string }) => p.classId === "sapling");
   const overlay = buildDecorOverlay(room.decorations, room.cols, room.rows, placedBlockingFootprint);
-  assert.equal(saplings.length, 8);
+  // boss005: eight defenders on the approach between the boss and the party, plus four flank
+  // guards out at the sides, level with the boss
+  const approach = saplings.filter((s: { y: number }) => s.y > plant.y);
+  const flanks = saplings.filter((s: { y: number }) => s.y <= plant.y);
+  assert.equal(approach.length, 8);
+  assert.equal(flanks.length, 4);
   assert.ok(room.waterLevels.every((level: number | null) => level === null), "the entire boss clearing is dry ground");
   assert.ok(!room.tiles.includes("water"));
   for (const key of ["tiles", "tileVariants", "tileRots", "terrainElevations", "waterLevels"]) {
     assert.equal(room[key].length, room.cols * room.rows, key);
   }
   for (const spawn of room.playerSpawns) assert.ok(hexDist(spawn, plant) >= 12);
-  for (const spawn of saplings) {
-    assert.ok(hexDef(room.tiles, room.cols, spawn.x, spawn.y, overlay).passable);
-    assert.ok(spawn.y > plant.y && spawn.y < room.playerSpawns[0].y);
-  }
+  for (const spawn of saplings) assert.ok(hexDef(room.tiles, room.cols, spawn.x, spawn.y, overlay).passable);
+  for (const spawn of approach) assert.ok(spawn.y < room.playerSpawns[0].y);
+  for (const spawn of flanks) assert.ok(Math.abs(spawn.x - plant.x) >= 8, "flank guards stand well off the central lane");
   // The central advance stays open, with two exposed lanes aligned to the boss's front.
   for (let y = 9; y <= 13; y++) for (let x = 14; x <= 16; x++) {
     const cell = { x, y };

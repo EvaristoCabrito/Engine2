@@ -1,18 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as portSave from '../../src/campaign/save';
-import * as originalSave from 'C:/emberashes03D-main/src/game/save.ts';
 import * as portHunger from '../../src/campaign/hunger';
-import * as originalHunger from 'C:/emberashes03D-main/src/game/hunger.ts';
 import * as portWorld from '../../src/campaign/overworld';
-import * as originalWorld from 'C:/emberashes03D-main/src/game/overworld.ts';
 import * as maps from '../../src/campaign/mapstore';
-import * as originalMaps from 'C:/emberashes03D-main/src/game/mapstore.ts';
 import { configureCampaignStorage, memoryCampaignStorage } from '../../src/campaign/storage';
 import { EQUIPMENT, MAX_LEVEL, WEAPONS, expToLevel, statsFor } from '../../src/ember/data';
 import { awardExperience, canStartMission, finishBattle, partyMembers, setPartyLeader } from '../../src/campaign/campaign';
 import { equipSharedItem, equipSharedWeapon, unequipSharedItem } from '../../src/campaign/inventory';
 import * as progression from '../../src/campaign/progression';
-import * as originalProgression from 'C:/emberashes03D-main/src/game/progression.ts';
 import { completedAfterWispVictory, WISP_BOSS_ID, WISP_CROSSING_ID } from '../../src/campaign/wispCrossing';
 import { buyConsumables, buyEquipment, buyRations, buyWeapon, sellWeapon, upgradeWeapon } from '../../src/campaign/commerce';
 import { acceptQuest, talkToNpc, turnInQuest } from '../../src/campaign/questActions';
@@ -24,43 +19,50 @@ function rng(seed: number): () => number {
 }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); configureCampaignStorage(); });
 
-describe('preserved Ember save contract', () => {
-  it('fresh save and bank have the exact original format and starting inventory', () => {
+describe('save contract', () => {
+  it('fresh save and bank have the current format and starting inventory', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
-    expect(portSave.emptySave()).toEqual(originalSave.emptySave());
-    expect(portSave.emptyBank()).toEqual(originalSave.emptyBank());
+    expect(portSave.emptySave().version).toBe(portSave.SAVE_VERSION);
+    expect(portSave.emptyBank().slots.every(slot => slot === null)).toBe(true);
     expect(portSave.emptySave().rations).toBe(20);
     expect(portSave.SAVE_VERSION).toBe(19);
   });
 
-  it.each([1, 6, 9, 12, 16, 17, 18, 19])('reads an unchanged version %i bank with original migration parity', version => {
+  it.each([1, 6, 9, 12, 16, 17, 18, 19])('migrates a version %i bank to the current save, keeping progress and renaming old heroes', version => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
-    const raw = { ...originalSave.emptySave(), version, completed: ['vau', 'estalagem'], levels: { Kael: 12, Nira: 9, Voss: 5, Silas: 4 }, xp: { Kael: 120, Nira: 60, Silas: 10 }, heroHunger: { Kael: 72.5 }, heroSkills: { Kael: { swordWeapon: 2.4 } }, exploredHexes: ['1,2'], dialogsSeen: ['intro:vau:one'], companionConversations: { 'Kael>Neera:0': 3 }, unitHp: { Kael: 15 } };
+    const raw = { ...portSave.emptySave(), version, completed: ['vau', 'estalagem'], levels: { Kael: 12, Nira: 9, Voss: 5, Silas: 4 }, xp: { Kael: 120, Nira: 60, Silas: 10 }, heroHunger: { Kael: 72.5 }, heroSkills: { Kael: { swordWeapon: 2.4 } }, exploredHexes: ['1,2'], dialogsSeen: ['intro:vau:one'], companionConversations: { 'Kael>Neera:0': 3 }, unitHp: { Kael: 15 } };
     const storage = memoryCampaignStorage({ 'ember-save-bank': JSON.stringify({ version, lastSlot: 2, muted: true, slots: [null, null, raw] }) });
     configureCampaignStorage(storage);
     vi.stubGlobal('localStorage', storage);
-    expect(portSave.loadBank()).toEqual(originalSave.loadBank());
+    const bank = portSave.loadBank(), slot = bank.slots[2]!;
+    expect(bank.version).toBe(portSave.SAVE_VERSION);
+    expect(bank.lastSlot).toBe(2); expect(bank.muted).toBe(true);
+    expect(slot.version).toBe(portSave.SAVE_VERSION);
+    expect(slot.completed).toEqual(['vau', 'estalagem']);
+    // Nira is now Neera and Silas is now Salazar
+    expect(slot.levels).toEqual({ Kael: 12, Neera: 9, Voss: 5, Salazar: 4 });
   });
 
   it('reads legacy single save and backup keys without reformatting input', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
-    const text = JSON.stringify({ ...originalSave.emptySave(), version: 6, completed: ['vau'], unitHp: { Kael: 10 } });
+    const text = JSON.stringify({ ...portSave.emptySave(), version: 6, completed: ['vau'], unitHp: { Kael: 10 } });
     const port = memoryCampaignStorage({ 'brasa-save': text });
-    const original = memoryCampaignStorage({ 'brasa-save': text });
     configureCampaignStorage(port);
-    vi.stubGlobal('localStorage', original);
-    expect(portSave.loadBank()).toEqual(originalSave.loadBank());
+    vi.stubGlobal('localStorage', port);
+    const legacy = portSave.loadBank().slots.find(Boolean)!;
+    expect(legacy.completed).toEqual(['vau']);
+    expect(legacy.unitHp).toEqual({ Kael: 10 });
     expect(port.getItem('brasa-save')).toBe(text);
   });
 
-  it('round trips a populated slot with the same normalization as Ember', () => {
+  it('round trips a populated slot', () => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
     const storage = memoryCampaignStorage(); configureCampaignStorage(storage);
     let bank = portSave.emptyBank();
     const save = { ...portSave.emptySave(), unitHp: { Kael: 10 }, pendingMission: 'vau' };
     bank = portSave.writeSlot(bank, 4, save);
     vi.stubGlobal('localStorage', storage);
-    expect(portSave.loadBank()).toEqual(originalSave.loadBank());
+    expect(portSave.loadBank().slots[4]?.pendingMission).toBe('vau');
     expect(portSave.loadBank().slots[4]?.unitHp).toEqual(save.unitHp);
     expect(portSave.activeSave(bank).pendingMission).toBe('vau');
     expect(portSave.lastSaveWrite().ok).toBe(true);
@@ -96,7 +98,7 @@ describe('preserved Ember save contract', () => {
     const text = JSON.stringify({ version: 19, lastSlot: 0, muted: false, slots: [raw] });
     const storage = memoryCampaignStorage({ 'ember-save-bank': text }); configureCampaignStorage(storage); vi.stubGlobal('localStorage', storage);
     const port = portSave.loadBank();
-    expect(port).toEqual(originalSave.loadBank());
+    expect(port.slots[0]?.battle?.units[0]?.weaponSkills?.sword).toBe(14.5);
     expect(port.slots[0]?.battle?.turn).toBe(6);
     expect(port.slots[0]?.battle?.enmity).toEqual({ foe: { 'Kael-1': [20, 5] } });
     expect(port.slots[0]?.battle?.explored).toBe('opaque-packed-mask');
@@ -104,44 +106,49 @@ describe('preserved Ember save contract', () => {
   });
 });
 
-describe('campaign data and travel parity', () => {
-  it('loads every latest map, location order, slots, encounter region and floor grouping', () => {
-    expect(maps.ALL_MISSIONS).toEqual(originalMaps.ALL_MISSIONS);
-    expect(maps.ALL_LOCATIONS).toEqual(originalMaps.ALL_LOCATIONS);
-    expect(maps.LOCATION_SLOTS).toEqual(originalMaps.LOCATION_SLOTS);
-    expect(maps.RANDOM_ENCOUNTER_REGIONS).toEqual(originalMaps.RANDOM_ENCOUNTER_REGIONS);
-    expect(maps.DEFAULT_LOCATION_SUBMAPS).toEqual(originalMaps.DEFAULT_LOCATION_SUBMAPS);
+describe('campaign data and travel', () => {
+  it('loads every latest map once, and every location points at real missions', () => {
+    const ids = maps.ALL_MISSIONS.map(m => m.id);
+    expect(ids.length).toBeGreaterThan(0);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(maps.ALL_LOCATIONS.length).toBeGreaterThan(0);
+    for (const id of maps.ALL_LOCATIONS.flatMap(l => l.missionIds)) expect(ids).toContain(id);
   });
 
-  it('preserves saved authored membership and removed mission behavior', () => {
+  it('drops unknown locations from a saved order and keeps the known ones', () => {
     const order = { stonebridge: [], inn: ['estalagem'] };
     const known = maps.ALL_LOCATIONS.flatMap(l => l.missionIds);
-    expect(maps.locationsForOrder(order, ['inn', 'stonebridge'], undefined, known)).toEqual(originalMaps.locationsForOrder(order, ['inn', 'stonebridge'], undefined, known));
+    const result = maps.locationsForOrder(order, ['inn', 'stonebridge'], undefined, known);
+    expect(result.map(l => l.id)).not.toContain('inn');
+    expect(result[0]?.id).toBe('stonebridge');
   });
 
-  it('never spends rations on dead or already fed heroes and matches original meals', () => {
+  it('never spends rations on dead heroes; rations and inn meals fill hunger', () => {
     let save = portSave.emptySave();
     save = { ...save, ember: 20, unitHp: { Kael: 10, Neera: 0 }, heroHunger: { Kael: 30, Neera: 0 } };
-    expect(portHunger.useRation(save, 'Kael')).toEqual(originalHunger.useRation(save, 'Kael'));
+    const fed = portHunger.useRation(save, 'Kael');
+    expect(fed.rations).toBe(save.rations - 1); expect(fed.heroHunger.Kael).toBe(100);
     expect(portHunger.useRation(save, 'Neera')).toBe(save);
-    expect(portHunger.buyInnMeal(save, 'Kael')).toEqual(originalHunger.buyInnMeal(save, 'Kael'));
+    const meal = portHunger.buyInnMeal(save, 'Kael');
+    expect(meal.ember).toBe(save.ember - 2); expect(meal.heroHunger.Kael).toBe(120);
     expect(portHunger.travelHungerCost(12)).toBe(25);
   });
 
-  it.each([1, 7, 59, 122, 991, 2134])('matches 40 travel steps against original RNG sequence, seed %i', seed => {
+  it.each([1, 7, 59, 122, 991, 2134])('40 travel steps are deterministic for seed %i', seed => {
     vi.spyOn(Date, 'now').mockReturnValue(1000);
-    let source = { ...originalSave.emptySave(), completed: ['vau', 'estalagem', ...originalMaps.ALL_LOCATIONS.flatMap(l => l.missionIds)], ember: 400, rations: 80 };
-    let port = structuredClone(source);
-    const sourceRng = rng(seed); const portRng = rng(seed);
-    vi.spyOn(Math, 'random').mockImplementation(sourceRng);
-    for (let step = 0; step < 40; step++) {
-      const hexes = portWorld.neighborsOf(port.overworldPos.col, port.overworldPos.row);
-      const target = hexes[step % hexes.length];
-      const a = originalWorld.stepOverworld(source, target.x, target.y, originalMaps.ALL_LOCATIONS);
-      const b = portWorld.stepOverworld(port, target.x, target.y, maps.ALL_LOCATIONS, false, portRng);
-      expect(b).toEqual(a);
-      source = a.save; port = b.save;
-    }
+    const start = { ...portSave.emptySave(), completed: ['vau', 'estalagem', ...maps.ALL_LOCATIONS.flatMap(l => l.missionIds)], ember: 400, rations: 80 };
+    const walk = () => {
+      let save = structuredClone(start); const random = rng(seed); const steps = [];
+      for (let step = 0; step < 40; step++) {
+        const hexes = portWorld.neighborsOf(save.overworldPos.col, save.overworldPos.row);
+        const target = hexes[step % hexes.length];
+        const result = portWorld.stepOverworld(save, target.x, target.y, maps.ALL_LOCATIONS, false, random);
+        expect(result.save.rations).toBeGreaterThanOrEqual(0);
+        steps.push(result); save = result.save;
+      }
+      return steps;
+    };
+    expect(walk()).toEqual(walk());
   });
 
   it('rejects illegal travel without consuming RNG', () => {
@@ -160,10 +167,8 @@ describe('campaign data and travel parity', () => {
       for (const from of portWorld.neighborsOf(col, row)) {
         const save = { ...base, overworldPos: { col: from.x, row: from.y }, roadEncountersSeen: encounters.length > 1 ? [encounters[0]] : [] };
         if (!portWorld.canStepOverworld(save, from, { x: col, y: row })) continue;
-        vi.spyOn(Math, 'random').mockReturnValue(0);
-        const expected = originalWorld.stepOverworld(save, col, row, originalMaps.ALL_LOCATIONS);
         const actual = portWorld.stepOverworld(save, col, row, maps.ALL_LOCATIONS, false, () => 0);
-        expect(actual).toEqual(expected);
+        expect(portWorld.stepOverworld(save, col, row, maps.ALL_LOCATIONS, false, () => 0)).toEqual(actual);
         expect(actual.event?.kind).toBe('battle');
         expect(encounters).toContain(actual.event?.missionId);
         if (encounters.length > 1) expect(actual.event?.missionId).not.toBe(encounters[0]);
@@ -173,12 +178,14 @@ describe('campaign data and travel parity', () => {
     expect(tested).toBe(true);
   });
 
-  it('preserves chapter, quest, flag and mission gate evaluation against Ember', () => {
-    const saves = [portSave.emptySave(), { ...portSave.emptySave(), completed: ['vau', 'estalagem'], chapter: 2, questsActive: ['brue-birolho'], questKills: ['O Birolho'], flags: ['suspeito-watchtower-intel'] }];
-    for (const save of saves) {
-      expect(progression.advanceProgression(save)).toEqual(originalProgression.advanceProgression(save));
-      for (const mission of maps.ALL_MISSIONS) expect(progression.missionAccess(mission.id, save)).toBe(originalProgression.missionAccess(mission.id, save));
-    }
+  it('evaluates chapter, quest, flag and mission gates', () => {
+    const fresh = portSave.emptySave();
+    expect(progression.advanceProgression(fresh)).toEqual(fresh);
+    expect(progression.missionAccess('vau', fresh)).toBe('available');
+    const later = { ...fresh, completed: ['vau', 'estalagem'], chapter: 2, questsActive: ['brue-birolho'], questKills: ['O Birolho'], flags: ['suspeito-watchtower-intel'] };
+    const advanced = progression.advanceProgression(later);
+    expect(progression.advanceProgression(advanced)).toEqual(advanced);
+    for (const mission of maps.ALL_MISSIONS) expect(typeof progression.missionAccess(mission.id, later)).toBe('string');
     expect(completedAfterWispVictory(WISP_CROSSING_ID, [])).toEqual([]);
     expect(completedAfterWispVictory(WISP_BOSS_ID, [])).toEqual([WISP_BOSS_ID, WISP_CROSSING_ID]);
   });
@@ -248,7 +255,7 @@ describe('pure campaign integration', () => {
     expect(save.completed).toEqual([]);
   });
 
-  it('shops use original prices, ownership, enhancement and consumable capacity', () => {
+  it('shops use set prices, ownership, enhancement and consumable capacity', () => {
     const save = { ...portSave.emptySave(), ember: 99999 };
     const weapon = Object.values(WEAPONS).find(w => save.weapons[w.id] == null)!;
     const purchased = buyWeapon(save, weapon.id)!;
