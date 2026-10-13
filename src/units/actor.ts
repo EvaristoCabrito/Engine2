@@ -26,6 +26,7 @@ const ONE_SHOT: Pose[] = ['attack', 'attackLeft', 'attack2', 'attack2Left', 'att
  * In 3D "up the map" is away from the camera. */
 type WalkDir = 'back' | 'front' | 'side';
 const WALK_STILL: Record<WalkDir, Pose> = { back: 'walkBack', front: 'walkFront', side: 'walkSide' };
+const WALK_POSES: Pose[] = ['walk', 'walkLeft', 'walkUp', 'walkDown', 'walkBack', 'walkFront', 'walkSide'];
 const STEP_SECONDS = 0.22; // Ember's normal walk speed per hex
 
 const cardGeo = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
@@ -106,13 +107,14 @@ export class UnitActor {
     return f;
   }
 
-  /** Load the idle so the unit can appear; warm every other pose in the background. */
+  /** Load the idle so the unit can appear; warm its walk cuts in the background. */
   async ready(): Promise<void> {
     await this.ensure('idle');
     this.mesh.visible = true;
-    // every other pose loads now, not on first use: a 64-frame walk started mid-move glided on
-    // frames still uploading (3 per screen frame) for its first hexes
-    void this.preloadAll();
+    // the walk cuts load now, not on first use: a 64-frame walk started mid-move glided on frames
+    // still uploading (3 per screen frame) for its first hexes. Only the walks: every pose of
+    // every unit overran the sprite budget (Neera alone is ~770 MB) and thrashed it.
+    for (const p of WALK_POSES) if (this.def.poses[p]) await this.ensure(p).catch(() => undefined);
   }
 
   async preloadAll(): Promise<void> {
@@ -194,7 +196,9 @@ export class UnitActor {
     }
 
     const f = this.frames.get(this.shown);
-    if (!f) return;
+    // an evicted pose is never drawn: its textures would re-upload outside the budget and leak
+    if (f?.evicted) void this.ensure(this.shown);
+    if (!f || f.evicted) return;
     f.lastUsed = performance.now();
     const paced = this.driven === null ? framePace(this.def, this.pose, f.n, this.t) : null;
     const frame = paced ? paced.frame : Math.min(f.n - 1, Math.max(0, Math.floor(this.driven! * f.n)));

@@ -155,7 +155,10 @@ export function Battle3D({
         // (faceDx/faceDy, toward its last move or target), turned to the camera.
         const yaw = view.rig.facingYaw;
         const onScreen = (dx: number, dz: number) => dx * Math.cos(yaw) - dz * Math.sin(yaw);
-        const stepX = entry.px === undefined ? 0 : onScreen(p.x - entry.px, p.z - (entry.pz ?? p.z));
+        // only a real move steers by its step: an attack's lunge and pull-back would turn the
+        // attacker away from its target mid-swing
+        const stepping = (e.active as Any | null)?.type === "move" && (e.active as Any).id === u.id;
+        const stepX = entry.px === undefined || !stepping ? 0 : onScreen(p.x - entry.px, p.z - (entry.pz ?? p.z));
         const lookX = u.faceDx != null && u.faceDy != null ? onScreen(u.faceDx, u.faceDy) : (u.facing ?? 1);
         const facing = Math.abs(stepX) > 1e-4 ? Math.sign(stepX) : Math.abs(lookX) > 1e-6 ? Math.sign(lookX) : (entry.facing ?? 1);
         entry.px = p.x; entry.pz = p.z; entry.facing = facing;

@@ -22,6 +22,8 @@ export interface PoseFrames {
   /** centerBody poses: per frame, how far (pixels of the prepared frame) the body sits right of
    * where it is in frame 1 — measured from the opaque legs and torso, not the weapon. */
   bodyShift?: number[];
+  /** released by the budget; actors reload it instead of drawing it */
+  evicted?: boolean;
 }
 
 type Prepared = Record<string, { n: number; natW: number; natH: number; x: number; y: number; w: number; h: number }>;
@@ -54,9 +56,12 @@ export function spriteMemory(): { usedMB: number; budgetMB: number; poses: numbe
 
 function evictFor(incoming: number, keep: Set<string>): void {
   if (usedBytes + incoming <= SPRITE_BUDGET_BYTES) return;
-  const order = [...live.values()].filter(p => !keep.has(p.key)).sort((a, b) => a.lastUsed - b.lastUsed);
+  // a pose drawn in the last 2 s is on screen: never released (it would re-upload unbudgeted)
+  const now = performance.now();
+  const order = [...live.values()].filter(p => !keep.has(p.key) && now - p.lastUsed > 2000).sort((a, b) => a.lastUsed - b.lastUsed);
   for (const p of order) {
     if (usedBytes + incoming <= SPRITE_BUDGET_BYTES) break;
+    p.evicted = true;
     for (const t of p.textures) t.dispose();
     live.delete(p.key); loading.delete(p.key);
     usedBytes -= p.bytes;

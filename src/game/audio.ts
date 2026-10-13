@@ -263,10 +263,11 @@ const MONSTER_SFX: Record<string, Partial<Record<MonsterSfxKind, string>>> = {
   "militia-v2": { attack: "FootmanLameSword.mp3", walk: "FootSteps1.mp3", hit: "HitreactArmor.mp3", death: "DeadArmor.mp3" },
   // Salazar V2: the sounds supplied with his sheets (Attachments/Salazar), file names kept. Cast is
   // for damage spells, heal for every other spell (heals, Bless, Create Food and Water, ...).
-  salazar: { attack: "Blunt2.mp3", cast: "ElecticCasting01-Balanced-High.mp3", heal: "Healing01-Balanced-High.mp3", walk: "SalazarWalk-Balanced-High.mp3" },
-  // Neera: her walk sound (Attachments/WalkRight/NeeraWalk.mp3), for both walk directions.
-  neera: { walk: "NeeraWalk.mp3" },
+  salazar: { attack: "Blunt2.mp3", cast: "ElecticCasting01-Balanced-High.mp3", heal: "Healing01-Balanced-High.mp3", walk: "NeeraWalk.mp3" },
 };
+// Every main character walks with Neera's walk sound (Attachments/WalkRight/NeeraWalk.mp3), both
+// directions. Malrec's sprite here is his class's, "conjurer".
+for (const sprite of ["kaelFinal", "kaelEarly", "neera", "voss", "salazar", "aldric", "conjurer"]) MONSTER_SFX[sprite] = { ...MONSTER_SFX[sprite], walk: "NeeraWalk.mp3" };
 for (const cues of Object.values(MONSTER_SFX)) for (const file of Object.values(cues)) preloadExclusiveSfx(file);
 
 /** Whether a sprite has its own cue of this kind (see MONSTER_SFX). */

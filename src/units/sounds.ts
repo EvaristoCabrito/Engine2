@@ -24,17 +24,19 @@ const MONSTER_SFX: Record<string, Partial<Record<Kind, string>>> = {
   'plague-bearing-cattle': { attack: 'PlagueCattleATT001.mp3', cast: 'PlagueCattleCast001.mp3', walk: 'PlagueCattleWalk001.mp3', death: 'PlagueCattleDeath001.mp3' },
   'minor-horror-001': { attack: 'MinorHorrorATT001.mp3', cast: 'MinorHorrorCasting001.mp3', walk: 'MinorHorrorWalk001.mp3' },
   // Ember picks CultistV2WalkLeft/Right by direction; Engine2 has one walk cue per unit for now
-  salazar: { attack: 'Blunt2.mp3', cast: 'ElecticCasting01-Balanced-High.mp3', heal: 'Healing01-Balanced-High.mp3', walk: 'SalazarWalk-Balanced-High.mp3' },
+  salazar: { attack: 'Blunt2.mp3', cast: 'ElecticCasting01-Balanced-High.mp3', heal: 'Healing01-Balanced-High.mp3' },
   'cultist-v2': { attack: 'CultistV2Attack.mp3', cast: 'CultistV2Spellcast.mp3', walk: 'CultistV2WalkRight.mp3' },
 };
 
 // Heroes use Ember's generic cues: Kael's blade, Neera's bow, spellcasting for casters.
+// Every main character walks with Neera's walk sound.
 const HERO_SFX: Record<string, Partial<Record<Kind, [string, number?]>>> = {
-  kaelFinal: { attack: ['BladeSlash1Dagger.mp3', 1.12] },
+  kaelFinal: { attack: ['BladeSlash1Dagger.mp3', 1.12], walk: ['NeeraWalk.mp3'] },
   neera: { attack: ['NeeraBowRelease.mp3'], attack2: ['NeeraBowRelease.mp3'], cast: ['Spellcast01.mp3'], walk: ['NeeraWalk.mp3'] },
-  aldric: { attack: ['ATT01Blunt.mp3'], cast: ['ATT01Blunt.mp3'] },
-  voss: { attack: ['Spellcast01.mp3'], cast: ['Spellcast01.mp3'] },
-  malrec: { attack: ['ATT01Blunt.mp3'], cast: ['Spellcast01.mp3'] },
+  aldric: { attack: ['ATT01Blunt.mp3'], cast: ['ATT01Blunt.mp3'], walk: ['NeeraWalk.mp3'] },
+  voss: { attack: ['Spellcast01.mp3'], cast: ['Spellcast01.mp3'], walk: ['NeeraWalk.mp3'] },
+  malrec: { attack: ['ATT01Blunt.mp3'], cast: ['Spellcast01.mp3'], walk: ['NeeraWalk.mp3'] },
+  salazar: { walk: ['NeeraWalk.mp3'] },
 };
 
 const KIND: Partial<Record<Pose, Kind>> = {
@@ -103,6 +105,6 @@ export function playPoseSound(u: UnitDef, pose: Pose): void {
 }
 
 export function stopWalkSound(u: UnitDef): void {
-  const file = MONSTER_SFX[u.sprite]?.walk;
+  const file = MONSTER_SFX[u.sprite]?.walk ?? HERO_SFX[u.sprite]?.walk?.[0];
   if (file) playing.get(file)?.pause();
 }
