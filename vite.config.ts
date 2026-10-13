@@ -1,5 +1,5 @@
 import { defineConfig, type Plugin } from 'vite';
-import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync, mkdirSync, existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
@@ -63,25 +63,29 @@ function mapsPlugin(): Plugin {
   };
 }
 
-/** Newly added terrain images must be served even when the large asset tree is not watched. */
+/** Art added to public/game while the server runs (portraits, icons, tiles, decorations…) is served at once:
+ * Vite only knows the public files that existed at startup, and public/game is not watched. */
+const LIVE_ART_TYPES: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif', mp3: 'audio/mpeg', ogg: 'audio/ogg', wav: 'audio/wav', mp4: 'video/mp4' };
 function terrainImagesPlugin(): Plugin {
+  const root = resolve('public/game');
   return {
-    name: 'engine2-live-terrain-images',
+    name: 'engine2-live-game-art',
+    // Only files created after the server started: the rest are Vite's own public files (its caching kept).
+    // Runs first, since Vite's HTML fallback would answer an unknown image with the game page.
     configureServer(server) {
-      for (const folder of ['ground-variant-tiles', 'decorations']) {
-      const directory = resolve('public/game', folder);
-      server.middlewares.use(`/game/${folder}/`, (req, res, next) => {
+      const startedAt = Date.now();
+      server.middlewares.use('/game/', (req, res, next) => {
         let file: string;
         try { file = decodeURIComponent((req.url ?? '').split('?')[0].replace(/^\//, '')); }
         catch { res.statusCode = 400; res.end(); return; }
-        if (!/^[^/\\]+\.png$/i.test(file) || file.includes('..')) { next(); return; }
-        const path = resolve(directory, file);
-        if (!existsSync(path)) { next(); return; }
-        res.setHeader('Content-Type', 'image/png');
+        const type = LIVE_ART_TYPES[file.split('.').pop()?.toLowerCase() ?? ''];
+        if (!type || file.split(/[/\\]/).includes('..')) { next(); return; }
+        const path = resolve(root, file);
+        if (!path.startsWith(root) || !existsSync(path) || statSync(path).mtimeMs < startedAt) { next(); return; }
+        res.setHeader('Content-Type', type);
         res.setHeader('Cache-Control', 'no-cache');
         res.end(readFileSync(path));
       });
-      }
     },
   };
 }
@@ -103,7 +107,7 @@ export default defineConfig({
     // files crashed the watcher (EBUSY while copying art in) and made it miss real source edits.
     // Map saves (maps/ember) are watched only so Ember's save plugin can refresh the map store; its own
     // config writes are ignored, exactly as in Ember, so saving never reloads the editor.
-    watch: { ignored: ['**/public/game/**', '**/shots/**', '**/node_modules/**', '**/maps/e2/**', '**/src/campaign/map-order.json', '**/src/campaign/location-order.json', '**/src/campaign/map-slots.json'] },
+    watch: { ignored: ['**/public/game/**', '**/shots/**', '**/Attachments/**', '**/node_modules/**', '**/maps/e2/**', '**/src/campaign/map-order.json', '**/src/campaign/location-order.json', '**/src/campaign/map-slots.json'] },
   },
   build: { target: 'esnext', rollupOptions: { input: { main: resolve('index.html'), game: resolve('game.html'), editor: resolve('editor.html'), diorama: resolve('diorama.html'), vfx: resolve('vfx.html') } } },
 });

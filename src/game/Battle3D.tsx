@@ -1,4 +1,6 @@
 import { openingPartyCamera } from '../render/partyCamera';
+import { CarriedLight } from '../render/carriedLight';
+import { getDevGfx } from './gfx/three/devGfx';
 // Engine2's 3D battlefield, standing in for Ember's 2D BattleCanvas (same props). Ember's
 // BattleEngine still runs every rule, turn and AI decision; this only draws its state on the 3D
 // map (Engine2 terrain, decorations, full-resolution sprites) and feeds clicks back as hexes.
@@ -316,6 +318,10 @@ export function Battle3D({
 
     let hudClock = 0, lastTick = 0, chestKey = "";
     view.stage.onFrame((dt) => {
+      // Options → Graphics: the sun's (or moon's) cast shadows and the map's local lights
+      const gfx = getDevGfx();
+      view.stage.sun.castShadow = gfx.realShadows;
+      CarriedLight.enabled = gfx.localLights;
       followMoon();
       followCameraButtons();
       // keeps the engine's sight/fog current exactly as its own renderer does every frame
@@ -397,6 +403,7 @@ export function Battle3D({
       canvas.removeEventListener("pointerdown", onDown);
       canvas.removeEventListener("pointerup", onUp);
       window.removeEventListener("keydown", onKey);
+      CarriedLight.enabled = true;
       for (const { actor } of actors.values()) actor.dispose();
       atmosphere.dispose();
       arrows.dispose();

@@ -3,6 +3,7 @@ import { Check, ChevronLeft, Lock, MapPin, SlidersHorizontal, Volume2, VolumeX, 
 import { missionsForLocation } from "./mapstore";
 import type { Mission, WorldLocation } from "./types";
 import { GoldAmount } from "./GoldAmount";
+import { OptionsButton } from "./OptionsMenu";
 import { getAudioVolumes, setCutsceneVolume, setMusicVolume, setSfxVolume, sfxPlay, unlockAudio } from "./audio";
 import { MapLoadingOverlay, useMapLoading } from "./MapLoadingOverlay";
 
@@ -196,7 +197,7 @@ export function WorldMapScreen({
     <section className="relative h-dvh min-h-0 flex flex-col overflow-hidden bg-bg">
       <div
         className="absolute inset-0"
-        style={{ background: "radial-gradient(ellipse at 30% 20%, #241f19 0%, #0c0b0a 70%)" }}
+        style={{ background: "radial-gradient(ellipse at 30% 20%, #1e1e1e 0%, #0b0b0b 70%)" }}
       />
 
       <header className="relative z-20 flex items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
@@ -213,6 +214,7 @@ export function WorldMapScreen({
         <button type="button" onClick={onMute} className="size-9 grid place-items-center ember-icon-btn" aria-label="Som">
           {muted ? <VolumeX className="size-4" /> : <Volume2 className="size-4" />}
         </button>
+        <OptionsButton muted={muted} onMute={onMute} iconOnly escapeKey onReturnToTitle={onBack} />
         <div className="relative">
           <button
             type="button"

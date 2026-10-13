@@ -219,7 +219,7 @@
   0%,
   100% {
     box-shadow: 0 0 8px rgba(201, 150, 88, 0.22);
-    border-color: #5a4a38;
+    border-color: #494949;
   }
   50% {
     box-shadow: 0 0 18px rgba(201, 150, 88, 0.5);
@@ -229,7 +229,7 @@
 
 .inn-open {
   animation: inn-glow 2.8s ease-in-out infinite;
-  border-color: #8a6a48;
+  border-color: #696969;
 }
 
 .ember-window {
@@ -252,7 +252,7 @@
   /* A very light wash softens the generated-looking contrast without blurring the art. */
   background-color: transparent;
   background-image:
-    linear-gradient(rgba(7, 6, 5, 0.07), rgba(7, 6, 5, 0.12)),
+    linear-gradient(rgba(6, 6, 6, 0.07), rgba(6, 6, 6, 0.12)),
     url("/game/ui/backpack-background.jpg");
   background-position: center;
   background-size: cover;
@@ -285,7 +285,7 @@
 
 .ember-chip {
   color: #e2c294;
-  background: linear-gradient(180deg, rgba(42, 35, 28, 0.94) 0%, rgba(12, 10, 8, 0.95) 55%, rgba(33, 26, 20, 0.94) 100%);
+  background: linear-gradient(180deg, rgba(35, 35, 35, 0.94) 0%, rgba(10, 10, 10, 0.95) 55%, rgba(26, 26, 26, 0.94) 100%);
   border: 1px solid rgba(190, 150, 95, 0.5);
   box-shadow: 0 0 0 1px #000, inset 0 0 8px rgba(0, 0, 0, 0.9), 0 6px 16px rgba(0, 0, 0, 0.6);
 }
@@ -399,7 +399,7 @@ button.ember-chip:hover {
 
 .status-condition-ok { border-color: color-mix(in oklab, var(--color-ok) 70%, var(--color-border)); }
 .status-condition-danger { border-color: color-mix(in oklab, var(--color-danger) 74%, var(--color-border)); }
-.status-condition-warn { border-color: #8f6b3e; }
+.status-condition-warn { border-color: #666666; }
 
 /* Sized to sit comfortably alongside the compact battle HUD instead of dominating the
    screen — a modal-sized sheet, not a full-art inspector. */
@@ -454,13 +454,13 @@ button.ember-chip:hover {
 /* Scrollbars are part of the world UI, not operating-system chrome: black iron track,
    tarnished bronze rim, and an ember-lit grip. */
 :root {
-  scrollbar-color: #8e5b2c #100d0c;
+  scrollbar-color: #5d5d5d #0e0e0e;
   scrollbar-width: thin;
 }
 
 .ember-scrollbar,
 .ember-scrollbar * {
-  scrollbar-color: #8e5b2c #100d0c;
+  scrollbar-color: #5d5d5d #0e0e0e;
   scrollbar-width: thin;
 }
 
@@ -472,8 +472,8 @@ button.ember-chip:hover {
 
 .ember-scrollbar::-webkit-scrollbar-track,
 ::-webkit-scrollbar-track {
-  background: linear-gradient(90deg, #090808 0%, #201713 48%, #090808 100%);
-  border: 1px solid #4b3020;
+  background: linear-gradient(90deg, #090808 0%, #1a1a1a 48%, #090808 100%);
+  border: 1px solid #363636;
   box-shadow: inset 0 0 0 1px #050505, inset 0 0 8px rgba(0, 0, 0, 0.9);
 }
 
@@ -481,21 +481,21 @@ button.ember-chip:hover {
 ::-webkit-scrollbar-thumb {
   min-height: 34px;
   min-width: 34px;
-  border: 3px solid #17100d;
+  border: 3px solid #121212;
   border-radius: 999px;
-  background: linear-gradient(135deg, #d1a05f 0%, #7b4826 36%, #2a1710 68%, #ad7138 100%);
+  background: linear-gradient(135deg, #d1a05f 0%, #505050 36%, #1d1d1d 68%, #727272 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 211, 139, 0.35), 0 0 7px rgba(190, 85, 24, 0.32);
 }
 
 .ember-scrollbar::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #f0c57b 0%, #a96330 38%, #3a1c10 68%, #d78a42 100%);
+  background: linear-gradient(135deg, #f0c57b 0%, #6c6c6c 38%, #252525 68%, #d78a42 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 231, 172, 0.62), 0 0 11px rgba(231, 110, 31, 0.58);
 }
 
 .ember-scrollbar::-webkit-scrollbar-corner,
 ::-webkit-scrollbar-corner {
-  background: #100d0c;
+  background: #0e0e0e;
 }
 
 .loading-progress-sweep {
@@ -545,7 +545,7 @@ button.ember-chip:hover {
 .title-loader-frame {
   position: relative;
   padding: 3px;
-  background: linear-gradient(180deg, #2a231c 0%, #0c0a08 55%, #211a14 100%);
+  background: linear-gradient(180deg, #232323 0%, #0a0a0a 55%, #1a1a1a 100%);
   border: 1px solid rgba(190, 150, 95, 0.5);
   border-radius: 2px;
   box-shadow: 0 0 0 1px #000, inset 0 0 0 1px rgba(255, 220, 160, 0.07), inset 0 0 10px rgba(0, 0, 0, 0.95), 0 8px 26px rgba(0, 0, 0, 0.8);
@@ -554,7 +554,7 @@ button.ember-chip:hover {
   position: relative;
   height: 12px;
   overflow: hidden;
-  background: #060504;
+  background: #050505;
   box-shadow: inset 0 2px 6px #000, inset 0 -1px 0 rgba(255, 210, 150, 0.05);
 }
 .title-loader-fill {
@@ -599,7 +599,7 @@ button.ember-chip:hover {
   top: 50%;
   width: 10px;
   height: 10px;
-  background: linear-gradient(135deg, #e0c08c, #4f3a26);
+  background: linear-gradient(135deg, #e0c08c, #3b3b3b);
   border: 1px solid #000;
   box-shadow: 0 0 7px rgba(0, 0, 0, 0.9), inset 0 0 2px rgba(255, 235, 190, 0.6);
 }
@@ -742,7 +742,7 @@ button.ember-chip:hover {
 .ember-btn-ghost {
   color: #e2c294;
   text-shadow: 0 1px 2px #000;
-  background: linear-gradient(180deg, #2a231c 0%, #0c0a08 55%, #211a14 100%);
+  background: linear-gradient(180deg, #232323 0%, #0a0a0a 55%, #1a1a1a 100%);
   border: 1px solid rgba(190, 150, 95, 0.5);
   box-shadow:
     0 0 0 1px #000,
@@ -783,7 +783,7 @@ button.ember-chip:hover {
 .ember-icon-btn {
   color: #dfbf8e;
   border-radius: 2px;
-  background: linear-gradient(180deg, #2a231c 0%, #0c0a08 55%, #211a14 100%);
+  background: linear-gradient(180deg, #232323 0%, #0a0a0a 55%, #1a1a1a 100%);
   border: 1px solid rgba(190, 150, 95, 0.5);
   box-shadow: 0 0 0 1px #000, inset 0 0 8px rgba(0, 0, 0, 0.9), 0 6px 16px rgba(0, 0, 0, 0.6);
   transition: color 200ms ease, border-color 200ms ease, box-shadow 200ms ease;
@@ -800,7 +800,7 @@ button.ember-chip:hover {
 .ember-panel {
   color: var(--color-fg);
   border-radius: 3px;
-  background: linear-gradient(180deg, rgba(36, 29, 23, 0.95) 0%, rgba(12, 10, 8, 0.96) 60%, rgba(30, 24, 18, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(10, 10, 10, 0.96) 60%, rgba(24, 24, 24, 0.95) 100%);
   border: 1px solid rgba(190, 150, 95, 0.45);
   box-shadow:
     0 0 0 1px #000,
@@ -877,14 +877,14 @@ button.ember-chip:hover {
   width: 7px;
   height: 7px;
   transform: translate(-50%, -50%) rotate(45deg);
-  background: linear-gradient(135deg, #e0c08c, #4f3a26);
+  background: linear-gradient(135deg, #e0c08c, #3b3b3b);
   border: 1px solid #000;
 }
 
 /* Save slots and result rows: a dark trough like the loader track. */
 .ember-slot {
   border-radius: 2px;
-  background: linear-gradient(180deg, rgba(14, 11, 9, 0.9), rgba(6, 5, 4, 0.9));
+  background: linear-gradient(180deg, rgba(12, 12, 12, 0.9), rgba(5, 5, 5, 0.9));
   border: 1px solid rgba(190, 150, 95, 0.28);
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.9), inset 0 -1px 0 rgba(255, 210, 150, 0.04);
   transition: border-color 200ms ease, box-shadow 200ms ease;
@@ -911,7 +911,7 @@ button.ember-slot:hover:not(:disabled) {
 .ember-plate {
   color: var(--color-fg);
   border-radius: 2px;
-  background: linear-gradient(180deg, rgba(34, 27, 21, 0.94) 0%, rgba(12, 10, 8, 0.95) 100%);
+  background: linear-gradient(180deg, rgba(28, 28, 28, 0.94) 0%, rgba(10, 10, 10, 0.95) 100%);
   border: 1px solid rgba(190, 150, 95, 0.45);
   box-shadow: 0 0 0 1px #000, inset 0 0 8px rgba(0, 0, 0, 0.85), 0 6px 18px rgba(0, 0, 0, 0.6);
 }
@@ -935,10 +935,10 @@ button.ember-plate:hover:not(:disabled) {
   height: fit-content;
   color: #eadcc9;
   scrollbar-width: thin;
-  scrollbar-color: #826342 #100d0a;
+  scrollbar-color: #626262 #0d0d0d;
 }
 .game-options::backdrop {
-  background: rgba(4, 3, 2, 0.82);
+  background: rgba(3, 3, 3, 0.82);
   backdrop-filter: blur(4px);
 }
 .game-options-header {
@@ -948,8 +948,8 @@ button.ember-plate:hover:not(:disabled) {
   display: flex;
   align-items: center;
   gap: 0.65rem;
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
 }
 .game-options-heading svg {
   width: 1.1rem;
@@ -958,7 +958,8 @@ button.ember-plate:hover:not(:disabled) {
   stroke-width: 1.5;
 }
 .game-options-section > label {
-  min-height: 2rem;
+  min-height: 1.9rem;
+  font-size: 0.8rem;
   align-items: center;
 }
 .game-options .text-muted {
@@ -967,39 +968,86 @@ button.ember-plate:hover:not(:disabled) {
 }
 .game-options select,
 .game-options fieldset {
-  background: #120f0c;
+  background: #0f0f0f;
   border: 1px solid rgba(190, 150, 95, 0.35);
   border-radius: 2px;
   color: #eadcc9;
 }
 .game-options select {
-  max-width: 55%;
-  min-height: 2.5rem;
+  width: min(55%, 11rem);
+  min-height: 1.9rem;
+  padding: 0.2rem 1.8rem 0.2rem 0.55rem;
+  font-size: 0.8rem;
+  appearance: none;
+  background: #080808 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23c49c69' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") right 0.6rem center / 0.9rem no-repeat;
+  box-shadow: 0 0 0 1px #000, inset 0 2px 6px #000;
+  cursor: pointer;
 }
+.game-options select:hover { border-color: rgba(226, 170, 100, 0.75); }
+.game-options option { background: #0f0f0f; }
 .game-options fieldset legend { color: #c49c69; }
 .game-options fieldset button {
   border-radius: 2px;
   border-color: rgba(190, 150, 95, 0.4);
-  background: linear-gradient(#2a2119, #100d0a);
+  background: linear-gradient(#222222, #0d0d0d);
   color: #cfb48e;
 }
 .game-options fieldset button[aria-pressed="true"] {
   border-color: #d29b58;
   color: #ffe1b4;
-  background: linear-gradient(#50321c, #21150e);
+  background: linear-gradient(#363636, #181818);
   box-shadow: inset 0 0 12px rgba(226, 104, 30, 0.15);
 }
+/* Ember checkbox: dark inset well; checked = the primary button's molten fill with a light tick. */
 .game-options input[type="checkbox"] {
-  width: 1.1rem;
-  height: 1.1rem;
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
   flex-shrink: 0;
-  accent-color: #c49c69;
+  margin: 0;
+  border: 1px solid rgba(190, 150, 95, 0.55);
+  border-radius: 2px;
+  background: #050505 center / 80% no-repeat;
+  box-shadow: 0 0 0 1px #000, inset 0 2px 5px #000;
+  cursor: pointer;
 }
+.game-options input[type="checkbox"]:checked {
+  border-color: rgba(255, 200, 130, 0.6);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff1d8' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12 4 4L19 6'/%3E%3C/svg%3E"), linear-gradient(180deg, #d9621c 0%, #9c2f10 55%, #561708 100%);
+  background-size: 80%, 100%;
+  background-position: center;
+  box-shadow: 0 0 0 1px #000, inset 0 1px 0 rgba(255, 225, 160, 0.45), 0 0 10px rgba(255, 110, 30, 0.3);
+}
+/* Ember slider: the loader bar's track and molten fill (--fill, set by OptionsMenu) with its gold diamond cap. */
 .game-options input[type="range"] {
+  --fill: 100%;
+  appearance: none;
   display: block;
-  margin-top: 0.5rem;
-  min-height: 1.5rem;
-  accent-color: #c49c69;
+  height: 8px;
+  margin-top: 0.4rem;
+  margin-bottom: 0.3rem;
+  border: 1px solid rgba(190, 150, 95, 0.45);
+  border-radius: 2px;
+  background: linear-gradient(90deg, #4a1408 0%, #a33210 45%, #e2681e 85%, #ffbe55 100%) 0 0 / var(--fill) 100% no-repeat, #050505;
+  box-shadow: 0 0 0 1px #000, inset 0 2px 6px rgba(0, 0, 0, 0.8);
+  cursor: pointer;
+}
+.game-options input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  border: 1px solid #000;
+  background: linear-gradient(135deg, #f0d29c, #3b3b3b);
+  box-shadow: 0 0 7px rgba(0, 0, 0, 0.9), 0 0 8px rgba(255, 140, 50, 0.45), inset 0 0 2px rgba(255, 235, 190, 0.6);
+  transform: rotate(45deg);
+}
+.game-options input[type="range"]::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 1px solid #000;
+  border-radius: 0;
+  background: linear-gradient(135deg, #f0d29c, #3b3b3b);
+  transform: rotate(45deg);
 }
 .game-options input:disabled { opacity: 0.4; }
 .game-options :is(button, select, input):focus-visible {
@@ -1009,7 +1057,7 @@ button.ember-plate:hover:not(:disabled) {
 .game-options-footer svg { color: #c49c69; }
 
 .ember-hud-bar {
-  background: linear-gradient(180deg, #1d1712 0%, #0c0a08 100%);
+  background: linear-gradient(180deg, #181818 0%, #0a0a0a 100%);
   border-top: 1px solid rgba(190, 150, 95, 0.45);
   box-shadow: 0 -1px 0 #000, 0 -10px 24px rgba(0, 0, 0, 0.55);
 }
@@ -1028,7 +1076,7 @@ button.ember-plate:hover:not(:disabled) {
 /* Action-slot sockets in the battle bar. */
 .ember-socket {
   border-radius: 2px;
-  background: linear-gradient(180deg, #0e0b09, #060504);
+  background: linear-gradient(180deg, #0c0c0c, #050505);
   border: 1px solid rgba(190, 150, 95, 0.35);
   box-shadow: inset 0 2px 6px #000;
 }

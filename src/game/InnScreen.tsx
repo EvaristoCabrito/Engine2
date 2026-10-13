@@ -198,6 +198,16 @@ export function InnScreen({
   onSeenSmithIntro: () => void;
 }) {
   const [view, setView] = useState<"npc" | "smith" | "healer">(farmlandsService?.kind === "smith" ? "smith" : startInMerchantGear ? "smith" : startInHealer ? "healer" : startInSmith && save.seenSmithIntro ? "smith" : "npc");
+  // Esc leaves, same as the Sair button (an open dialog closes on Esc by itself first).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || e.defaultPrevented || document.querySelector("dialog[open]") || (e.target as HTMLElement | null)?.closest("input, textarea, select")) return;
+      e.preventDefault();
+      onLeave();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onLeave]);
   const [smithIntro, setSmithIntro] = useState(startInSmith && !farmlandsService && !save.seenSmithIntro);
   const [npc, setNpc] = useState<(typeof NPCS)[number]>(startInMerchant || startInMerchantGear ? NPCS[NPCS.length - 1] : NPCS[0]);
   const npcOptions = startInMerchant || startInMerchantGear ? [NPCS[NPCS.length - 1]] : NPCS.slice(0, -1);

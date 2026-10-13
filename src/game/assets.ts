@@ -103,7 +103,8 @@ const HERO_PORTRAIT: Partial<Record<string, string>> = {
   kaelFinal: "/game/portraits/kael-final-face-001.jpg?v=1",
   neera: "/game/portraits/NeeraProperSide-profile.jpg",
   voss: "/game/portraits/voss.png",
-  salazar: "/game/portraits/salazar-v2-face.jpg",
+  // A 2:3 bust cut from salazar-v2-face.jpg (a near-square waist-up shot that every frame showed too far away).
+  salazar: "/game/portraits/salazar-v2-bust.jpg?v=2",
   aldric: "/game/portraits/aldric-profile-001.jpg?v=3",
   defaultLancer: "/game/portraits/aldric-profile-001.jpg?v=3",
   sandoval: "/game/portraits/sandoval-001.jpg?v=1",
@@ -113,6 +114,8 @@ const HERO_PORTRAIT: Partial<Record<string, string>> = {
   theButcher: "/game/portraits/the-butcher-portrait-001.jpg?v=1",
   // Familiar Titã uses a direct crop of the player's supplied concept art; no art is generated.
   familiar3: "/game/portraits/familiar3-profile.jpeg?v=3",
+  // Familiar (1): a 2:3 bust cut from the player's supplied art (Attachments/frame_028.png).
+  familiar: "/game/portraits/familiar1-profile.png?v=4",
   // Inn and village NPCs. Keyed by SPRITE, so every place a unit or dialog line shows a face
   // (dialogs, the unit inspect popup, the footer portrait, the map party list) picks the right
   // portrait from the NPC's sprite automatically; nothing per-NPC has to be wired again.

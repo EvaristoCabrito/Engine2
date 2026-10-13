@@ -4,11 +4,15 @@ import { activeSave, configureCampaignStorage, emptySave, formatStamp, hasAnySav
 import { getAudioVolumes, setCutsceneVolume as setGameCutsceneVolume, setMusicVolume as setGameMusicVolume, setSfxVolume as setGameSfxVolume } from '../game/audio';
 import { getDevGfx, setDevGfx } from '../game/gfx/three/devGfx';
 import { getGraphicsQuality, graphicsQualityIsCustom, setGraphicsQuality, type GraphicsQuality } from '../game/graphicsQuality';
-import { getGamePreferences, setGamePreferences } from '../game/gamePreferences';
+import { getGamePreferences, setGamePreferences, subscribeGamePreferences } from '../game/gamePreferences';
 import { artProgress, loadGameArt, subscribeArtProgress } from '../game/assets';
 import type { SaveBank } from '../ember/types';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+// No browser right-click menu over the game (text fields keep it for copy and paste).
+document.addEventListener('contextmenu', (e) => {
+  if (!(e.target as HTMLElement | null)?.closest('input, textarea, [contenteditable="true"]')) e.preventDefault();
+});
 const titleScreen = $('title-screen'), devControls = $('dev-controls');
 const saveSlotsScreen = $('save-slots-screen');
 const titleLoader = $('title-loader'), loaderFill = $('loader-fill'), loaderPercent = $('loader-percent'), loaderStatus = $('loader-status');
@@ -293,7 +297,39 @@ $('dialog-test-link').addEventListener('click', () => { $<HTMLDialogElement>('no
 document.querySelectorAll<HTMLButtonElement>('[data-close-dialog]').forEach((button) => button.addEventListener('click', () => $<HTMLDialogElement>('notice-dialog').close()));
 $('notice-dialog').addEventListener('click', (event) => { if (event.target === $('notice-dialog')) $<HTMLDialogElement>('notice-dialog').close(); });
 
-$('help-open').addEventListener('click', () => $<HTMLDialogElement>('help-dialog').showModal());
+// Como jogar and Opções open Ember's own windows (src/title/emberMenus.tsx).
+$('help-open').addEventListener('click', () => {
+  void import('./emberMenus').then(({ openHelp }) => openHelp(() => $('help-open').focus()));
+});
+/** Ember's Options writes the game's audio volumes and preferences: the title follows them. */
+function syncTitleAudio(): void {
+  const gameAudio = getAudioVolumes();
+  setMusicVolume(gameAudio.music);
+  setSfxVolume(gameAudio.sfx);
+  setCutsceneVolume(gameAudio.cutscene);
+  menuMusic.volume = gameAudio.music * Number(menuMusic.dataset.engine2MusicBase ?? 1);
+}
+subscribeGamePreferences(() => {
+  const prefs = getGamePreferences();
+  Object.assign(languageOptions, { dialogue: prefs.dialogueLanguage, subtitles: prefs.subtitleLanguage, showSubtitles: prefs.subtitles, dialogueSize: String(prefs.dialogueScale) });
+  if (prefs.uiLanguage !== language) applyLanguage(prefs.uiLanguage);
+});
+function toggleTitleMute(): void {
+  const next = !getAudioSettings().muted;
+  setMuted(next);
+  saveBank = setMutedBank(saveBank, next);
+  updateSoundToggle();
+  if (!titleScreen.hidden || !saveSlotsScreen.hidden) startMenuMusic();
+}
+$('options-open').addEventListener('click', () => {
+  syncTitleAudio();
+  document.addEventListener('input', syncTitleAudio);
+  void import('./emberMenus').then(({ openOptions }) => openOptions({
+    muted: () => getAudioSettings().muted,
+    onMute: toggleTitleMute,
+    onClosed: () => { document.removeEventListener('input', syncTitleAudio); syncTitleAudio(); $('options-open').focus(); },
+  }));
+});
 renderHelpPanel();
 $('help-tabs').addEventListener('click', (event) => {
   const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-help-tab]');
@@ -303,8 +339,8 @@ $('help-tabs').addEventListener('click', (event) => {
 });
 document.querySelectorAll<HTMLButtonElement>('[data-close-help]').forEach((button) => button.addEventListener('click', () => $<HTMLDialogElement>('help-dialog').close()));
 $('help-dialog').addEventListener('click', (event) => { if (event.target === $('help-dialog')) $<HTMLDialogElement>('help-dialog').close(); });
-$('options-open').addEventListener('click', () => {
-  $<HTMLDialogElement>('options-dialog').showModal();
+$('options-dialog').addEventListener('toggle', () => {
+  if (!$<HTMLDialogElement>('options-dialog').open) return;
   const audio = getAudioSettings();
   const gameAudio = getAudioVolumes();
   setMusicVolume(gameAudio.music);

@@ -479,7 +479,7 @@ export function OverworldMapScreen({
 
   return (
     <section className="relative h-dvh min-h-0 flex flex-col overflow-hidden bg-bg">
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 30% 20%, #241f19 0%, #0c0b0a 70%)" }} />
+      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 30% 20%, #1e1e1e 0%, #0b0b0b 70%)" }} />
       {warpMenuHero && onCastWarp && (
         <div
           className="fixed inset-0 z-[75] grid place-items-center bg-black/60 p-4"
@@ -487,13 +487,13 @@ export function OverworldMapScreen({
           onClick={() => setWarpMenuHero(null)}
         >
           <div
-            className="relative aspect-square w-[min(86vw,380px)] rounded-full border border-[#dfbf8e]/45 bg-[#17130f]/95 shadow-[0_0_48px_rgba(65,113,190,0.32),inset_0_0_36px_rgba(65,113,190,0.16)]"
+            className="relative aspect-square w-[min(86vw,380px)] rounded-full border border-[#dfbf8e]/45 bg-[#131313]/95 shadow-[0_0_48px_rgba(65,113,190,0.32),inset_0_0_36px_rgba(65,113,190,0.16)]"
             role="dialog"
             aria-modal="true"
             aria-label={`${uiText("Escolha o destino do Warp", { en: "Choose a Warp destination" })} · ${warpMenuHero}`}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="absolute left-1/2 top-1/2 z-10 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#dfbf8e]/50 bg-[#241b15] p-2 text-center shadow-lg">
+            <div className="absolute left-1/2 top-1/2 z-10 grid size-24 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#dfbf8e]/50 bg-[#1c1c1c] p-2 text-center shadow-lg">
               <div>
                 <img src={spellIcon("warp")} alt="" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = "/game/icons/warp.jpg"; }} className="mx-auto mb-1 size-9 rounded object-cover mix-blend-screen drop-shadow-[0_0_5px_rgba(74,150,255,0.7)]" />
                 <p className="text-xs text-[#dfbf8e]">Warp</p>
@@ -508,7 +508,7 @@ export function OverworldMapScreen({
                 <button
                   key={city.id}
                   type="button"
-                  className="absolute z-20 flex min-h-11 w-[clamp(92px,27vw,124px)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#dfbf8e]/60 bg-[#33271d] px-2 text-center text-xs text-[#f0dfc5] shadow-md transition hover:bg-[#55402c] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#dfbf8e]"
+                  className="absolute z-20 flex min-h-11 w-[clamp(92px,27vw,124px)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-[#dfbf8e]/60 bg-[#282828] px-2 text-center text-xs text-[#f0dfc5] shadow-md transition hover:bg-[#404040] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#dfbf8e]"
                   style={{ left: `${left}%`, top: `${top}%` }}
                   onClick={() => {
                     const ok = onCastWarp(warpMenuHero, city.id);
@@ -523,7 +523,7 @@ export function OverworldMapScreen({
             })}
             <button
               type="button"
-              className="absolute bottom-[-3.25rem] left-1/2 -translate-x-1/2 rounded-md border border-white/20 bg-[#17130f]/95 px-3 py-1.5 text-xs text-[#dfbf8e]"
+              className="absolute bottom-[-3.25rem] left-1/2 -translate-x-1/2 rounded-md border border-white/20 bg-[#131313]/95 px-3 py-1.5 text-xs text-[#dfbf8e]"
               onClick={() => setWarpMenuHero(null)}
             >
               {uiText("Cancelar", { en: "Cancel" })}
@@ -678,6 +678,7 @@ export function OverworldMapScreen({
           muted={muted}
           onMute={onMute}
           iconOnly
+          escapeKey
           onSaveGame={!test ? onSave : undefined}
           onLoadGame={onLoad}
           onReturnToTitle={onBack}
@@ -737,7 +738,7 @@ export function OverworldMapScreen({
                   })}
                 </mask>
               </defs>
-              <rect x="0" y="0" width="100" height="100" fill="rgba(8,6,4,0.78)" mask="url(#ow-fog-mask)" />
+              <rect x="0" y="0" width="100" height="100" fill="rgba(6, 6, 6,0.78)" mask="url(#ow-fog-mask)" />
             </svg>
           )}
           {artOk && <div aria-hidden className="pointer-events-none absolute inset-0 transition-colors duration-[1500ms]" style={{ backgroundColor: skyTint }} />}
@@ -842,7 +843,7 @@ export function OverworldMapScreen({
       {affinityOpen && (
         <div className="absolute inset-0 z-40 ember-veil flex items-center justify-center p-4" onClick={(event) => { if (event.target === event.currentTarget) setAffinityOpen(false); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="party-title" className="relative flex max-h-[82dvh] w-full max-w-3xl flex-col overflow-hidden ember-panel">
-            <header className="flex items-start justify-between gap-3 border-b border-[#6b5238]/60 p-4">
+            <header className="flex items-start justify-between gap-3 border-b border-[#525252]/60 p-4">
               <div>
                 <p className="text-xs ember-kicker">Grupo · {partyHeroes.length} {partyHeroes.length === 1 ? "membro" : "membros"} · Líder: {leader}</p>
                 <h2 id="party-title" className="mt-1 font-display text-2xl ember-title">Party</h2>
@@ -949,7 +950,7 @@ export function OverworldMapScreen({
                                   <button key={slot} type="button" aria-pressed={formationPick === slot} aria-label={`${row.label}, posição ${slot + 1}: vazia`} onClick={() => pick(slot)}
                                     className="grid h-[96px] w-[84px] place-items-center"
                                     style={{ clipPath: hex, background: formationPick === slot ? "#d9621c" : "rgba(190, 150, 95, 0.25)" }}>
-                                    <span className="flex h-[92px] w-[80px] flex-col items-center justify-center gap-0.5 text-[11px] leading-none text-muted" style={{ clipPath: hex, background: "linear-gradient(180deg, #0e0b09, #060504)" }}>
+                                    <span className="flex h-[92px] w-[80px] flex-col items-center justify-center gap-0.5 text-[11px] leading-none text-muted" style={{ clipPath: hex, background: "linear-gradient(180deg, #0c0c0c, #050505)" }}>
                                       <span>vazia</span>
                                       <span className="tabular-nums">{slot + 1}</span>
                                     </span>
@@ -958,7 +959,7 @@ export function OverworldMapScreen({
                                   <button key={slot} type="button" aria-pressed={formationPick === slot} aria-label={`${row.label}, posição ${slot + 1}: ${hero}`} onClick={() => pick(slot)}
                                     className="grid h-[96px] w-[84px] place-items-center"
                                     style={{ clipPath: hex, background: formationPick === slot ? "#d9621c" : "rgba(190, 150, 95, 0.45)" }}>
-                                    <span className="flex h-[92px] w-[80px] flex-col items-center justify-center gap-0.5 text-[11px] leading-none" style={{ clipPath: hex, background: "linear-gradient(180deg, #0e0b09, #060504)", color: formationPick === slot ? "#ffe0b4" : "#e2c294" }}>
+                                    <span className="flex h-[92px] w-[80px] flex-col items-center justify-center gap-0.5 text-[11px] leading-none" style={{ clipPath: hex, background: "linear-gradient(180deg, #0c0c0c, #050505)", color: formationPick === slot ? "#ffe0b4" : "#e2c294" }}>
                                       <img src={portraitFor(HERO_PORTRAIT_SPRITE[hero as AffinityHero]).src} alt="" style={{ objectPosition: portraitFor(HERO_PORTRAIT_SPRITE[hero as AffinityHero]).position }} className="h-10 w-9 rounded object-cover" />
                                       <span>{hero}</span>
                                       <span className="text-muted tabular-nums">{slot + 1}</span>
@@ -1150,7 +1151,7 @@ function QuestLogPanel({ save, onClose }: { save: SaveData; onClose: () => void 
       }}
     >
       <section role="dialog" aria-modal="true" aria-labelledby="quest-log-title" className="relative flex max-h-[82dvh] w-full max-w-2xl flex-col overflow-hidden ember-panel">
-        <header className="flex items-start justify-between gap-3 border-b border-[#6b5238]/60 p-4">
+        <header className="flex items-start justify-between gap-3 border-b border-[#525252]/60 p-4">
           <div>
             <p className="text-xs ember-kicker">Estalagem · {completed.length}/{QUESTS.length} concluídas</p>
             <h2 id="quest-log-title" className="mt-1 font-display text-2xl ember-title">Registro de missões</h2>

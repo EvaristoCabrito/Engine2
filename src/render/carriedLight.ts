@@ -10,6 +10,10 @@ const TAIL = 2.5;
 const STRENGTH = 3.2;
 
 export class CarriedLight extends THREE.PointLight {
+  /** Options → Graphics → Local lights: off = every lamp, fire and carried torch gives no light
+   * (the flames themselves still burn). Set by the battle each frame; the editor leaves it on. */
+  static enabled = true;
+
   constructor(readonly definition: LightDef, readonly seed: number, radius = definition.radius, height = 1) {
     super(0xffffff, 0, Math.hypot(radius, height) * TAIL, DECAY);
     this.color.setRGB(...definition.color);
@@ -18,6 +22,6 @@ export class CarriedLight extends THREE.PointLight {
   }
 
   update(time: number, fade = 1): void {
-    this.intensity = this.definition.intensity * STRENGTH * flickerAt(time, this.seed, this.definition.flicker) * Math.max(0, Math.min(1, fade));
+    this.intensity = !CarriedLight.enabled ? 0 : this.definition.intensity * STRENGTH * flickerAt(time, this.seed, this.definition.flicker) * Math.max(0, Math.min(1, fade));
   }
 }

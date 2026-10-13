@@ -1366,11 +1366,12 @@ export function GameApp() {
       const sourceMission = override ?? missionById(id);
       const resolved = sourceMission ? routeWispCrossing(sourceMission, testMode ? [] : save.completed) : undefined;
       if (!resolved) return;
-      // A recorded fingerprint mismatch means the authored map changed. Resuming that
-      // snapshot would paint the old board over the edited map, so start on the current map.
-      // Older snapshots have no fingerprint; absence is not evidence that the map changed.
+      // A saved fight carries its own board (tiles, decorations, units), so it resumes even when
+      // the mission was edited since (the fingerprint hashed the whole mission: any text, stat or
+      // decor edit threw the fight away and overwrote the save with a fresh start, so Load acted
+      // like New game). Only a board of a different size can't take the saved tiles.
       const mapKey = missionMapKey(sourceMission!);
-      if (resume?.mapKey && resume.mapKey !== mapKey) resume = undefined;
+      if (resume && resume.tiles.length !== sourceMission!.cols * sourceMission!.rows) resume = undefined;
       const load = ++battleLoadRef.current;
       setBattleLoading(true);
       battleAssetProgress.current = {
@@ -3848,7 +3849,7 @@ const RESISTANCE_LABELS_PT: Record<(typeof RESISTANCE_ELEMENTS)[number], string>
   ember: "Brasa",
 };
 
-function HelpModal({ onClose }: { onClose: () => void }) {
+export function HelpModal({ onClose }: { onClose: () => void }) {
   const { uiLanguage } = useGamePreferences();
   const numberLocale = uiLanguage === "en" ? "en-US" : "pt-BR";
   const [tab, setTab] = useState<"basicos" | "tabelas" | "loot" | "dano" | "formulas">("basicos");
@@ -4676,12 +4677,12 @@ const TERRAIN_SWATCH: Record<TerrainId, string> = {
   ruins: "#6b6560",
   water: "#2c5f7a",
   ember: "#7a2c2c",
-  hill: "#8a7a4f",
+  hill: "#6c6c6c",
   flame: "#b5501f",
   column: "#4a4a52",
   nave: "#26262c",
-  barricade: "#5a4630",
-  door: "#4a3524",
+  barricade: "#454545",
+  door: "#373737",
   void: "#050505",
   snow: "#d8dee2",
 };
@@ -10592,7 +10593,7 @@ function GrowthXpBar({ fromLevel, toLevel, fromXp, toXp }: { fromLevel: number; 
         style={{
           width: pct(segments[0]!.start),
           borderRadius: 9999,
-          background: "linear-gradient(90deg, #713718 0%, #c8641e 55%, #e1a541 85%, #fff0a2 100%)",
+          background: "linear-gradient(90deg, #444444 0%, #c8641e 55%, #e1a541 85%, #fff0a2 100%)",
           boxShadow: "0 0 6px rgba(255, 140, 50, 0.55)",
         }}
       >
@@ -10909,7 +10910,7 @@ function SlotScreen({
               role="progressbar" aria-label="Salvando o jogo" aria-valuemin={0} aria-valuemax={100} aria-valuenow={saveProgress}
             >
               <div
-                className="h-full bg-gradient-to-r from-[#713718] via-[#e1a541] to-[#fff0a2] transition-[width] duration-100 ease-linear"
+                className="h-full bg-gradient-to-r from-[#444444] via-[#e1a541] to-[#fff0a2] transition-[width] duration-100 ease-linear"
                 style={{ width: `${saveProgress}%` }}
               />
             </div>

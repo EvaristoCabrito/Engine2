@@ -7,6 +7,12 @@ import { returnToTitle, shouldReturnToTitle } from "./titleNavigation";
 const root = document.getElementById("app");
 if (!root) throw new Error("Missing #app root for the Ember campaign.");
 
+// Right-click belongs to the game (inspect / cancel): the browser's own menu never opens over it.
+// Text fields keep it for copy and paste.
+document.addEventListener("contextmenu", (e) => {
+  if (!(e.target as HTMLElement | null)?.closest("input, textarea, [contenteditable='true']")) e.preventDefault();
+});
+
 // The title launches /game.html?start=... ; a browser reload of that page goes back to the title
 // instead of replaying the launch (new campaign intro). A map-editor session still resumes on
 // reload, as in Ember (its own resume snapshot).

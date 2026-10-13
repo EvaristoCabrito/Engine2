@@ -132,7 +132,7 @@ function LoadingArt({ progress: ownProgress, label: ownLabel, barLabel, z }: { p
   // the bar, so loading progress is never hidden.)
   const [artReady, setArtReady] = useState(() => !!loadingArtPreload?.complete && loadingArtPreload.naturalWidth > 0);
   return (
-    <div className={`absolute inset-0 ${z} overflow-hidden bg-[#151311]`} aria-live="polite" aria-label={label}>
+    <div className={`absolute inset-0 ${z} overflow-hidden bg-[#131313]`} aria-live="polite" aria-label={label}>
       <div
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{ width: "max(100vw, calc(100vh * 2128 / 912))", aspectRatio: "2128 / 912", visibility: artReady ? "visible" : "hidden" }}
@@ -146,7 +146,7 @@ function LoadingArt({ progress: ownProgress, label: ownLabel, barLabel, z }: { p
           {/* LOCKED (2026-10-06): no real number means no fill — never a fake sweeping bar. */}
           {progress !== null && (
             <div
-              className="h-full bg-gradient-to-r from-[#713718] via-[#e1a541] to-[#fff0a2] transition-[width] duration-100 ease-linear"
+              className="h-full bg-gradient-to-r from-[#444444] via-[#e1a541] to-[#fff0a2] transition-[width] duration-100 ease-linear"
               style={{ width: `${progress}%` }}
             />
           )}

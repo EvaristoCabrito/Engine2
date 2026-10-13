@@ -1371,6 +1371,8 @@ export interface BattleSnapshot {
   auraZones: { cells: string[]; roundsLeft: number; kind: "protection" | "intimidation"; side: Side; pct: number }[];
   /** Paired Warp openings and remaining rounds; optional for older battle saves. */
   warpGate?: { a: Point; b: Point; roundsLeft: number; level: number; casterId: string } | null;
+  /** Every open Warp pair (several can be open at once); older saves carry only warpGate. */
+  warpGates?: { a: Point; b: Point; roundsLeft: number; level: number; casterId: string }[];
   log: string[];
   winAvailable: boolean;
   chestLoot: { unitName: string; ember: number; items: { name: string; icon: string; tip?: string }[] } | null;

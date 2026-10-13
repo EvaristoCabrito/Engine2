@@ -3212,14 +3212,15 @@ export function spellIcon(id: string): string {
   if (id === "ice-storm") return "/game/icons/ice-storm.jpg";
   if (id === "divine-bolt") return "/game/icons/divine-bolt.jpg";
   if (id === "turn-undead") return "/game/icons/turn-undead.jpg";
-  if (id === "bloody-shot") return "/game/icons/bloody-shot.jpg";
+  if (id === "bloody-shot") return "/game/icons/bloody-shot-002.jpg";
   if (id === "provoke") return "/game/icons/provoke.jpg";
   if (id === "summon-familiar2") return "/game/icons/summon-familiar2.png";
   if (id === "summon-familiar3") return "/game/icons/summon-familiar3.png";
   if (id === "summon-familiar4") return "/game/icons/summon-familiar4.png";
   if (id === "phantasmal-force") return "/game/icons/phantasmal-force.png";
   if (id === "bull-rush") return "/game/icons/bull-rush.png";
-  if (id === "executioner-strike") return "/game/icons/executioner-strike.png";
+  if (id === "executioner-strike") return "/game/icons/executioner-strike-002.png";
+  if (id === "summon-zombie-dog") return "/game/icons/summon-zombie-dog-002.png";
   if (id === "burning-hands") return "/game/icons/burning-hands.png";
   if (id === "shield-bash") return "/game/icons/shield-bash.png";
   if (id === "poison-breath") return "/game/icons/poison-breath.png";

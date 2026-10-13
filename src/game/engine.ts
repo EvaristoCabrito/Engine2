@@ -353,7 +353,7 @@ interface PortalFx {
   persistent?: boolean;
 }
 interface WarpGatePair { a: Point; b: Point; roundsLeft: number; level: number; casterId: string }
-const PORTAL_FX_CAP = 4;
+const PORTAL_FX_CAP = 16;
 function blankPortalFx(): PortalFx {
   return { live: false, x: 0, y: 0, t: 0, max: 0.85, seed: 0, body: null, red: false, warp: false, radius: 1 };
 }
@@ -1495,7 +1495,8 @@ export class BattleEngine {
   private bladeFxLive = 0;
   private portalFx: PortalFx[] = Array.from({ length: PORTAL_FX_CAP }, blankPortalFx);
   private portalFxLive = 0;
-  private warpGate: WarpGatePair | null = null;
+  /** Every open Warp pair: a mage can keep several open at once, each on its own round timer. */
+  private warpGates: WarpGatePair[] = [];
   /** 0-1: how visible the movement/range grid is right now (see OVERLAY_FADE_IN). Read by
    * both renderers when they draw boardOverlayLayers. */
   overlayFade = 1;
@@ -2203,7 +2204,7 @@ export class BattleEngine {
         side: z.side,
         pct: z.pct,
       })),
-      warpGate: this.warpGate ? { ...this.warpGate, a: { ...this.warpGate.a }, b: { ...this.warpGate.b } } : null,
+      warpGates: this.warpGates.map((g) => ({ ...g, a: { ...g.a }, b: { ...g.b } })),
       log: [...this.log],
       winAvailable: this.winAvailable,
       chestLoot: this.chestLoot
@@ -2231,10 +2232,11 @@ export class BattleEngine {
     const cleanedTiles = clearRockColumnTiles(this.tiles, this.cols, this.rows, this.decorations, this.mission.baseTile);
     for (let i = 0; i < cleanedTiles.length; i++) this.tiles[i] = cleanedTiles[i]!;
     this.refreshDecorOverlay();
-    this.warpGate = snap.warpGate ? { ...snap.warpGate, a: { ...snap.warpGate.a }, b: { ...snap.warpGate.b } } : null;
-    if (this.warpGate) {
-      this.emitWarpFx(this.warpGate.a.x, this.warpGate.a.y, warpPartyRadius(this.warpGate.level), this.warpGate.level);
-      this.emitWarpFx(this.warpGate.b.x, this.warpGate.b.y, warpPartyRadius(this.warpGate.level), this.warpGate.level);
+    // older saves carry a single warpGate
+    this.warpGates = (snap.warpGates ?? (snap.warpGate ? [snap.warpGate] : [])).map((g) => ({ ...g, a: { ...g.a }, b: { ...g.b } }));
+    for (const gate of this.warpGates) {
+      this.emitWarpFx(gate.a.x, gate.a.y, warpPartyRadius(gate.level), gate.level);
+      this.emitWarpFx(gate.b.x, gate.b.y, warpPartyRadius(gate.level), gate.level);
     }
     const needsOpeningInitiative = snap.units.some((unit) => unit.initiative == null || unit.initiativeRoll == null);
     this.units = snap.units.map(saved => {
@@ -2533,7 +2535,7 @@ export class BattleEngine {
         if (!p.live) continue;
         p.t += actionCap;
         if (p.t >= p.max) {
-          if (p.persistent && this.warpGate) {
+          if (p.persistent && this.warpGates.some((g) => (g.a.x === p.x && g.a.y === p.y) || (g.b.x === p.x && g.b.y === p.y))) {
             p.t %= p.max;
             live += 1;
             continue;
@@ -5939,14 +5941,16 @@ export class BattleEngine {
 
   /** Crossing happens on the movement step that enters either opening. */
   private tryWarpCrossing(unit: Unit, action: MoveAnim): boolean {
-    const gate = this.warpGate;
-    if (!gate || (unit.side !== "player" && footprint(unit).length > 1)) return false;
+    if (unit.side !== "player" && footprint(unit).length > 1) return false;
+    const gate = this.warpGates.find((g) => (unit.x === g.a.x && unit.y === g.a.y) || (unit.x === g.b.x && unit.y === g.b.y));
+    if (!gate) return false;
     const atA = unit.x === gate.a.x && unit.y === gate.a.y;
-    const atB = unit.x === gate.b.x && unit.y === gate.b.y;
-    if (!atA && !atB) return false;
     const other = atA ? gate.b : gate.a;
-    const landing = hexAreaTiles(other, 1, this.cols, this.rows)
-      .filter((cell) => this.hexAt(cell.x, cell.y).passable && !this.units.some((otherUnit) => otherUnit.id !== unit.id && otherUnit.alive && occupies(otherUnit, cell.x, cell.y)))
+    // Land beside the far gate, never in either opening: landing in it counted as entering it,
+    // which sent the unit straight back — an endless blink between the two gates.
+    const isGate = (cell: Point) => this.warpGates.some((g) => (cell.x === g.a.x && cell.y === g.a.y) || (cell.x === g.b.x && cell.y === g.b.y));
+    const landing = hexAreaTiles(other, 2, this.cols, this.rows)
+      .filter((cell) => !isGate(cell) && this.hexAt(cell.x, cell.y).passable && !this.units.some((otherUnit) => otherUnit.id !== unit.id && otherUnit.alive && occupies(otherUnit, cell.x, cell.y)))
       .sort((a, b) => hexDist(a, other) - hexDist(b, other) || a.y - b.y || a.x - b.x)[0];
     if (!landing) return false;
     unit.x = landing.x;
@@ -5990,7 +5994,9 @@ export class BattleEngine {
       return;
     }
     const radius = warpPartyRadius(unit.level);
-    const occupiedByOther = (cell: Point) => this.units.some((occupant) => occupant.alive && occupies(occupant, cell.x, cell.y));
+    // a cell already holding a gate (or a unit) can't take a new opening
+    const occupiedByOther = (cell: Point) => this.units.some((occupant) => occupant.alive && occupies(occupant, cell.x, cell.y))
+      || this.warpGates.some((g) => (g.a.x === cell.x && g.a.y === cell.y) || (g.b.x === cell.x && g.b.y === cell.y));
     const freeCellsNear = (center: Point, maxRadius: number) => hexAreaTiles(center, maxRadius, this.cols, this.rows)
       .filter((cell) => this.hexAt(cell.x, cell.y).passable && !occupiedByOther(cell))
       .sort((a, b) => hexDist(a, center) - hexDist(b, center) || a.y - b.y || a.x - b.x);
@@ -6009,9 +6015,8 @@ export class BattleEngine {
       sfxPlay.ui();
       return;
     }
-    this.warpGate = { a: source, b: destination, roundsLeft: warpPortalRounds(unit.level), level: unit.level, casterId: unit.id };
-    this.portalFx.forEach((fx) => { if (fx.persistent) fx.live = false; });
-    this.portalFxLive = this.portalFx.filter((fx) => fx.live).length;
+    const opened: WarpGatePair = { a: source, b: destination, roundsLeft: warpPortalRounds(unit.level), level: unit.level, casterId: unit.id };
+    this.warpGates.push(opened);
     this.emitWarpFx(source.x, source.y, radius, unit.level);
     this.emitWarpFx(destination.x, destination.y, radius, unit.level);
     this.spendTier(unit, "warp");
@@ -6021,7 +6026,7 @@ export class BattleEngine {
     this.spellAim = null;
     this.missileTargets = [];
     this.mode = "locked";
-    this.tip = `Warp: dois portais abertos por ${this.warpGate.roundsLeft} rodadas. Aliados e inimigos de tamanho humano podem atravessar ao alcançá-los.`;
+    this.tip = `Warp: dois portais abertos por ${opened.roundsLeft} rodadas. Aliados e inimigos de tamanho humano podem atravessar ao alcançá-los.`;
     this.queue.push({ type: "spell", att: unit.id, tiles: [source, destination], ids: [], label: WARP.name, spellKind: "warp" });
   }
 
@@ -8677,16 +8682,16 @@ export class BattleEngine {
     this.iceStormZones = this.iceStormZones.filter((z) => z.roundsLeft > 0);
     for (const z of this.auraZones) z.roundsLeft -= 1;
     this.auraZones = this.auraZones.filter((z) => z.roundsLeft > 0);
-    if (this.warpGate) {
-      this.warpGate.roundsLeft -= 1;
-      if (this.warpGate.roundsLeft <= 0) {
-        this.warpGate = null;
-        for (const fx of this.portalFx) {
-          if (fx.persistent) fx.live = false;
-        }
-        this.portalFxLive = this.portalFx.filter((fx) => fx.live).length;
-        this.tip = "Os portais de Warp se fecharam.";
+    for (const gate of this.warpGates) gate.roundsLeft -= 1;
+    const closed = this.warpGates.filter((gate) => gate.roundsLeft <= 0);
+    if (closed.length) {
+      this.warpGates = this.warpGates.filter((gate) => gate.roundsLeft > 0);
+      const stillOpen = (fx: PortalFx) => this.warpGates.some((g) => (g.a.x === fx.x && g.a.y === fx.y) || (g.b.x === fx.x && g.b.y === fx.y));
+      for (const fx of this.portalFx) {
+        if (fx.persistent && !stillOpen(fx)) fx.live = false;
       }
+      this.portalFxLive = this.portalFx.filter((fx) => fx.live).length;
+      this.tip = closed.length > 1 ? "Portais de Warp se fecharam." : "Um par de portais de Warp se fechou.";
     }
     // Neutrals are left out, so they never get a turn and the AI never runs for them. One
     // provoked mid-round isn't in this round's order either: it wakes up and acts from the
@@ -9217,12 +9222,13 @@ export class BattleEngine {
     }
     // Human-sized hostiles recognize either active Warp opening as a route to pursue the
     // party through. Their ordinary pursuit resumes after crossing, one turn at a time.
-    if (this.warpGate && next.side !== "player" && footprint(next).length === 1) {
-      const aField = terrainDistanceField(this.warpGate.a, this.tiles, this.cols, this.rows, this.decorOverlay);
-      const bField = terrainDistanceField(this.warpGate.b, this.tiles, this.cols, this.rows, this.decorOverlay);
-      const currentA = aField.get(key(next.x, next.y)) ?? Infinity;
-      const currentB = bField.get(key(next.x, next.y)) ?? Infinity;
-      nearest = { p: next, field: currentA <= currentB ? aField : bField };
+    if (this.warpGates.length && next.side !== "player" && footprint(next).length === 1) {
+      let best = Infinity;
+      for (const gate of this.warpGates) for (const opening of [gate.a, gate.b]) {
+        const field = terrainDistanceField(opening, this.tiles, this.cols, this.rows, this.decorOverlay);
+        const d = field.get(key(next.x, next.y)) ?? Infinity;
+        if (d < best) { best = d; nearest = { p: next, field }; }
+      }
     }
     let closest: Point | null = null;
     let dist = Infinity;
