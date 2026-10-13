@@ -35,6 +35,11 @@ export const FLAT_ROW_STEP = 0.002;
 
 const Y_AXIS = new THREE.Vector3(0, 1, 0), X_AXIS = new THREE.Vector3(1, 0, 0);
 const qYaw = new THREE.Quaternion(), qPitch = new THREE.Quaternion(), back = new THREE.Vector3();
+const probeRay = new THREE.Raycaster(), probeNdc = new THREE.Vector2();
+/** The 3D view's pan reach, as screen points (−1..1) that must stay over the board: the board's
+ * edge just shows: a 5% strip past it at each side of the screen, no further (user's call:
+ * "see the edges of the map, that's the limit"). Lower = more panning room. */
+const EDGE_PROBE_X = 0.9, EDGE_PROBE_Y = 0.9;
 
 export class CameraRig {
   readonly target = new THREE.Vector3();
@@ -98,11 +103,34 @@ export class CameraRig {
     return Math.min(this.maxDist, width / (2 * tan * Math.max(0.25, this.camera.aspect)));
   }
 
+  /** The 3D view's edge limit. The aim point (screen centre) always stays on the board, and
+   * the board's edge may come no further in than probe points 5% in from the screen's left,
+   * right and bottom sides (EDGE_PROBE_X/Y) traced onto the ground. The top probe is left out:
+   * at the low tilt it looks far past the board, which locked panning. A board narrower than
+   * the probes on an axis just keeps the aim point over it there. Clamped per world axis, so a
+   * pan into an edge slides along it, and a view pushed past the edge (zoom) comes straight back. */
+  private clampTarget3D(b: RigBounds): void {
+    this.apply();
+    this.camera.updateMatrixWorld(true);
+    const t0 = this.target;
+    let minX = 0, maxX = 0, minZ = 0, maxZ = 0;
+    for (const [nx, ny] of [[-EDGE_PROBE_X, 0], [EDGE_PROBE_X, 0], [0, -EDGE_PROBE_Y]]) {
+      probeRay.setFromCamera(probeNdc.set(nx, ny), this.camera);
+      const d = probeRay.ray.direction, o = probeRay.ray.origin;
+      if (d.y > -1e-4) continue; // at or above the horizon: never meets the ground
+      const t = (t0.y - o.y) / d.y, ox = o.x + d.x * t - t0.x, oz = o.z + d.z * t - t0.z;
+      minX = Math.min(minX, ox); maxX = Math.max(maxX, ox); minZ = Math.min(minZ, oz); maxZ = Math.max(maxZ, oz);
+    }
+    const span = (lo: number, hi: number, v: number) => lo <= hi ? THREE.MathUtils.clamp(v, lo, hi) : v;
+    t0.x = THREE.MathUtils.clamp(span(b.x0 - minX, b.x1 - maxX, t0.x), b.x0, b.x1);
+    t0.z = THREE.MathUtils.clamp(span(b.z0 - minZ, b.z1 - maxZ, t0.z), b.z0, b.z1);
+  }
+
   /** Keep the aim point where the board's edge stays within the reference strip (panBounds). */
   clampTarget(): void {
     const b = this.panBounds;
-    // only Tática is held to the board; the 3D view pans freely to every corner (user's call)
-    if (!b || !this.flat) return;
+    if (!b) return;
+    if (!this.flat) { this.clampTarget3D(b); return; }
     const halfH = this.dist * Math.tan(THREE.MathUtils.degToRad(NORMAL_FOV / 2)), halfW = halfH * Math.max(0.25, this.camera.aspect);
     // a tilted camera sees the ground stretched in depth by 1/sin(tilt) (straight down = 1)
     const depth = this.flat ? 1 : 1 / Math.max(0.2, Math.abs(Math.sin(this.pitch)));

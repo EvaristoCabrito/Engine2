@@ -1,5 +1,5 @@
 import type { Point } from "./types.ts";
-import { axisDir, hexLine, hexRay } from "./pathfinding.ts";
+import { cubeRound, cubeToOddr, hexDist, oddrToCube } from "./pathfinding.ts";
 export const FROST = {
   name: "Frost",
   unlockLevel: 5,
@@ -21,7 +21,8 @@ export function frostPower(level: number) {
 export function frostCharges(level: number) {
   return 1 + Number(level >= 5) + Number(level >= 12) + Number(level >= 20);
 }
-/** One hex wide: adjacent to the caster, extending along one of the six exact hex axes. */
+/** One hex wide, starting next to the caster and running straight toward the aimed hex in any
+ *  direction (not only the six hex axes), its length set by the caster's level. */
 export function frostAreaTiles(
   origin: Point,
   through: Point,
@@ -29,8 +30,17 @@ export function frostAreaTiles(
   cols: number,
   rows: number,
 ): Point[] {
-  const first = hexLine(origin, through)[1];
-  const direction = first ? axisDir(origin, first) : null;
-  return direction ? hexRay(origin, direction, cols, rows).slice(0, frostPower(level).length) : [];
+  const n = hexDist(origin, through);
+  if (!n) return [];
+  // a hair off-centre, so a line passing exactly between two hexes always picks the same side
+  const A = oddrToCube(origin.x, origin.y), B = oddrToCube(through.x, through.y);
+  const aq = A.q + 1e-6, ar = A.r + 2e-6, as = A.s - 3e-6;
+  const out: Point[] = [];
+  for (let i = 1; i <= frostPower(level).length; i++) {
+    const t = i / n, c = cubeRound(aq + (B.q - A.q) * t, ar + (B.r - A.r) * t, as + (B.s - A.s) * t);
+    const p = cubeToOddr(c.q, c.r);
+    if (p.x < 0 || p.y < 0 || p.x >= cols || p.y >= rows) break;
+    out.push(p);
+  }
+  return out;
 }
-

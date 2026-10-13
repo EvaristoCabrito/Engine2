@@ -243,7 +243,8 @@ export class Stage {
     this.keyIntensity = p.sunIntensity;
     this.placeLight(p.azimuth, p.elevation);
     // at night the key light is the moon: placed (and dimmed near the horizon) every frame as it moves
-    this.moonDisc.visible = night;
+    // indoors there is no sky: the moon still lights the night, but its disc is never drawn
+    this.moonDisc.visible = night && !this.indoor;
     if (night) this.moveMoon();
     this.hemi.color.set(p.sky);
     this.hemi.groundColor.set(p.ground);
@@ -255,6 +256,8 @@ export class Stage {
   }
 
   private keyIntensity = 3;
+  /** Indoor map (Mission.environment): no moon disc in the sky. Set before timeOfDay. */
+  indoor = false;
   /** How far tonight's moon is across the sky: 0 rising, 0.5 highest, 1 setting. */
   moonProgress = 0.35;
 

@@ -1231,6 +1231,11 @@ export class BattleEngine {
     Object.setPrototypeOf(engine, BattleEngine.prototype);
     engine.provokeFx ??= [];
     engine.supportAffinityRecipients ??= new Map();
+    // fields added since the battle began: the new methods use them (a missing one threw
+    // mid-commitMove and left the battle locked after every move)
+    const added = engine as unknown as { warpedThisMove?: Set<string>; warpFloorHalo?: boolean };
+    added.warpedThisMove ??= new Set();
+    added.warpFloorHalo ??= true;
   }
   /** Stable sprite overlap order, independent of animation sway and camera depth. */
   readonly unitActionOrder = new Map<string, number>();
@@ -1497,6 +1502,11 @@ export class BattleEngine {
   private portalFxLive = 0;
   /** Every open Warp pair: a mage can keep several open at once, each on its own round timer. */
   private warpGates: WarpGatePair[] = [];
+  /** Units a gate carried across during the move now playing (commitMove's onNextIdle). */
+  private readonly warpedThisMove = new Set<string>();
+  /** Warp's flat floor glow and floor reflection under the gate. The 3D battle draws the gate on
+   * an upright sheet, where they read as a horizontal halo across it, so it turns them off. */
+  warpFloorHalo = true;
   /** 0-1: how visible the movement/range grid is right now (see OVERLAY_FADE_IN). Read by
    * both renderers when they draw boardOverlayLayers. */
   overlayFade = 1;
@@ -2535,8 +2545,9 @@ export class BattleEngine {
         if (!p.live) continue;
         p.t += actionCap;
         if (p.t >= p.max) {
+          // an open Warp gate waits fully open, its loop running on: wrapping its clock back to 0
+          // closed and reopened it every 2.4 s (a flicker)
           if (p.persistent && this.warpGates.some((g) => (g.a.x === p.x && g.a.y === p.y) || (g.b.x === p.x && g.b.y === p.y))) {
-            p.t %= p.max;
             live += 1;
             continue;
           }
@@ -5955,6 +5966,8 @@ export class BattleEngine {
       .filter((cell) => !isGate(cell) && this.hexAt(cell.x, cell.y).passable && !this.units.some((otherUnit) => otherUnit.id !== unit.id && otherUnit.alive && occupies(otherUnit, cell.x, cell.y)))
       .sort((a, b) => hexDist(a, other) - hexDist(b, other) || a.y - b.y || a.x - b.x)[0];
     if (!landing) return false;
+    // the move's end must leave it here, not put it on the hex that was clicked (see commitMove)
+    this.warpedThisMove.add(unit.id);
     unit.x = landing.x;
     unit.y = landing.y;
     unit.drawX = landing.x;
@@ -9474,9 +9487,14 @@ export class BattleEngine {
     this.mode = "locked";
     this.queue.push({ type: "move", id: unit.id, path });
     this.queue.push({ type: "delay", dur: 0.02 });
+    this.warpedThisMove.delete(unit.id);
     this.onNextIdle = () => {
-      unit.x = Math.round(to.x);
-      unit.y = Math.round(to.y);
+      // A Warp gate on the way carried the unit across mid-walk: it stays where it landed.
+      // Snapping it to the clicked hex put it straight back on the near side (back and forth).
+      if (!this.warpedThisMove.delete(unit.id)) {
+        unit.x = Math.round(to.x);
+        unit.y = Math.round(to.y);
+      }
       unit.drawX = unit.x;
       unit.drawY = unit.y;
       // Accumulates: movement is spent as the unit walks, hop by hop, never refunded by a
@@ -12646,6 +12664,7 @@ export class BattleEngine {
         const gateH = r * 1.42;
         ctx.save();
         ctx.globalCompositeOperation = "lighter";
+        if (this.warpFloorHalo) {
         const floorGlow = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 1.35);
         floorGlow.addColorStop(0, `rgba(195,225,255,${0.42 * radiusK})`);
         floorGlow.addColorStop(0.42, `rgba(75,150,255,${0.26 * radiusK})`);
@@ -12654,6 +12673,7 @@ export class BattleEngine {
         ctx.beginPath();
         ctx.ellipse(cx, cy, r * 1.35, r * 0.34, 0, 0, Math.PI * 2);
         ctx.fill();
+        }
 
         const flipbooks = getWarpPortalFlipbooks();
         if (flipbooks) {
@@ -12671,7 +12691,7 @@ export class BattleEngine {
           ctx.globalCompositeOperation = "lighter";
           ctx.imageSmoothingEnabled = true;
           ctx.globalAlpha = 0.72 * radiusK;
-          drawFrame(groundSheet, (frame + 3) % 16, cx - r * 1.25, cy - r * 0.38, r * 2.5, r * 0.76);
+          if (this.warpFloorHalo) drawFrame(groundSheet, (frame + 3) % 16, cx - r * 1.25, cy - r * 0.38, r * 2.5, r * 0.76);
 
           const imageW = gateW * 2.75;
           const imageH = gateH * 2.55;

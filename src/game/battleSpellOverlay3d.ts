@@ -6,29 +6,39 @@ import type { DioramaView } from "../editor/ember/dioramaView";
 import { WebGL2DRenderer } from "./gfx/WebGL2DRenderer";
 import { EffectsRenderer } from "../vfx/legacy/two-d/EffectsRenderer";
 import { footprintFrontRow } from "./pathfinding";
-import { CARD_RENDER_ORDER, FOG_RENDER_ORDER } from "../render/drawOrder";
+import { CARD_RENDER_ORDER, FOG_RENDER_ORDER, UNIT_RENDER_ORDER } from "../render/drawOrder";
 
 type PortalItem = { live: boolean; x: number; y: number; body: { dx: number; dy: number }[] | null };
 /** After the ground and terrain fog, before unit/decoration cards: portals sit under the units. */
 const PORTAL_RENDER_ORDER = (FOG_RENDER_ORDER + CARD_RENDER_ORDER) / 2;
 const PORTAL_TEX_W = 512, PORTAL_TEX_H = 512;
+/** A Warp gate is a standing thing, not a mark on the floor: it is depth-tested and drawn after
+ * the units, so whatever stands nearer covers it and whatever is farther stays behind it. The
+ * whole sheet takes the depth of the hex it stands on (gl_FragDepth): tested plane by plane, the
+ * camera-facing gate cut through prop cards standing square to the hex rows. */
+const WARP_GATE_RENDER_ORDER = UNIT_RENDER_ORDER + 0.1;
 /** Frost's strike: an icy flash on each hex as the ice lands, about a strong lantern's light,
  * fading in a fraction of a second (the pulse decay in sync). */
 const FROST_FLASH = 8;
+/** A potion burst's glow (Ember: 0.95 tile around the chest) as a share of the unit card's height. */
+const POTION_GLOW_OF_CARD = 0.55;
 
 export class BattleSpellOverlay3D {
   private readonly legacy: WebGL2DRenderer;
   private readonly effects: EffectsRenderer;
   private readonly blizzards = new Map<number, number>();
   private webShot: number | null = null;
-  private readonly portalSheets = new Map<PortalItem, { mesh: THREE.Mesh; canvas: HTMLCanvasElement; texture: THREE.CanvasTexture }>();
+  private readonly portalSheets = new Map<PortalItem, { mesh: THREE.Mesh; canvas: HTMLCanvasElement; texture: THREE.CanvasTexture; depth?: { value: number }; outline?: THREE.Vector3[] }>();
   /** The effects canvas as a texture, while an Ice Storm puts it in the board's layers. */
   private readonly fxTexture: THREE.CanvasTexture;
   private readonly pulses =Array.from({ length: 4 }, () => ({ age: 1, light: new THREE.PointLight(0xb6e7ff, 0, 3.2, 1.8) }));
-  constructor(private readonly artCanvas: HTMLCanvasElement, private readonly fxCanvas: HTMLCanvasElement, private readonly view: DioramaView, private readonly engine: BattleEngine) {
+  /** `cardAt`: a unit's 3D card (body centre and height), where potion bursts are centred. */
+  constructor(private readonly artCanvas: HTMLCanvasElement, private readonly fxCanvas: HTMLCanvasElement, private readonly view: DioramaView, private readonly engine: BattleEngine,
+    private readonly cardAt?: (unitId: string) => { centre: THREE.Vector3; height: number } | null) {
     this.legacy = new WebGL2DRenderer(artCanvas, true);
     this.effects = new EffectsRenderer(fxCanvas, true);
     this.fxTexture = new THREE.CanvasTexture(fxCanvas);
+    (engine as unknown as { warpFloorHalo: boolean }).warpFloorHalo = false;
     for (const pulse of this.pulses) view.stage.scene.add(pulse.light);
   }
   /** `intensity` overrides the blizzard-scaled 0.012 x strength (Frost's strike is a real flash). */
@@ -102,12 +112,19 @@ export class BattleSpellOverlay3D {
         canvas.width = PORTAL_TEX_W; canvas.height = PORTAL_TEX_H;
         const texture = new THREE.CanvasTexture(canvas);
         texture.colorSpace = THREE.SRGBColorSpace;
-        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false, side: THREE.DoubleSide }));
+        const gate = !!(q as unknown as { warp?: boolean }).warp;
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: gate, depthWrite: false, blending: THREE.AdditiveBlending, toneMapped: false, fog: false, side: THREE.DoubleSide });
+        const depth = gate ? { value: 0.5 } : undefined;
+        if (depth) material.onBeforeCompile = (sh) => {
+          sh.uniforms.uGateDepth = depth;
+          sh.fragmentShader = `uniform float uGateDepth;\n${sh.fragmentShader}`.replace("#include <dithering_fragment>", "#include <dithering_fragment>\n  gl_FragDepth = uGateDepth;");
+        };
+        const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
         mesh.matrixAutoUpdate = false;
         mesh.frustumCulled = false;
-        mesh.renderOrder = PORTAL_RENDER_ORDER;
+        mesh.renderOrder = gate ? WARP_GATE_RENDER_ORDER : PORTAL_RENDER_ORDER;
         this.view.stage.scene.add(mesh);
-        sheet = { mesh, canvas, texture };
+        sheet = { mesh, canvas, texture, depth };
         this.portalSheets.set(q, sheet);
       }
       // The box of Ember canvas px the art is painted in, around the portal's centre: wide enough
@@ -115,17 +132,38 @@ export class BattleSpellOverlay3D {
       const shift = shiftOf(q) ?? { dx: 0, dy: 0 };
       const at = this.engine.effectAnchor(q.x, q.y);
       const cx = at.x + shift.dx, cy = at.y + shift.dy;
-      const halfW = tile * 4.2, up = tile * 5, down = tile * 2.6;
+      // a big Warp gate (wide party radius) stands taller than the familiar's circle: room for all of it
+      const gateR = (q as unknown as { warp?: boolean; radius?: number }).warp ? tile * (0.9 + ((q as unknown as { radius?: number }).radius ?? 1) * 0.52) : 0;
+      const halfW = Math.max(tile * 4.2, gateR * 1.4), up = Math.max(tile * 5, gateR * 2.9), down = tile * 2.6;
       const ctx = sheet.canvas.getContext("2d")!;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, PORTAL_TEX_W, PORTAL_TEX_H);
       ctx.setTransform(PORTAL_TEX_W / (halfW * 2), 0, 0, PORTAL_TEX_H / (up + down), -(cx - halfW) * PORTAL_TEX_W / (halfW * 2), -(cy - up) * PORTAL_TEX_H / (up + down));
       for (const other of items) other.live = other === q;
-      try { eng.drawPortalFx(ctx, tile); } finally { for (const other of items) other.live = true; }
+      // Tática (2D, straight down) shows Ember's own gate: centred on its hex, its floor glow on
+      // the floor, under the units, no depth test (a single-depth sheet lying on the floor tied
+      // with it and broke apart). The 3D view stands it on its hex, depth-sorted, no floor halo.
+      const flat = this.view.rig.flat, gateSheet = sheet.depth !== undefined;
+      eng.warpFloorHalo = flat;
+      try { eng.drawPortalFx(ctx, tile); } finally { for (const other of items) other.live = true; eng.warpFloorHalo = false; }
+      if (gateSheet) {
+        const material = sheet.mesh.material as THREE.MeshBasicMaterial;
+        if (material.depthTest === flat) { material.depthTest = !flat; material.needsUpdate = true; }
+        sheet.mesh.renderOrder = flat ? PORTAL_RENDER_ORDER : WARP_GATE_RENDER_ORDER;
+      }
       sheet.texture.needsUpdate = true;
       // the unit plane, stretched over that box in canvas px, then the standing sheet (canvas px → world)
       const box = new THREE.Matrix4().makeTranslation(cx, cy + (down - up) / 2, 0).multiply(new THREE.Matrix4().makeScale(halfW * 2, -(up + down), 1));
-      sheet.mesh.matrix.copy(this.standingSheet(q, tile, 0, shift)).multiply(box);
+      // Ember drew the gate (warp-v3 art, drawPortalFx) hanging 0.93 r below its hex centre; depth-
+      // tested, the floor would cut that off, so the open gate's bottom edge stands on the hex
+      const standing = this.standingSheet(q, tile, flat ? 0 : gateR * 0.93, shift);
+      sheet.mesh.matrix.copy(standing).multiply(box);
+      if (sheet.depth) {
+        const c = this.view.board!.cell(q.x, q.y), gx = c.x + shift.dx / tile, gz = c.z + shift.dy / tile;
+        sheet.depth.value = new THREE.Vector3(gx, this.view.groundAt(gx, gz), gz).project(this.view.stage.camera).z * 0.5 + 0.5;
+        // the gate's body (drawPortalFx: centred 0.88 r over the hex, 1.42 r tall, art to 0.93 r below), for clicks
+        sheet.outline = flat ? undefined : [[-0.5, -2.3], [0.5, -2.3], [0.5, 0.93], [-0.5, 0.93]].map(([u, v]) => new THREE.Vector3(cx + u * gateR, cy + v * gateR, 0).applyMatrix4(standing));
+      }
       sheet.mesh.matrixWorldNeedsUpdate = true;
       sheet.mesh.visible = true;
     }
@@ -134,6 +172,24 @@ export class BattleSpellOverlay3D {
       sheet.mesh.visible = false;
       if (!q.live) { this.disposePortal(sheet); this.portalSheets.delete(q); }
     }
+  }
+  /** The Warp gate under a screen point (client px), if the pointer is on a gate's body: it
+   * stands above its hex, so a click on it should mean that hex, not the floor behind it. */
+  gateAt(clientX: number, clientY: number): { x: number; y: number } | null {
+    const rect = this.view.stage.renderer.domElement.getBoundingClientRect(), camera = this.view.stage.camera;
+    for (const [q, sheet] of this.portalSheets) {
+      if (!sheet.mesh.visible || !sheet.outline) continue;
+      const pts = sheet.outline.map(p => { const s = p.clone().project(camera); return { x: rect.left + (s.x + 1) / 2 * rect.width, y: rect.top + (1 - s.y) / 2 * rect.height }; });
+      let inside = true;
+      for (let i = 0; i < 4 && inside; i++) {
+        const a = pts[i]!, b = pts[(i + 1) % 4]!;
+        const cross = (b.x - a.x) * (clientY - a.y) - (b.y - a.y) * (clientX - a.x);
+        const turn = (pts[1]!.x - pts[0]!.x) * (pts[2]!.y - pts[0]!.y) - (pts[1]!.y - pts[0]!.y) * (pts[2]!.x - pts[0]!.x);
+        if (cross * turn < 0) inside = false;
+      }
+      if (inside) return { x: q.x, y: q.y };
+    }
+    return null;
   }
   private disposePortal(sheet: { mesh: THREE.Mesh; texture: THREE.Texture }): void {
     sheet.mesh.removeFromParent();
@@ -170,11 +226,13 @@ export class BattleSpellOverlay3D {
     // flat ground sheet that laid them along the floor at height 0, off their hex, so each is
     // drawn on its own camera-facing sheet standing on its hex instead (Ember's 2D look, in place).
     const eng = this.engine as unknown as Record<string, any>, tile = a.tile;
+    const potionCard = (fx: { unitId?: string }) => fx.unitId ? this.cardAt?.(fx.unitId) ?? null : null;
     const unitCell = (id?: string) => { const u = id ? this.engine.units.find(n => n.id === id) : undefined; return u ? { x: u.x, y: u.y } : null; };
     const standing = ([
       [eng.lightningFx, (l: any) => l, () => eng.drawLightningFx(this.legacy, tile), false],
       [eng.fireballBurstFx, (b: any) => b, () => eng.drawFireballBurstFx(this.legacy, tile), false],
-      [eng.holyFx, (fx: any) => unitCell(fx.unitId) ?? fx, () => eng.drawHolyFx(this.legacy, tile), false],
+      // a potion on a unit with a card is drawn on its own, centred on the card (below)
+      [eng.holyFx, (fx: any) => fx.kind === "potion" && potionCard(fx) ? null : unitCell(fx.unitId) ?? fx, () => eng.drawHolyFx(this.legacy, tile), false],
       [eng.particles, (q: any) => ({ x: Math.round(q.x), y: Math.round(q.y) }), () => eng.drawParticleFx(this.legacy, tile, true), true],
       [eng.levelUpFx, (s: any) => unitCell(s.unitId), () => eng.drawLevelUpFx(this.legacy, tile, true), true],
       [eng.portalFx, (q: any) => q, () => eng.drawPortalFx(this.legacy, tile), false],
@@ -200,11 +258,17 @@ export class BattleSpellOverlay3D {
     for (const blade of blades) blade.live = false;
     for (const pool of standing) for (const fx of pool.items) (fx as { live: boolean }).live = false;
     eng.provokeFx = []; eng.turnUndeadFx = [];
+    // Poison / disease (drawStatusFx): Ember's haze and motes rise from a unit's feet to its head.
+    // On the flat ground sheet (height 0) they lay along the floor, off the unit, so they are
+    // left out of the shared pass and drawn below on each unit's own standing sheet.
+    const statusUnits = this.engine.units.filter(u => (u.poisoned || u.diseased) && u.fade > 0 && !eng.unitHidden(u));
+    eng.drawStatusFx = () => undefined;
     try { this.engine.renderUnitsAndOverlays(this.legacy, 1280, 800, undefined, true, true, true, true, true, false, true, true); }
     finally {
       for (const shot of [...arrows, ...bolts]) shot.live = true; for (const blade of blades) blade.live = true;
       for (const pool of standing) for (const fx of pool.items) (fx as { live: boolean }).live = true;
       eng.provokeFx = provoke; eng.turnUndeadFx = turnUndead;
+      delete eng.drawStatusFx;
     }
     const viewProj = new THREE.Matrix4().multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
     for (const pool of standing) {
@@ -222,6 +286,37 @@ export class BattleSpellOverlay3D {
         for (const other of pool.items) (other as { live: boolean }).live = fx.includes(other);
         try { pool.draw(); } finally { for (const other of pool.items) (other as { live: boolean }).live = true; }
       }
+    }
+    // Potion bursts: Ember drew them around a small sprite's chest (half a tile over the hex
+    // centre), which sat low and small on the tall 3D card. Each goes on a camera-facing sheet
+    // centred on the card's body, its glow sized to the card (POTION_GLOW_OF_CARD).
+    const holy = standing[2]!.items as unknown as Array<{ live: boolean; kind: string; unitId?: string }>;
+    for (const fx of holy) {
+      if (fx.kind !== "potion") continue;
+      const card = potionCard(fx), u = card ? this.engine.units.find(n => n.id === fx.unitId) : undefined;
+      if (!card || !u) continue;
+      const centre = eng.hexCenter(u.drawX, u.drawY) as { cx: number; cy: number };
+      const size = card.height * POTION_GLOW_OF_CARD / 0.95 / tile;
+      const R = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(size);
+      const D = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1).multiplyScalar(-size);
+      const N = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 2);
+      const O = card.centre.clone().addScaledVector(R, -centre.cx).addScaledVector(D, -(centre.cy - tile * 0.5));
+      this.legacy.setProjection(viewProj.clone().multiply(new THREE.Matrix4().set(R.x, D.x, N.x, O.x, R.y, D.y, N.y, O.y, R.z, D.z, N.z, O.z, 0, 0, 0, 1)).elements);
+      for (const other of holy) other.live = other === fx;
+      try { eng.drawHolyFx(this.legacy, tile); } finally { for (const other of holy) other.live = true; }
+    }
+    // each poisoned / diseased unit: its feet (where Ember drew them) on the ground under its card
+    for (const u of statusUnits) {
+      if (u.x < 0 || u.y < 0 || u.x >= this.engine.cols || u.y >= this.engine.rows) continue;
+      const at = this.engine.effectAnchor(u.x, u.y), px = eng.unitPixel(u) as { cx: number; cy: number };
+      const v = eng.unitVisual(u, tile) as { sway: number; bob: number; footY: number; scaleX: number; scaleY: number };
+      this.legacy.setProjection(viewProj.clone().multiply(this.standingSheet(u, tile, v.footY, { dx: px.cx - at.x, dy: px.cy - at.y })).elements);
+      const ctx = this.legacy as unknown as Record<string, any>, cell = tile * Math.sqrt(3);
+      ctx.save();
+      ctx.globalAlpha = u.fade;
+      ctx.translate(px.cx + v.sway, px.cy + v.footY + v.bob);
+      ctx.scale(v.scaleX, v.scaleY);
+      try { eng.drawStatusFx(ctx, u, cell * 1.11 * 1.2, cell * 1.42 * 1.2); } finally { ctx.restore(); }
     }
     try {
       for (const fx of provoke) {

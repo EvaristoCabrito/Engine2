@@ -143,7 +143,9 @@ export class DioramaView {
     const key = `${m.id}|${m.cols}x${m.rows}`;
     const b = board.bounds(), w = b.x1 - b.x0 + 2.4, depth = b.z1 - b.z0 + 2.4;
     const tod = (['day', 'noon', 'dawn', 'dusk', 'brightNight', 'darkNight'] as TimeOfDay[]).includes(m.timeOfDay as TimeOfDay) ? m.timeOfDay as TimeOfDay : 'day';
-    if (key !== this.mapKey || tod !== this.stage.timeOfDay) {
+    const indoor = m.environment === 'indoor';
+    if (key !== this.mapKey || tod !== this.stage.timeOfDay || indoor !== this.stage.indoor) {
+      this.stage.indoor = indoor;
       this.stage.timeOfDay = tod;
       this.stage.scene.background = new THREE.Color('#000000');
       this.stage.fitToBoard(w, depth);

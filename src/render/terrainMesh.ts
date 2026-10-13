@@ -10,6 +10,7 @@ import { type HexLayout, hexAt, neighbors, corner, SQ3, STEP } from '../core/hex
 import type { Board, Cell } from '../map/board';
 import { terrainReliefAt } from './terrainRelief';
 import { GROUND_LAYER_COUNT, GROUND_WEIGHT_ATTRIBUTES } from '../map/board';
+import { DECORATIONS } from '../ember/data';
 
 export type EdgeStyle = 'smooth' | 'hard';
 
@@ -28,14 +29,22 @@ const RING7 = [[0, 0], ...Array.from({ length: 6 }, (_, k) => [Math.sin((k * Mat
 const STRIDE = 8 + GROUND_LAYER_COUNT;
 const WEIGHT_ATTRIBUTES = ['splatA', 'splatB', ...GROUND_WEIGHT_ATTRIBUTES];
 
-/** Surface and tile weights around a point: softly blended, void contributes nothing. */
-function splat(b: Board, L: HexLayout, sx: number, sz: number, rad: number, out: Float32Array, o: number): void {
+/** Surface and tile weights around a point: softly blended over real ground only, so the ground
+ *  beside a void keeps its full colour. With no ground in reach it takes the fallback cell's. */
+function splat(b: Board, L: HexLayout, sx: number, sz: number, rad: number, out: Float32Array, o: number, fallback?: Cell): void {
   const w = new Array<number>(STRIDE).fill(0);
+  let n = 0;
   for (const [ox, oz] of RING7) {
     const cell = cellAt(b, L, sx + ox * rad, sz + oz * rad);
-    if (cell.surface >= 0) w[cell.surface] += 1 / 7;
-    if (cell.ground >= 0) w[8 + cell.ground] += 1 / 7;
+    if (cell.surface < 0) continue;
+    n++; w[cell.surface] += 1;
+    if (cell.ground >= 0) w[8 + cell.ground] += 1;
   }
+  if (!n && fallback && fallback.surface >= 0) {
+    n = 1; w[fallback.surface] = 1;
+    if (fallback.ground >= 0) w[8 + fallback.ground] = 1;
+  }
+  for (let k = 0; k < STRIDE; k++) w[k] /= n || 1;
   out.set(w, o * STRIDE);
 }
 
@@ -55,43 +64,125 @@ function finish(pos: Float32Array, splats: Float32Array, index: Uint32Array | nu
   return g;
 }
 
-/** Smooth look: a dense heightfield. Resolution adapts so big maps stay light. */
+/** Ember's architecture (decor.ts addArchitecture) stands on a square grid: every row at the same
+ *  x, no odd-row half-hex shift, walls 0.32 thick on the cell's centre line. */
+const ARCHITECTURE = new Set(['wall', 'doorway', 'door', 'secretDoor']);
+const WALL_HALF = 0.16;
+
+/** Where the board has ground. Hex cells everywhere, except around walls: there the ground follows
+ *  the walls' square grid and stops at a wall's outer face where void lies beyond it, so no
+ *  half-hexes poke out past the wall in steps. */
+function groundFootprint(b: Board): (x: number, z: number) => boolean {
+  const L = b.layout;
+  const inBoard = (c: number, r: number) => c >= 0 && r >= 0 && c < L.cols && r < L.rows;
+  const walls = new Set<number>();
+  for (const p of b.draft.decorations ?? []) {
+    const def = DECORATIONS[p.id];
+    if (def?.model3d && ARCHITECTURE.has(def.model3d) && !def.propModel && inBoard(p.x, p.y)) walls.add(p.y * L.cols + p.x);
+  }
+  const hexSolid = (x: number, z: number) => cellAt(b, L, x, z).surface >= 0;
+  if (!walls.size) return hexSolid;
+  const isWall = (c: number, r: number) => inBoard(c, r) && walls.has(r * L.cols + c);
+  const voidAt = (c: number, r: number) => inBoard(c, r) && b.cell(c, r).surface < 0;
+  return (x: number, z: number) => {
+    const fc = (x + L.ox) / SQ3, fr = (z + L.oz) / 1.5;
+    const c = Math.round(fc), r = Math.round(fr);
+    let near = false;
+    for (let dr = -1; dr <= 1 && !near; dr++) for (let dc = -1; dc <= 1; dc++) if (isWall(c + dc, r + dr)) { near = true; break; }
+    if (!near) return hexSolid(x, z);
+    if (!inBoard(c, r) || b.cell(c, r).surface < 0) return false;
+    if (!isWall(c, r)) return true;
+    // a wall cell: cut at the wall's face on every side that opens onto void
+    const ox = (fc - c) * SQ3, oz = (fr - r) * 1.5;
+    if (ox < -WALL_HALF && voidAt(c - 1, r)) return false;
+    if (ox > WALL_HALF && voidAt(c + 1, r)) return false;
+    if (oz < -WALL_HALF && voidAt(c, r - 1)) return false;
+    if (oz > WALL_HALF && voidAt(c, r + 1)) return false;
+    return true;
+  };
+}
+
+/** Smooth look: a dense heightfield. Resolution adapts so big maps stay light.
+ *  Where the map turns to void the ground is cut exactly on the hex edge (not square by square,
+ *  which left saw teeth) and a short lip drops from the cut, like the board's outer edge. */
 export function buildSmoothGround(b: Board): THREE.BufferGeometry {
   const L = b.layout, { x0, x1, z0, z1 } = b.bounds();
   const res = Math.max(0.125, Math.sqrt(((x1 - x0) * (z1 - z0)) / 220000));
   const nx = Math.ceil((x1 - x0) / res), nz = Math.ceil((z1 - z0) / res);
-  const VX = nx + 3, VZ = nz + 3; // +1 ring on each side forms the diorama's cut walls
-  const pos = new Float32Array(VX * VZ * 3), splats = new Float32Array(VX * VZ * STRIDE);
+  const VX = nx + 3, VZ = nz + 3, N = VX * VZ; // +1 ring on each side forms the diorama's cut walls
   const SM = [[0, 0], ...Array.from({ length: 8 }, (_, k) => [Math.sin((k * Math.PI) / 4) * res * 1.1, Math.cos((k * Math.PI) / 4) * res * 1.1])];
-  for (let j = 0; j < VZ; j++) for (let i = 0; i < VX; i++) {
-    const gi = i - 1, gj = j - 1, edge = gi < 0 || gj < 0 || gi > nx || gj > nz;
-    const x = Math.min(x1, Math.max(x0, x0 + gi * res)), z = Math.min(z1, Math.max(z0, z0 + gj * res));
+  const solidAt = groundFootprint(b);
+  const pos: number[] = [], spl: number[] = [], lipOf: number[] = [], tmp = new Float32Array(STRIDE);
+  // One ground point. `lip` (0..1) sinks it toward the board's outer cut edge.
+  const addPoint = (x: number, z: number, lip: number): number => {
     const [wx, wz] = warp(x, z);
-    // void holes have no ground: averaging their height 0 in hung a cliff down into every hole,
-    // so only real ground counts, and the hole's rim just bevels a thin lip
+    // only real ground counts toward the height: averaging a void's height 0 in hung a slope into it
     let h = 0, solid = 0;
     for (const [ox, oz] of SM) { const s = cellAt(b, L, wx + ox, wz + oz); if (s.surface >= 0) { h += s.groundY; solid++; } }
-    h = solid ? h / solid - EDGE_LIP * (1 - solid / SM.length) : 0;
-    const v = j * VX + i;
-    pos[v * 3] = x; pos[v * 3 + 2] = z;
+    const own = cellAt(b, L, x, z);
+    h = solid ? h / solid : own.groundY;
     // Only the new smooth plains version omits decorative vertex noise.
     const cell = cellAt(b, L, wx, wz);
     const flatPlains = cell.type === 'plains' && (b.draft.tileVariants?.[cell.i] === 56 || b.draft.tileVariants?.[cell.i] === 57 || b.draft.tileVariants?.[cell.i] === 58 || b.draft.tileVariants?.[cell.i] === 59 || b.draft.tileVariants?.[cell.i] === 60 || b.draft.tileVariants?.[cell.i] === 61);
     // the cut wall is a short lip under the ground at the board's edge, never a cliff hanging down to 0
     const top = h + terrainReliefAt(b, x, z);
-    pos[v * 3 + 1] = edge ? top - EDGE_LIP : top + (flatPlains ? 0 : (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04);
-    splat(b, L, wx, wz, 0.3, splats, v);
+    pos.push(x, lip > 0 ? top - EDGE_LIP * lip : top + (flatPlains ? 0 : (vnoise(x * 2.3, z * 2.3) - 0.5) * 0.04), z);
+    splat(b, L, wx, wz, 0.3, tmp, 0, own);
+    for (let k = 0; k < STRIDE; k++) spl.push(tmp[k]);
+    lipOf.push(lip);
+    return lipOf.length - 1;
+  };
+  const inside = new Uint8Array(N);
+  for (let j = 0; j < VZ; j++) for (let i = 0; i < VX; i++) {
+    const gi = i - 1, gj = j - 1, edge = gi < 0 || gj < 0 || gi > nx || gj > nz;
+    const x = Math.min(x1, Math.max(x0, x0 + gi * res)), z = Math.min(z1, Math.max(z0, z0 + gj * res));
+    inside[addPoint(x, z, edge ? 1 : 0)] = solidAt(x, z) ? 1 : 0;
   }
-  const index = new Uint32Array((VX - 1) * (VZ - 1) * 6);
-  let t = 0;
+  // where a grid edge leaves the ground: the exact crossing, found by halving, shared by both sides
+  const cuts = new Map<number, number>();
+  const cut = (s: number, v: number): number => {
+    const key = s < v ? s * N + v : v * N + s;
+    const hit = cuts.get(key);
+    if (hit !== undefined) return hit;
+    const sx = pos[s * 3], sz = pos[s * 3 + 2], dx = pos[v * 3] - sx, dz = pos[v * 3 + 2] - sz;
+    let lo = 0, hi = 1;
+    for (let k = 0; k < 10; k++) { const m = (lo + hi) / 2; if (solidAt(sx + dx * m, sz + dz * m)) lo = m; else hi = m; }
+    const idx = addPoint(sx + dx * lo, sz + dz * lo, lipOf[s] + (lipOf[v] - lipOf[s]) * lo);
+    cuts.set(key, idx);
+    return idx;
+  };
+  const tris: number[] = [];
+  const skirt = (p: number, q: number, inner: number) => {
+    if (lipOf[p] > 0 || lipOf[q] > 0) return; // the board's outer ring already drops its own lip
+    const dx = pos[q * 3] - pos[p * 3], dz = pos[q * 3 + 2] - pos[p * 3 + 2];
+    // the face must look out into the void, away from the ground it hangs from
+    if (dz * (pos[inner * 3] - pos[p * 3]) - dx * (pos[inner * 3 + 2] - pos[p * 3 + 2]) > 0) [p, q] = [q, p];
+    const base = lipOf.length;
+    for (const [v, drop] of [[p, 0], [q, 0], [q, EDGE_LIP], [p, EDGE_LIP]]) {
+      pos.push(pos[v * 3], pos[v * 3 + 1] - drop, pos[v * 3 + 2]);
+      for (let k = 0; k < STRIDE; k++) spl.push(spl[v * STRIDE + k]);
+      lipOf.push(1);
+    }
+    tris.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  };
+  const clip = (t: number[]) => {
+    const n = inside[t[0]] + inside[t[1]] + inside[t[2]];
+    if (n === 3) { tris.push(t[0], t[1], t[2]); return; }
+    if (n === 0) return;
+    const poly: number[] = [], edge: number[] = [];
+    for (let k = 0; k < 3; k++) {
+      const p = t[k], q = t[(k + 1) % 3];
+      if (inside[p]) poly.push(p);
+      if (inside[p] !== inside[q]) { const c = inside[p] ? cut(p, q) : cut(q, p); poly.push(c); edge.push(c); }
+    }
+    for (let k = 1; k + 1 < poly.length; k++) tris.push(poly[0], poly[k], poly[k + 1]);
+    skirt(edge[0], edge[1], t.find(v => inside[v])!);
+  };
   for (let j = 0; j < VZ - 1; j++) for (let i = 0; i < VX - 1; i++) {
     const a = j * VX + i, bb = a + 1, c = a + VX, d = c + 1;
-    const x = (pos[a * 3] + pos[d * 3]) / 2, z = (pos[a * 3 + 2] + pos[d * 3 + 2]) / 2;
-    const [wx, wz] = warp(x, z);
-    if (cellAt(b, L, wx, wz).surface < 0) continue;
-    index[t++] = a; index[t++] = c; index[t++] = bb; index[t++] = bb; index[t++] = c; index[t++] = d;
+    clip([a, c, bb]); clip([bb, c, d]);
   }
-  return finish(pos, splats, index.subarray(0, t), null);
+  return finish(new Float32Array(pos), new Float32Array(spl), new Uint32Array(tris), null);
 }
 
 /** Hard look: crisp hex cliffs at every height step, seamless tops. */

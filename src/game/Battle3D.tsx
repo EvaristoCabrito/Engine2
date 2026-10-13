@@ -42,6 +42,19 @@ import { BattleSpellOverlay3D } from "./battleSpellOverlay3d";
 
 type Any = Record<string, any>; // the engine's private helpers (hexCenter, active) are read as-is
 
+/** The caster's point of light at full strength (Frost's strike flash is 8). */
+const CAST_LIGHT = 9;
+/** Skills that are swings, shoves and arrow shots, not spells: no casting light. */
+const NOT_CASTS = new Set(["doubleStrike", "cleave", "piercingThrust", "sweep", "trip", "shoulderSmash", "stampede", "tendrilSwipe",
+  "longShot", "bloodyShot", "multiShot", "piercing", "bullRush", "shieldBash", "executionerStrike"]);
+/** Malrec's own lights: every spell he casts glows blue, his attacks a regular yellow. */
+const MALREC_CAST_LIGHT = 0x4f9dff, MALREC_ATTACK_LIGHT = 0xffd45a;
+/** Spell colours for the casting light; anything else glows warm white. */
+const CAST_TINT: Record<string, number> = {
+  fireball: 0xff8a3c, burningHands: 0xff8a3c, frost: 0x9fd6ff, iceStorm: 0x9fd6ff, lightning: 0xb8d2ff, shock: 0xb8d2ff,
+  causticVenom: 0x86ff7c, minorVenom: 0x86ff7c, poisonBreath: 0x86ff7c, lifeDrain: 0xff5a6e, magicMissile: 0xc7b4ff, magicMissileV2: 0xc7b4ff,
+  phantasmalForce: 0xc7b4ff, fantomForce: 0xc7b4ff, webOfDreams: 0xd8c8ff, warp: 0xb48cff,
+};
 /** Ember's art pools → Engine2's poses (same source sheets). Earlier entries win when two pools
  * share an image (a sprite's `sprites` pool is its idle). */
 const ART_POSES: [string, Pose][] = [
@@ -300,7 +313,13 @@ export function Battle3D({
       const entry = actors.get(unitId);
       return entry?.actor.mesh.visible ? entry.actor.pickMesh.localToWorld(new THREE.Vector3(0, 0.5, 0)) : null;
     });
-    const spellOverlay = new BattleSpellOverlay3D(spellArtRef.current!, spellFxRef.current!, view, engine);
+    // a unit's card: its body centre and its height (potion bursts are sized and centred on it)
+    const spellOverlay = new BattleSpellOverlay3D(spellArtRef.current!, spellFxRef.current!, view, engine, (unitId) => {
+      const entry = actors.get(unitId);
+      if (!entry?.actor.mesh.visible) return null;
+      const pick = entry.actor.pickMesh;
+      return { centre: pick.localToWorld(new THREE.Vector3(0, 0.5, 0)), height: pick.localToWorld(new THREE.Vector3(0, 1, 0)).distanceTo(pick.localToWorld(new THREE.Vector3(0, 0, 0))) };
+    });
     const unitHud = new BattleHud3D(hudRef.current!, view, engine);
     // Ember's own debug handle (its BattleCanvas set the same): the live engine, for QA scripts
     const w = window as Window & { __emberEngine?: BattleEngine };
@@ -317,6 +336,38 @@ export function Battle3D({
       moon = phase; tod = t;
       if (relight) view.stage.timeOfDay = t as typeof view.stage.timeOfDay;
       view.stage.setMoon(phase ? moonlightFor(phase) : { strength: 1 });
+    };
+
+    // A point of light at a caster's hands while it casts. One light, always in the scene (adding or
+    // removing lights mid-battle recompiles every lit material), dark unless someone is casting.
+    // Physical skills and arrow shots are not casts; heals glow gold, elements take their colour.
+    const castLight = new THREE.PointLight(0xffe6c0, 0, 6, 1.8);
+    view.stage.scene.add(castLight);
+    let castGlow = 0;
+    const castColor = new THREE.Color();
+    const syncCastLight = (dt: number) => {
+      const a = e.active as Any | null;
+      let id: string | null = null, step: Any | null = null, attack = false;
+      if (a?.type === "windup" && a.pose === "cast") { id = a.id; step = (e.queue as Any[])[0] ?? null; }
+      else if ((a?.type === "spell" || a?.type === "heal") && !NOT_CASTS.has(String(a.spellKind ?? ""))) { id = a.att; step = a; }
+      else if (a?.type === "windup" || a?.type === "combat") {
+        // Malrec alone also lights his attacks (a plain yellow light); nobody else's swings glow
+        const who = a.type === "windup" ? a.id : a.att;
+        if ((e.units as Unit[]).find(u => u.id === who)?.sprite === "malrec") { id = who; attack = true; }
+      }
+      const entry = id ? actors.get(id) : undefined;
+      const on = !!entry?.actor.mesh.visible;
+      castGlow = Math.max(0, Math.min(1, castGlow + dt * (on ? 5 : -2.5)));
+      if (on) {
+        const pick = entry!.actor.pickMesh;
+        const hands = pick.localToWorld(new THREE.Vector3(0, 0.6, 0));
+        castLight.position.copy(hands).addScaledVector(view.stage.camera.getWorldDirection(new THREE.Vector3()), -0.45);
+        const malrec = (e.units as Unit[]).find(u => u.id === id)?.sprite === "malrec";
+        castColor.set(attack ? MALREC_ATTACK_LIGHT : malrec ? MALREC_CAST_LIGHT
+          : step?.type === "heal" || a?.heal ? 0xffd98a : CAST_TINT[String(step?.spellKind ?? "")] ?? 0xffe6c0);
+        castLight.color.copy(castColor);
+      }
+      castLight.intensity = CarriedLight.enabled ? CAST_LIGHT * castGlow * (0.92 + Math.sin(performance.now() / 70) * 0.08) : 0;
     };
 
     let hudClock = 0, lastTick = 0, chestKey = "";
@@ -337,6 +388,7 @@ export function Battle3D({
       lastTick = now;
       if (!pausedRef.current) while (real > 1e-4) { const step = Math.min(0.05, real); engine.tick(step); real -= step; }
       syncUnits();
+      syncCastLight(dt);
       // an opened chest leaves the engine's decoration list: take its card off the 3D board too
       // (checked whenever the chest count or the loaded card count changes)
       const engineDecor = engine.decorations as { id: string; x: number; y: number }[];
@@ -358,15 +410,24 @@ export function Battle3D({
 
     // clicks: the hex under the pointer, handed to the engine as that hex's own screen point
     const cssPoint = (x: number, y: number) => e.hexCenter(x, y) as { cx: number; cy: number };
+    // the hex under the pointer; on a Warp gate's body (it stands above its hex) that gate's hex,
+    // unless the floor under the pointer is nearer than the gate (something in front of it)
+    const pickCell = (x: number, y: number) => {
+      const cell = view.cellAt(x, y), gate = spellOverlay.gateAt(x, y);
+      if (!gate) return cell;
+      if (!cell) return gate;
+      const cam = view.stage.camera.position, at = (c: { x: number; y: number }) => { const p = view.board!.cell(c.x, c.y); return Math.hypot(p.x - cam.x, p.z - cam.z); };
+      return at(cell) > at(gate) ? gate : cell;
+    };
     view.rig.onClick = (ev) => {
       if (pausedRef.current) return;
-      const cell = view.cellAt(ev.clientX, ev.clientY);
+      const cell = pickCell(ev.clientX, ev.clientY);
       if (!cell) return;
       const p = cssPoint(cell.x, cell.y);
       engine.pointerDown(p.cx, p.cy, "click");
     };
     const onMove = (ev: PointerEvent) => {
-      const cell = view.cellAt(ev.clientX, ev.clientY);
+      const cell = pickCell(ev.clientX, ev.clientY);
       if (!cell) { onTileReadout?.(false); return; }
       const p = cssPoint(cell.x, cell.y);
       engine.pointerMove(p.cx, p.cy);
@@ -409,6 +470,7 @@ export function Battle3D({
       CarriedLight.enabled = true;
       for (const { actor } of actors.values()) actor.dispose();
       atmosphere.dispose();
+      castLight.removeFromParent(); castLight.dispose();
       arrows.dispose();
       cinematics.dispose();
       spells.dispose();

@@ -98,7 +98,9 @@ export class BattleSpells3D {
       if (!target || !this.visible(request.target)) {
         engine.phantasmalForceVfxEvents.push({ id: request.id, phase: "impact" }, { id: request.id, phase: "complete" }); continue;
       }
-      this.phantasm.restartAt(this.unit(target), 1, {
+      // it strikes the middle of the target's body (its card), like Magic Missile, not its legs
+      const body = this.bodyAt?.(target.id);
+      this.phantasm.restartAt(body ? this.adapter.toEmber(body) : this.unit(target), 1, {
         onImpact: () => engine.phantasmalForceVfxEvents.push({ id: request.id, phase: "impact" }),
         onComplete: () => engine.phantasmalForceVfxEvents.push({ id: request.id, phase: "complete" }) });
       this.phantasm.update(0);
