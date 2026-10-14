@@ -1754,7 +1754,7 @@
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 16,
         "y": 4,
         "level": 4
@@ -1789,7 +1789,7 @@
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 6,
         "y": 10,
         "level": 4

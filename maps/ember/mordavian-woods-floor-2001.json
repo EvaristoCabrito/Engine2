@@ -3157,7 +3157,7 @@
       },
       {
         "name": "Rootbound Warden 2B",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 26,
         "y": 16,
         "level": 12

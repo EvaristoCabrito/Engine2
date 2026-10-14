@@ -1415,7 +1415,7 @@
       },
       {
         "name": "Lanceiro da clareira",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 18,
         "y": 8,
         "level": 8

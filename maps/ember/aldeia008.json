@@ -1300,14 +1300,14 @@
     "enemySpawns": [
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 5,
         "y": 3,
         "level": 2
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 14,
         "y": 4,
         "level": 2

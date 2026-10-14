@@ -1549,7 +1549,7 @@
       },
       {
         "name": "Cistern sentinel",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 15,
         "y": 10,
         "level": 11

@@ -1312,7 +1312,7 @@
       },
       {
         "name": "Guarda do menir",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 8,
         "y": 4,
         "level": 8

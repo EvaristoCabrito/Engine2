@@ -261,6 +261,7 @@ const MONSTER_SFX: Record<string, Partial<Record<MonsterSfxKind, string>>> = {
   // Jacaré: each clip is its sheet's own 3 s window of the video (work/jacare/build.py); idle has none.
   jacare: { attack: "JacareATT001.mp3", attack2: "JacareSpecial001.mp3", walk: "JacareWalk001.mp3", hit: "JacareHit001.mp3", death: "JacareDeath001.mp3" },
   "militia-v2": { attack: "FootmanLameSword.mp3", walk: "FootSteps1.mp3", hit: "HitreactArmor.mp3", death: "DeadArmor.mp3" },
+  BaseCrossbowman: { hit: "BaseCrossbowmanHit001.mp3" },
   // Salazar V2: the sounds supplied with his sheets (Attachments/Salazar), file names kept. Cast is
   // for damage spells, heal for every other spell (heals, Bless, Create Food and Water, ...).
   salazar: { attack: "Blunt2.mp3", cast: "ElecticCasting01-Balanced-High.mp3", heal: "Healing01-Balanced-High.mp3", walk: "NeeraWalk.mp3" },

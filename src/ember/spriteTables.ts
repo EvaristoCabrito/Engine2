@@ -85,6 +85,9 @@ export const ATTACK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }
   // Milícia V2's ATT, mirrored at cut time to face the same way as his idle (see
   // work/militia_v2_build.py); same shared canvas and scale as his other sheets.
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   // Apparition's ATT (TEK cut, work/apparition/build.py): 60 frames / 5 s, longer than the usual
   // 36 on purpose — see APPARITION_ATTACK_SECONDS in engine.ts. Faces right; mirrored for left.
   apparition: { n: 60, bust: "" },
@@ -232,6 +235,9 @@ export const WALK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>>
   "cultist-v2": { n: 36, bust: "" },
   // Right-facing cut (Walk Right); his authored Walk Left loads as walksLeft below.
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   // Apparition: one right-facing profile walk (TEK cut); the renderer mirrors it for leftward travel.
   apparition: { n: 36, bust: "" },
   // Jacaré: one right-facing walk (TEK cut); the renderer mirrors it for leftward travel.
@@ -259,6 +265,9 @@ export const HIT_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> 
   // 528x321, wider than its other sheets — see computeUnitVisual's zombieDogWideSheet.
   zombieDog: { n: 36, bust: "?v=zd-hit-death-36" },
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 20, bust: "" },
+  BaseCrossbowman: { n: 22, bust: "" },
+  BrigandCrossbowman: { n: 20, bust: "" },
   // Apparition hit react 1 (TEK cut, work/apparition/build.py); her react 2 is HIT2_FRAMES below.
   apparition: { n: 36, bust: "" },
   jacare: { n: 36, bust: "" },
@@ -286,6 +295,9 @@ export const DEATH_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>
   undeadOx: { n: 36, bust: "?v=ox-36" },
   "plague-bearing-cattle": { n: 36, bust: "?v=plague-cattle-001" },
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   apparition: { n: 36, bust: "" },
   jacare: { n: 36, bust: "" },
 };
@@ -299,6 +311,7 @@ export const DEATH2_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }
 // GameArt.walksUp/walksDown. A sprite with only one of the two keeps its left/right walk
 // for the other direction.
 export const WALK_UP_DOWN_FRAMES: Partial<Record<SpriteId, { up?: number; down?: number; bust: string }>> = {
+  BasePikeman: { down: 36, bust: "" },
   BirolhoLegs: { up: 36, down: 36, bust: "" },
   "mordavian-wolf-final": { up: 36, down: 36, bust: "" },
   troll2: { up: 36, down: 36, bust: "" },
@@ -316,7 +329,7 @@ export function spriteDirectory(id: SpriteId): string {
 
 // From Ember loadSpritePools(): how many idle (numbered) frames each sprite loads.
 export function idleFrameCount(id: SpriteId): number {
-  return id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "apparition" || id === "jacare" || id === "malrec" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
+  return id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "BasePikeman" || id === "BaseCrossbowman" || id === "BrigandCrossbowman" || id === "apparition" || id === "jacare" || id === "malrec" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
 }
 
 export const MC_SPRITES: SpriteId[] = ["kaelFinal", "neera", "voss", "salazar", "aldric", "malrec"];

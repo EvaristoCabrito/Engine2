@@ -95,7 +95,8 @@ export default defineConfig({
   // React + Tailwind: Ember's own menus are built with them and are brought over as-is.
   plugins: [
     { name: 'engine2-release-version', transformIndexHtml: renderReleaseVersion },
-    terrainImagesPlugin(), mapsPlugin(), mapSavePlugin(), react(), tailwindcss(),
+    // compact:false — GameApp.tsx is over Babel's 500KB "auto" limit; this silences the deoptimised-styling note.
+    terrainImagesPlugin(), mapsPlugin(), mapSavePlugin(), react({ babel: { compact: false } }), tailwindcss(),
   ],
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   // `@/` is Ember's src alias; Ember's shared UI pieces live in src/ember-ui.
@@ -105,9 +106,10 @@ export default defineConfig({
     open: '/',
     // Huge asset, output and map folders are never edited live through the bundler; watching thousands of
     // files crashed the watcher (EBUSY while copying art in) and made it miss real source edits.
-    // Map saves (maps/ember) are watched only so Ember's save plugin can refresh the map store; its own
-    // config writes are ignored, exactly as in Ember, so saving never reloads the editor.
-    watch: { ignored: ['**/public/game/**', '**/shots/**', '**/Attachments/**', '**/node_modules/**', '**/maps/e2/**', '**/src/campaign/map-order.json', '**/src/campaign/location-order.json', '**/src/campaign/map-slots.json'] },
+    // Map saves (maps/ember) are not watched either: every save adds a NEW file, and Vite answers a
+    // new file under an eager import.meta.glob with a full page reload (kicking the author out of the
+    // editor through the loading screen). The save plugin refreshes the map stores itself instead.
+    watch: { ignored: ['**/public/game/**', '**/shots/**', '**/Attachments/**', '**/node_modules/**', '**/maps/ember/**', '**/maps/e2/**', '**/src/campaign/map-order.json', '**/src/campaign/location-order.json', '**/src/campaign/map-slots.json'] },
   },
   build: { target: 'esnext', rollupOptions: { input: { main: resolve('index.html'), game: resolve('game.html'), editor: resolve('editor.html'), diorama: resolve('diorama.html'), vfx: resolve('vfx.html') } } },
 });

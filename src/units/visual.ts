@@ -38,6 +38,10 @@ export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, nat
   // Salazar V2: one shared 416x613 canvas for every sheet, idle body 480 px, feet 8 px up
   if (sprite === 'salazar') { const k = (CELL * 1.53) / 480; return { w: natW * k, h: natH * k, foot: 8 * k }; }
   if (sprite === 'militia-v2') { const k = (CELL * 1.53) / 628; return { w: natW * k, h: natH * k, foot: 61 * k }; }
+  // BasePikeman: one shared 1000x800 canvas for every sheet, standing body 600 px, soles 20 px up
+  if (sprite === 'BasePikeman') { const k = (CELL * 1.53) / 600; return { w: natW * k, h: natH * k, foot: 20 * k }; }
+  // The crossbowmen: same rule (BaseCrossbowman's canvas is 1200x800 so his fall lies full length)
+  if (sprite === 'BaseCrossbowman' || sprite === 'BrigandCrossbowman') { const k = (CELL * 1.53) / 600; return { w: natW * k, h: natH * k, foot: 20 * k }; }
   if (sprite === 'apparition') { const k = (CELL * 1.53) / 597; return { w: natW * k, h: natH * k, foot: 34 * k }; }
   if (sprite === 'jacare') { const k = (CELL * 3.4) / 581; return { w: natW * k, h: natH * k, foot: 13 * k }; }
 
@@ -87,7 +91,16 @@ export function unitBox(u: UnitDef, pose: Pose, frame: number, natW: number, nat
 }
 
 /** Ember's animation pacing. Returns the frame index for a pose that has played for `t` seconds. */
-export function framePace(u: UnitDef, pose: Pose, n: number, t: number): { frame: number; done: boolean } {
+/** Veo-cut walks loop at the footage's own length (each cut spans a different stretch of video). */
+const FOOTAGE_WALK_SECONDS: Record<string, Partial<Record<Pose, number>>> = {
+  BasePikeman: { walk: 1.75, walkLeft: 5, walkDown: 2.33 },
+  BaseCrossbowman: { walk: 4.75, walkLeft: 4.75 },
+  BrigandCrossbowman: { walk: 3.25, walkLeft: 3.25 },
+};
+
+export function framePace(u: UnitDef, pose: Pose, n: number, t: number, cut: Pose = pose): { frame: number; done: boolean } {
+  const footage = FOOTAGE_WALK_SECONDS[u.sprite]?.[cut];
+  if (footage && (pose === 'walk' || pose === 'walkLeft')) return { frame: Math.floor((t / footage) * n) % n, done: false };
   const long = n >= 24;
   const slow = u.sprite === 'malrec' ? 0.9 : 1; // Conjurer/Malrec sheets play 10% slower
   if (pose === 'idle' || pose === 'idle2') {

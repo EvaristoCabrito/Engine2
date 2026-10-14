@@ -54,6 +54,8 @@ export type ClassId = import("./encounter-npcs").EncounterNpcId
   | "healer"
   | "soldier"
   | "brigand"
+  | "baseCrossbowman"
+  | "brigandCrossbowman"
   | "captain"
   | "cultist"
   | "cultistV2"
@@ -63,6 +65,7 @@ export type ClassId = import("./encounter-npcs").EncounterNpcId
   | "horror"
   | "asherah"
   | "pikeman"
+  | "basePikeman"
   | "wardog"
   | "wardog2"
   | "emberedWraith"
@@ -149,6 +152,9 @@ export type ClassId = import("./encounter-npcs").EncounterNpcId
 export type SpriteId = "defaultWarrior" | "neera" | "voss" | "salazar" | "aldric" | "malrec" | "defaultLancer" | "soldier" | "brigand" | "captain" | "sorcerer" | "horror" | "minor-horror-001" | "Asherah" | "pikeman" | "wardog" | "wardog2" | "EmberedWraith" | "zombie" | "zombie2" | "undeadOx" | "plague-bearing-cattle" | "troll" | "troll2" | "RoccoTheBird" | "morvenian-wolf" | "mordavian-wolf" | "mordavian-wolf-final" | "punisher" | "theButcher" | "birolho" | "birolho2" | "birolho3" | "BirolhoLegs" | "BirolhoLegs2" | "familiar" | "familiar2" | "familiar3" | "familiar4" | "zombieDog" | "swamp-blue-calf" | "cobalt-blue-deer" | "big-blue-ox-002" | "ancient-golem" | "lancer" | "sandoval" | "kaelFinal" | "kaelEarly" | "conjurer" | "cultist-v2"
   // Milícia V2: idle/hit/death/walk right/walk left, 36 frames each (work/militia_v2_build.py).
   | "militia-v2"
+  | "BasePikeman"
+  | "BaseCrossbowman"
+  | "BrigandCrossbowman"
   // Apparition: idle/cast, 36 frames each, cut with the TEK (work/apparition/build.py).
   | "apparition"
   // Jacaré: idle/walk/ATT/Special/hit/death, 36 frames each, cut with the TEK (work/jacare/build.py).

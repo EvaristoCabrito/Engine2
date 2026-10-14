@@ -1991,7 +1991,7 @@
       },
       {
         "name": "Vigia do norte",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 7,
         "y": 14,
         "level": 8

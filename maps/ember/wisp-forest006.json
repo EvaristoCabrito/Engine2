@@ -1393,7 +1393,7 @@
       },
       {
         "name": "Inimigo 9",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 6,
         "y": 12,
         "useClassSprite": true,

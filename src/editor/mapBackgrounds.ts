@@ -1,6 +1,8 @@
 import type { EmberMapDraft } from '../map/emberMap';
 
-const IMAGE_URLS = import.meta.glob('/public/game/map-backgrounds/*.{jpg,jpeg,png,webp}', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+// Lazy glob: only the file names are used, so the /public/ paths are never requested
+// (an eager glob made Vite warn once per backdrop on every page load).
+const IMAGE_URLS = import.meta.glob('/public/game/map-backgrounds/*.{jpg,jpeg,png,webp}', { query: '?url', import: 'default' });
 
 export interface MapBackground {
   id: string;

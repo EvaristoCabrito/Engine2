@@ -203,7 +203,7 @@ export class UnitActor {
     if (f?.evicted) void this.ensure(this.shown);
     if (!f || f.evicted) return;
     f.lastUsed = performance.now();
-    const paced = this.driven === null ? framePace(this.def, this.pose, f.n, this.t) : null;
+    const paced = this.driven === null ? framePace(this.def, this.pose, f.n, this.t, this.shown) : null;
     const frame = paced ? paced.frame : Math.min(f.n - 1, Math.max(0, Math.floor(this.driven! * f.n)));
     if (paced?.done && ONE_SHOT.includes(this.pose) && !this.dead) { const ended = this.pose; void this.play('idle'); this.onPoseEnd(ended); }
 

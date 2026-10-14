@@ -1644,51 +1644,6 @@
         "level": 1
       },
       {
-        "name": "Severino",
-        "classId": "maskedPhysician",
-        "x": 2,
-        "y": 9,
-        "dialog": {
-          "id": "encounter-maskedPhysician",
-          "startId": "start",
-          "lines": [
-            {
-              "id": "start",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "Respire devagar. A máscara assusta, mas a febre costuma ser menos educada.",
-              "replies": [
-                {
-                  "text": "Há doença por aqui?",
-                  "next": "answer1"
-                },
-                {
-                  "text": "O que há no frasco?",
-                  "next": "answer2"
-                },
-                {
-                  "text": "Boa viagem.",
-                  "next": null
-                }
-              ]
-            },
-            {
-              "id": "answer1",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "Há água parada e gente cansada. Ferva a água. Limpe os cortes. Não espere a coragem curar uma infecção."
-            },
-            {
-              "id": "answer2",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "Algo que cheira pior do que funciona. Se eu dissesse o contrário, seria mercador."
-            }
-          ]
-        },
-        "level": 1
-      },
-      {
         "name": "Erasmo",
         "classId": "shadowScholar",
         "x": 2,

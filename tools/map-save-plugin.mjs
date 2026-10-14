@@ -131,10 +131,11 @@ function invalidateMapstore(server) {
   // which matched nothing — so this used to silently invalidate NOTHING, and the server kept
   // serving the first-loaded map list (deleted files still in it, new saves missing) until the
   // whole dev server restarted. Normalize, and clear every environment's graph, not just one.
-  const mapstoreFile = join(server.config.root, "src", "campaign", "mapstore.ts").replaceAll("\\", "/");
+  // Both map stores glob maps/ember: the campaign's and the game's.
+  const mapstoreFiles = [join(server.config.root, "src", "campaign", "mapstore.ts"), join(server.config.root, "src", "game", "mapstore.ts")].map((f) => f.replaceAll("\\", "/"));
   const graphs = [server.moduleGraph, ...Object.values(server.environments ?? {}).map((env) => env.moduleGraph)].filter(Boolean);
   for (const graph of graphs) {
-    for (const mod of graph.getModulesByFile(mapstoreFile) ?? []) graph.invalidateModule(mod);
+    for (const file of mapstoreFiles) for (const mod of graph.getModulesByFile(file) ?? []) graph.invalidateModule(mod);
   }
 }
 

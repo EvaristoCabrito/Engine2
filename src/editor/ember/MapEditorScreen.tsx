@@ -1904,18 +1904,10 @@ export function MapEditorScreen({
    * replacement file: activation is a local campaign pointer to this exact draft. */
   const doActivateFile = (f: { serial: number; draft: MapDraft; file?: string }) => {
     const next = { ...activeVersions, [draft.id]: f.serial };
-    // A repository file is on disk, so the browser copy is only a convenience: when browser
-    // storage is full it activates from the file itself (this scenario's old copy is dropped
-    // rather than left behind to shadow it).
-    let copyNote = "";
-    if (!saveActiveDrafts({ ...loadActiveDrafts(), [draft.id]: f.draft })) {
-      const { [draft.id]: _stale, ...others } = loadActiveDrafts();
-      if (!saveActiveDrafts(others)) {
-        setNote(`NÃO ATIVOU ${f.file ?? mapFileName(draft.id, f.serial)}: o navegador recusou salvar a cópia da campanha.`);
-        return;
-      }
-      copyNote = " (armazenamento do navegador cheio: usa o arquivo direto do repositório)";
-    }
+    // A repository file is on disk and the campaign plays files from disk (mapstore
+    // missionById ignores browser copies for any map that has a file), so no browser copy is
+    // stored: a big map's copy overflowed browser storage and failed activation for nothing.
+    const copyNote = "";
     setActiveVersions(next);
     saveActiveVersions(next);
     setDraft(f.draft);

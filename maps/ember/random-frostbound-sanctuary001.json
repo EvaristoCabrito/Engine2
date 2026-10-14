@@ -1073,7 +1073,7 @@
       },
       {
         "name": "Guardião da ala",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 14,
         "y": 6,
         "level": 8

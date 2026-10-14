@@ -1378,7 +1378,7 @@
       },
       {
         "name": "Inimigo 9",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 17,
         "y": 1,
         "level": 1

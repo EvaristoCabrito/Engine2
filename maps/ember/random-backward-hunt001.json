@@ -1065,7 +1065,7 @@
       },
       {
         "name": "Lanceiro da tormenta",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 12,
         "y": 8,
         "level": 8

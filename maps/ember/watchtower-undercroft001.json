@@ -6885,7 +6885,7 @@
       },
       {
         "name": "Guarda da Torre",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 26,
         "y": 18,
         "level": 10

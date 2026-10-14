@@ -734,7 +734,7 @@
         "x": 23,
         "name": "Piqueiro Sepulcral",
         "level": 10,
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "y": 12
       },
       {

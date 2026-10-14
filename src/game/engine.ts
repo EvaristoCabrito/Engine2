@@ -1025,6 +1025,9 @@ function spawnUnit(spawn: Mission["playerSpawns"][number], side: Unit["side"], i
             ? 0
           : cls.id === "cultist" || cls.id === "cultistV2"
           ? cultistSpellUses(level).magicMissile
+          // Base Crossbowman: 2 Long Shot; 1 Piercing Shot below (the brigand AI branch spends them).
+          : cls.id === "baseCrossbowman"
+          ? 2
           : cls.id === "brigand"
             ? brigandSpellUses(level).longShot
             : cls.id === "birolho" || cls.id === "birolho2" || cls.id === "birolho3" || cls.id === "birolhoLegs" || cls.id === "birolhoLegs2"
@@ -1038,12 +1041,17 @@ function spawnUnit(spawn: Mission["playerSpawns"][number], side: Unit["side"], i
             ? 1
           : cls.id === "cultist" || cls.id === "cultistV2"
           ? cultistSpellUses(level).lightning
+          : cls.id === "baseCrossbowman"
+          ? 1
+          // Brigand Crossbowman: 2 Bloody Shot here, 1 Multi Shot in tier3.
+          : cls.id === "brigandCrossbowman"
+          ? 2
           : cls.id === "brigand"
             ? brigandSpellUses(level).piercing
             : cls.id === "birolho" || cls.id === "birolho2" || cls.id === "birolho3" || cls.id === "birolhoLegs" || cls.id === "birolhoLegs2"
               ? birolhoSpellUses(level).lightning
               : remainingTier(cls.id, 2, "tier2", level, side, roster, spawn.name),
-      tier3: cls.id === "carnivorousPlant" ? 2 : remainingTier(cls.id, 3, "tier3", level, side, roster, spawn.name),
+      tier3: cls.id === "carnivorousPlant" ? 2 : cls.id === "brigandCrossbowman" ? 1 : remainingTier(cls.id, 3, "tier3", level, side, roster, spawn.name),
       tier4:
         cls.id === "carnivorousPlant"
           ? 3
@@ -2674,7 +2682,7 @@ export class BattleEngine {
         const attacker = this.units.find((u) => u.id === step.att);
         if (step.spellKind === "shieldBash") {
           // ShieldBash.mp3 is cued at the strike, after the attack wind-up.
-        } else if (attacker && (attacker.classId === "brigand" || (!step.customDice && this.isArrowAttack(attacker)))) {
+        } else if (attacker && (attacker.classId === "brigand" || attacker.classId === "baseCrossbowman" || attacker.classId === "brigandCrossbowman" || (!step.customDice && this.isArrowAttack(attacker)))) {
           sfxPlay.arrowAttack(attacker.sprite === "neera", this.reducedMotion ? 0 : LONG_ARROW_RELEASE_SECONDS);
         } else if (attacker && !step.customDice && this.isArcaneCaster(attacker)) {
           if (attacker.sprite === "cultist-v2") sfxPlay.cultistV2Attack();
@@ -4658,10 +4666,10 @@ export class BattleEngine {
   /** True only for bow/crossbow users. Reach weapons strike physically instead of firing arrows. */
   private isArrowAttack(unit: Unit): boolean {
     // Reach weapons are always physical, even if an imported loadout is incorrectly flagged ranged.
-    if (unit.classId === "pikeman" || unit.classId === "lancer" || unit.classId === "aldric" || unit.classId === "sandoval" || unit.classId === "sentinel" || unit.classId === "templar") return false;
+    if (unit.classId === "pikeman" || unit.classId === "basePikeman" || unit.classId === "lancer" || unit.classId === "aldric" || unit.classId === "sandoval" || unit.classId === "sentinel" || unit.classId === "templar") return false;
     // Besteiros are enemy crossbow users; an imported/legacy weapon id must never turn their
     // ranged attack into a silent or melee action.
-    if (unit.classId === "brigand") return true;
+    if (unit.classId === "brigand" || unit.classId === "baseCrossbowman" || unit.classId === "brigandCrossbowman") return true;
     if (unit.weaponId) return !!WEAPONS[unit.weaponId]?.ranged;
     // Default campaign loadouts: Neera starts as a bow user before gear is assigned.
     return unit.classId === "archer" || unit.classId === "ranger" || unit.classId === "assassin";
@@ -9147,12 +9155,50 @@ export class BattleEngine {
       return;
     }
 
+    // Brigand Crossbowman ("Besteiro Salteador"): 1 Multi Shot, then 2 Bloody Shot per battle
+    // (tier3 / tier2 at spawn). Multi Shot spends its volley from the spot that reaches the most
+    // foes (repeating targets when fewer stand in range); Bloody Shot picks one target the same
+    // way the brigand's Long Shot does.
+    if (next.classId === "brigandCrossbowman" && (next.spells.tier2 > 0 || next.spells.tier3 > 0)) {
+      const multi = next.spells.tier3 > 0;
+      const range = multi ? MULTI_SHOT.range : BLOODY_SHOT.range;
+      let pick: { from: Point; foes: Unit[]; score: number } | null = null;
+      for (const cell of reach.values()) {
+        const ranked = players
+          .filter((foe) => {
+            const d = manhattan(cell, foe);
+            return d >= next.minRange && d <= range && clearShot(cell, { x: foe.x, y: foe.y }, this.tiles, this.cols, "arrow", this.decorOverlay);
+          })
+          .map((foe) => ({ foe, score: (foe.maxHp - foe.hp) * 3 + (foe.hp <= 8 ? 20 : 0) }))
+          .sort((a, b) => b.score - a.score);
+        if (!ranked.length) continue;
+        const score = multi ? ranked.reduce((sum, r) => sum + r.score + 10, 0) : ranked[0].score;
+        if (!pick || score > pick.score) pick = { from: { x: cell.x, y: cell.y }, foes: ranked.map((r) => r.foe), score };
+      }
+      if (pick) {
+        if (pick.from.x !== next.x || pick.from.y !== next.y) this.queue.push({ type: "move", id: next.id, path: reconstructPath(walkReach, pick.from) });
+        this.spendTier(next, multi ? "multiShot" : "bloodyShot");
+        if (multi) {
+          const power = multiShotPower(next.level);
+          for (let i = 0; i < multiShotTargets(next.level); i++) {
+            const foe = pick.foes[i % pick.foes.length];
+            this.queue.push({ type: "spell", att: next.id, tiles: [{ x: foe.x, y: foe.y }], ids: [foe.id], label: MULTI_SHOT.name, weaponBonusDice: power.dice, weaponBonusFaces: power.faces, weaponBonusBonus: 0, spellKind: "multiShot" });
+          }
+        } else {
+          const foe = pick.foes[0];
+          this.queue.push({ type: "spell", att: next.id, tiles: [{ x: foe.x, y: foe.y }], ids: [foe.id], label: BLOODY_SHOT.name, dmgMul: bloodyShotMul(next.level), spellKind: "bloodyShot" });
+        }
+        this.queue.push({ type: "delay", dur: 0.12 });
+        return;
+      }
+    }
+
     // Brigand ("Besteiro") is the one enemy archer — see brigandSpellUses. Piercing outranks
     // Long Shot whenever both are still banked, same priority shape as the cultist branch
     // above. Long Shot picks one target the same way; Piercing aims THROUGH a target the same
     // way castPiercing does, so it can also clip whoever else stands on that line (allies
     // included) — no side filter, matching the player-facing spell.
-    if (next.classId === "brigand" && (next.spells.tier1 > 0 || next.spells.tier2 > 0)) {
+    if ((next.classId === "brigand" || next.classId === "baseCrossbowman") && (next.spells.tier1 > 0 || next.spells.tier2 > 0)) {
       const spellKind: "piercing" | "longShot" = next.spells.tier2 > 0 ? "piercing" : "longShot";
       const longMax = LONG_SHOT.range;
       let bestSpell: { foe: Unit; from: Point; score: number } | null = null;

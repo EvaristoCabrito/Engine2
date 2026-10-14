@@ -129,6 +129,8 @@ function loadArt(url: string, anisotropy: number): Promise<Art> {
 }
 
 const cardGeo = new THREE.PlaneGeometry(1, 1).translate(0, 0.5, 0);
+/** A waypoint lying on the floor sits this far above the ground, clear of it but never floating. */
+const FLOOR_LIFT = 0.03;
 
 export interface DecorStats { placed: number; skippedArchitecture: number; missingArt: string[] }
 
@@ -254,6 +256,9 @@ export class DecorLayer {
         card.customDepthMaterial = depth;
         card.scale.set(w, h, 1);
         card.position.set((0.5 - art.base.u) * w, -art.base.v * h, 0); // opaque base onto the anchor
+        // waypoints (floor connectors, stairs, exits) lie flat on the floor, centred on their hexes
+        const onFloor = !!def.exitKind;
+        if (onFloor) card.position.set(0, -0.5 * h, 0);
         const holder = new THREE.Group();
         holder.add(card);
         if (lightDef) {
@@ -265,9 +270,11 @@ export class DecorLayer {
           // A flame card must not block its own light.
           card.castShadow = false;
         }
+        if (onFloor) card.castShadow = false;
         card.userData.castsShadow = card.castShadow;
         holder.position.set(x, groundAt(x, z), z);
         holder.userData.groundY = holder.position.y;
+        holder.userData.onFloor = onFloor;
         holder.scale.x = mirror ? -1 : 1;
         holder.userData.decor = p.id;
         holder.userData.at = { x: p.x, y: p.y };
@@ -312,6 +319,7 @@ export class DecorLayer {
   face(yaw: number, flatTop: number | null = null): void {
     for (const c of this.cards) {
       if (c.userData.wall) continue; // 3D walls stand as built
+      if (c.userData.onFloor) { c.rotation.set(-Math.PI / 2, 0, 0); c.position.y = c.userData.groundY + FLOOR_LIFT; (c.userData.card as THREE.Mesh).position.z = 0; continue; }
       const locked = (c.userData.lockedYaw as number | null) ?? (LOCK_PROPS ? 0 : null);
       c.rotation.set(flatTop === null ? 0 : -Math.PI / 2, locked !== null && flatTop === null ? locked : yaw, 0, 'YXZ');
       c.position.y = flatTop === null ? c.userData.groundY : flatTop + c.position.z * FLAT_ROW_STEP;

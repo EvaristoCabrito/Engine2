@@ -3118,7 +3118,7 @@
       },
       {
         "name": "Guarda da Torre",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 14,
         "y": 16,
         "level": 4
@@ -3139,7 +3139,7 @@
       },
       {
         "name": "Piqueiro da Torre",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 22,
         "y": 16,
         "level": 4

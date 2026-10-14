@@ -9,11 +9,38 @@
 //  - it drifts slowly in 3D, never as a flat sheet.
 // Ember's Névoas (2, 3, 4, 01, 5) are each remade on it as a preset (src/game/mist3d.ts): the
 // same character, built as real mist. Off until a mission's Névoa turns it on.
+//
+// Cost: the march runs at half resolution into its own target (glow + transmittance) and is
+// laid over the full-resolution frame with a depth-aware upsample, so silhouettes keep clean
+// mist edges. Its noise is one baked, tileable 3D texture (built once) instead of hashing every
+// lattice corner per step. Same 28 steps, same density rules and settings as before.
 
 import * as THREE from 'three';
 import { Pass, FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 
 const MAX_LIGHTS = 12;
+/** Lattice cells per side of the baked noise volume (one texel = one value-noise lattice cell). */
+const NOISE_SIZE = 64;
+
+/** Tileable 3D value-noise lattice: each texel is one random corner value; the shader's smooth
+ * filtering (smoothstep between texels) turns it into the same smooth value noise as before. */
+function buildNoiseVolume(): THREE.Data3DTexture {
+  const n = NOISE_SIZE, data = new Uint8Array(n * n * n);
+  let s = 0x9e3779b9;
+  for (let i = 0; i < data.length; i++) {
+    s ^= s << 13; s ^= s >>> 17; s ^= s << 5;
+    data[i] = (s >>> 0) & 255;
+  }
+  const tex = new THREE.Data3DTexture(data, n, n, n);
+  tex.format = THREE.RedFormat;
+  tex.type = THREE.UnsignedByteType;
+  tex.wrapS = tex.wrapT = tex.wrapR = THREE.RepeatWrapping;
+  tex.minFilter = tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.unpackAlignment = 1;
+  tex.needsUpdate = true;
+  return tex;
+}
 
 const VERTEX = /* glsl */ `
   varying vec2 vUv;
@@ -23,7 +50,8 @@ const VERTEX = /* glsl */ `
 const FRAGMENT = /* glsl */ `
   #define MAX_LIGHTS ${MAX_LIGHTS}
   #define STEPS 28
-  uniform sampler2D tDiffuse;
+  #define NOISE_SIZE ${NOISE_SIZE}.0
+  uniform sampler3D tNoise;
   uniform sampler2D tDepth;
   uniform mat4 uProjInv;
   uniform mat4 uCamWorld;
@@ -51,11 +79,13 @@ const FRAGMENT = /* glsl */ `
   uniform float uLightRange[MAX_LIGHTS];
   varying vec2 vUv;
 
-  float hash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+  // smooth value noise from the baked lattice: one filtered fetch, with the fetch point bent
+  // by smoothstep so it interpolates as smoothly as the old per-corner hash version
   float noise(vec3 x) {
-    vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
-    return mix(mix(mix(hash(i), hash(i + vec3(1,0,0)), f.x), mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x), f.y),
-               mix(mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x), mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x), f.y), f.z);
+    // texel k's centre is (k + 0.5) / NOISE_SIZE: shift by one so f = 0 lands exactly on it
+    vec3 p = x + 1.0, i = floor(p), f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return texture(tNoise, (i + f - 0.5) / NOISE_SIZE).r;
   }
   float fbm(vec3 p) { return noise(p) * 0.55 + noise(p * 2.03 + 7.1) * 0.3 + noise(p * 4.1 + 3.7) * 0.15; }
 
@@ -99,8 +129,8 @@ const FRAGMENT = /* glsl */ `
     return uDensity * pow(h, uHeightPow) * mask * (uFloor + (1.0 - uFloor) * wisps);
   }
 
+  // output: rgb = mist glow, a = how much of the scene still shows through (transmittance)
   void main() {
-    vec4 scene = texture2D(tDiffuse, vUv);
     // a unit or prop card's soft edge is mostly see-through but still writes the card's depth:
     // take the farthest depth around the pixel so those edge pixels get the mist of what shows
     // through them, not an un-misted outline in the backdrop's colour
@@ -121,8 +151,8 @@ const FRAGMENT = /* glsl */ `
     if (abs(rd.y) > 1e-4) {
       float ta = (lo - uCamPos.y) / rd.y, tb = (hi - uCamPos.y) / rd.y;
       t0 = max(t0, min(ta, tb)); t1 = min(t1, max(ta, tb));
-    } else if (uCamPos.y < lo || uCamPos.y > hi) { gl_FragColor = scene; return; }
-    if (t1 <= t0) { gl_FragColor = scene; return; }
+    } else if (uCamPos.y < lo || uCamPos.y > hi) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+    if (t1 <= t0) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
 
     float dt = (t1 - t0) / float(STEPS);
     // per-pixel jitter (interleaved gradient noise) hides step banding
@@ -153,8 +183,42 @@ const FRAGMENT = /* glsl */ `
       T *= 1.0 - a;
       if (T.x < 0.01) break;
     }
-    vec3 outC = scene.rgb * T + glow;
     // never hand an invalid value on (NaN fails every comparison with itself)
+    if (!(glow.r == glow.r) || !(glow.g == glow.g) || !(glow.b == glow.b) || !(T.x == T.x)) { gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
+    gl_FragColor = vec4(min(glow, vec3(64.0)), T.x);
+  }
+`;
+
+/** Full resolution: lays the half-resolution mist over the scene. Each pixel blends its four
+ * nearest mist texels, weighting down any whose depth differs from its own, so mist never bleeds
+ * across a unit's or a tree's silhouette. */
+const COMPOSITE = /* glsl */ `
+  uniform sampler2D tDiffuse;
+  uniform sampler2D tDepth;
+  uniform sampler2D tFog;
+  uniform vec2 uFogSize;
+  uniform float uNear, uFar;
+  varying vec2 vUv;
+
+  float viewZ(float d) { float z = d * 2.0 - 1.0; return 2.0 * uNear * uFar / (uFar + uNear - z * (uFar - uNear)); }
+
+  void main() {
+    vec4 scene = texture2D(tDiffuse, vUv);
+    float z = viewZ(texture2D(tDepth, vUv).x);
+    vec2 f = vUv * uFogSize - 0.5, i = floor(f), w = f - i;
+    vec4 acc = vec4(0.0);
+    float sum = 0.0;
+    for (int y = 0; y < 2; y++) for (int x = 0; x < 2; x++) {
+      vec2 uv = (i + vec2(float(x), float(y)) + 0.5) / uFogSize;
+      float zs = viewZ(texture2D(tDepth, uv).x);
+      float bw = (x == 0 ? 1.0 - w.x : w.x) * (y == 0 ? 1.0 - w.y : w.y);
+      float dw = 1.0 / (0.02 + abs(zs - z) / max(z, 1e-3) * 50.0);
+      float k = bw * dw + 1e-5;
+      acc += texture2D(tFog, uv) * k;
+      sum += k;
+    }
+    vec4 fog = acc / sum;
+    vec3 outC = scene.rgb * fog.a + fog.rgb;
     if (!(outC.r == outC.r) || !(outC.g == outC.g) || !(outC.b == outC.b)) outC = scene.rgb;
     gl_FragColor = vec4(min(outC, vec3(64.0)), scene.a);
   }
@@ -207,6 +271,17 @@ export class VolumetricFogPass extends Pass {
   };
   private readonly quad: FullScreenQuad;
   private readonly material: THREE.ShaderMaterial;
+  private readonly noise = buildNoiseVolume();
+  /** Half-resolution mist: rgb = glow, a = transmittance. */
+  private readonly half = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: false });
+  private readonly compositeMaterial = new THREE.ShaderMaterial({
+    vertexShader: VERTEX, fragmentShader: COMPOSITE, depthTest: false, depthWrite: false,
+    uniforms: {
+      tDiffuse: { value: null }, tDepth: { value: null }, tFog: { value: null },
+      uFogSize: { value: new THREE.Vector2(1, 1) }, uNear: { value: 0.5 }, uFar: { value: 600 },
+    },
+  });
+  private readonly compositeQuad = new FullScreenQuad(this.compositeMaterial);
   private lights: THREE.PointLight[] = [];
   private lightScan = 0;
 
@@ -217,7 +292,7 @@ export class VolumetricFogPass extends Pass {
     this.material = new THREE.ShaderMaterial({
       vertexShader: VERTEX, fragmentShader: FRAGMENT, depthTest: false, depthWrite: false,
       uniforms: {
-        tDiffuse: { value: null }, tDepth: { value: null },
+        tNoise: { value: this.noise }, tDepth: { value: null },
         uProjInv: { value: new THREE.Matrix4() }, uTexel: { value: new THREE.Vector2() }, uCamWorld: { value: new THREE.Matrix4() }, uCamPos: { value: new THREE.Vector3() },
         uTime: { value: 0 }, uSpeed: { value: 1 }, uDensity: { value: 0.6 }, uBase: { value: 0 }, uTop: { value: 2 }, uMaxDist: { value: 400 },
         uAlbedo: { value: new THREE.Color() }, uAmbient: { value: new THREE.Color() },
@@ -240,7 +315,6 @@ export class VolumetricFogPass extends Pass {
 
   render(renderer: THREE.WebGLRenderer, writeBuffer: THREE.WebGLRenderTarget, readBuffer: THREE.WebGLRenderTarget, deltaTime?: number): void {
     const u = this.material.uniforms, s = this.settings, cam = this.camera;
-    u.tDiffuse.value = readBuffer.texture;
     u.tDepth.value = readBuffer.depthTexture;
     u.uTexel.value.set(1 / readBuffer.width, 1 / readBuffer.height);
     u.uProjInv.value.copy(cam.projectionMatrixInverse);
@@ -278,8 +352,19 @@ export class VolumetricFogPass extends Pass {
     u.uSunColor.value.copy(this.sun.color).multiplyScalar(this.sun.intensity * 0.12);
     u.uSunDir.value.subVectors(this.sun.position, this.sun.target.position).normalize();
     this.syncLights();
-    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    // 1) march the mist at half resolution
+    renderer.setRenderTarget(this.half);
     this.quad.render(renderer);
+    // 2) lay it over the full-resolution frame
+    const c = this.compositeMaterial.uniforms;
+    c.tDiffuse.value = readBuffer.texture;
+    c.tDepth.value = readBuffer.depthTexture;
+    c.tFog.value = this.half.texture;
+    c.uFogSize.value.set(this.half.width, this.half.height);
+    c.uNear.value = cam.near;
+    c.uFar.value = cam.far;
+    renderer.setRenderTarget(this.renderToScreen ? null : writeBuffer);
+    this.compositeQuad.render(renderer);
   }
 
   /** The brightest lit point lights near the mist, re-listed a few times a second. */
@@ -306,5 +391,14 @@ export class VolumetricFogPass extends Pass {
     });
   }
 
-  dispose(): void { this.material.dispose(); this.quad.dispose(); }
+  /** The composer hands over the full frame size in pixels; the mist marches at half of it. */
+  setSize(width: number, height: number): void {
+    this.half.setSize(Math.max(1, Math.ceil(width / 2)), Math.max(1, Math.ceil(height / 2)));
+  }
+
+  dispose(): void {
+    this.material.dispose(); this.quad.dispose();
+    this.compositeMaterial.dispose(); this.compositeQuad.dispose();
+    this.half.dispose(); this.noise.dispose();
+  }
 }

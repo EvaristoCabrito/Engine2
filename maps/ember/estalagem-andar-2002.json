@@ -2208,51 +2208,6 @@
         "level": 3
       },
       {
-        "name": "Severino",
-        "classId": "maskedPhysician",
-        "x": 5,
-        "y": 3,
-        "dialog": {
-          "id": "inn-guest-maskedPhysician",
-          "startId": "start",
-          "lines": [
-            {
-              "id": "start",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "Tomas finalmente dormiu. Fale baixo; o silêncio também faz parte do tratamento.",
-              "replies": [
-                {
-                  "text": "Ele vai melhorar?",
-                  "next": "answer1"
-                },
-                {
-                  "text": "Por que mantém a máscara aqui?",
-                  "next": "answer2"
-                },
-                {
-                  "text": "Boa viagem.",
-                  "next": null
-                }
-              ]
-            },
-            {
-              "id": "answer1",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "A febre cedeu um pouco. Isa trouxe água limpa e eu troquei o curativo. Agora precisamos de uma noite sem sustos."
-            },
-            {
-              "id": "answer2",
-              "speaker": "Severino",
-              "portrait": "maskedPhysician",
-              "text": "Porque cuido de gente doente antes e depois do jantar. Ela não é para assustar os hóspedes. É para eu continuar ajudando amanhã."
-            }
-          ]
-        },
-        "level": 1
-      },
-      {
         "name": "Nara",
         "classId": "roadCartographer",
         "x": 10,

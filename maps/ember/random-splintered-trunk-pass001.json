@@ -2865,7 +2865,7 @@
       {
         "x": 25,
         "y": 15,
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "name": "Hunter’s Guard",
         "level": 8
       }

@@ -1401,7 +1401,7 @@
       },
       {
         "name": "Cobrador armado",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 16,
         "y": 7,
         "level": 8

@@ -1,6 +1,7 @@
 import { DECORATIONS, decorationImage, decorationImageWebp, decorationSideFile } from "./data";
 import type { GameArt, SpriteId, TerrainId } from "./types";
 import { ENCOUNTER_NPC_IDS } from "./encounter-npcs";
+import enemyPortraitList from "./spritePortraits.json";
 import { ENGINE2_V3_GROUND_VARIANTS, GROUND_VARIANT_LAYERS, TILE_VARIANT_COUNT as EMBER_TILE_VARIANT_COUNT, tileVariantSrc as editorTileVariantSrc } from "../ember/tileVariants";
 
 // Number of art variants available per terrain, e.g. plains001.png / plains002.png.
@@ -137,17 +138,23 @@ const HERO_PORTRAIT: Partial<Record<string, string>> = {
  * popup, the footer portrait button, and DialogOverlay. Every "framed" portrait renders in
  * the same fixed box via object-cover, so the frame is always the same size regardless of
  * the source image's own dimensions. */
+/** Enemies without hand-made art: a 2:3 head-and-shoulders cut of their own sprite on black
+ * (tools/build-sprite-portraits.mjs writes the files and this list). */
+const ENEMY_PORTRAITS = new Set<string>(enemyPortraitList);
+
 export function portraitFor(sprite: SpriteId): { src: string; framed: boolean; position?: string } {
   const framed = HERO_PORTRAIT[sprite];
   return sprite === "travelingMerchant"
     ? { src: "/game/portraits/traveling-merchant.png", framed: false }
     : framed
       ? { src: framed, framed: true }
-      : { src: `/game/sprites/${sprite}/1.png`, framed: false };
+      : ENEMY_PORTRAITS.has(sprite)
+        ? { src: `/game/portraits/sprites/${encodeURIComponent(sprite)}.png?v=1`, framed: true }
+        : { src: `/game/sprites/${sprite}/1.png`, framed: false };
 }
 
 const TILES = Object.keys(TILE_VARIANT_COUNT) as TerrainId[];
-const SPRITES: SpriteId[] = ["defaultWarrior", "neera", "voss", "salazar", "aldric", "malrec", "defaultLancer", "soldier", "brigand", "captain", "sorcerer", "horror", "minor-horror-001", "Asherah", "pikeman", "wardog", "wardog2", "EmberedWraith", "troll", "troll2", "RoccoTheBird", "morvenian-wolf", "mordavian-wolf", "mordavian-wolf-final", "punisher", "theButcher", "birolho", "birolho2", "birolho3", "BirolhoLegs", "BirolhoLegs2", "familiar", "familiar2", "familiar3", "familiar4", "zombieDog", "zombie", "zombie2", "undeadOx", "plague-bearing-cattle", "swamp-blue-calf", "cobalt-blue-deer", "big-blue-ox-002", "ancient-golem", "lancer", "sandoval", "kaelFinal", "kaelEarly", "conjurer", "cultist-v2", "militia-v2", "apparition", "jacare", "archerRecruit", "mageRecruit", "healerRecruit", "beberrao", "breadLady", "brue", "crazyLady", "mudinho", "oldHealer", "peasant1", "shadyPatron", "soupLady", "villagerF1", "woodsman", "travelingMerchant"];
+const SPRITES: SpriteId[] = ["defaultWarrior", "neera", "voss", "salazar", "aldric", "malrec", "defaultLancer", "soldier", "brigand", "captain", "sorcerer", "horror", "minor-horror-001", "Asherah", "pikeman", "BasePikeman", "BaseCrossbowman", "BrigandCrossbowman", "wardog", "wardog2", "EmberedWraith", "troll", "troll2", "RoccoTheBird", "morvenian-wolf", "mordavian-wolf", "mordavian-wolf-final", "punisher", "theButcher", "birolho", "birolho2", "birolho3", "BirolhoLegs", "BirolhoLegs2", "familiar", "familiar2", "familiar3", "familiar4", "zombieDog", "zombie", "zombie2", "undeadOx", "plague-bearing-cattle", "swamp-blue-calf", "cobalt-blue-deer", "big-blue-ox-002", "ancient-golem", "lancer", "sandoval", "kaelFinal", "kaelEarly", "conjurer", "cultist-v2", "militia-v2", "apparition", "jacare", "archerRecruit", "mageRecruit", "healerRecruit", "beberrao", "breadLady", "brue", "crazyLady", "mudinho", "oldHealer", "peasant1", "shadyPatron", "soupLady", "villagerF1", "woodsman", "travelingMerchant"];
 
 SPRITES.push(...ENCOUNTER_NPC_IDS);
 
@@ -356,6 +363,9 @@ const ATTACK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   // Milícia V2's ATT, mirrored at cut time to face the same way as his idle (see
   // work/militia_v2_build.py); same shared canvas and scale as his other sheets.
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   // Apparition's ATT (TEK cut, work/apparition/build.py): 60 frames / 5 s, longer than the usual
   // 36 on purpose — see APPARITION_ATTACK_SECONDS in engine.ts. Faces right; mirrored for left.
   apparition: { n: 60, bust: "" },
@@ -513,6 +523,9 @@ const WALK_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   "cultist-v2": { n: 36, bust: "" },
   // Right-facing cut (Walk Right); his authored Walk Left loads as walksLeft below.
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   // Apparition: one right-facing profile walk (TEK cut); the renderer mirrors it for leftward travel.
   apparition: { n: 36, bust: "" },
   // Jacaré: one right-facing walk (TEK cut); the renderer mirrors it for leftward travel.
@@ -540,6 +553,9 @@ const HIT_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   // 528x321, wider than its other sheets — see computeUnitVisual's zombieDogWideSheet.
   zombieDog: { n: 36, bust: "?v=zd-hit-death-36" },
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 20, bust: "" },
+  BaseCrossbowman: { n: 22, bust: "" },
+  BrigandCrossbowman: { n: 20, bust: "" },
   // Apparition hit react 1 (TEK cut, work/apparition/build.py); her react 2 is HIT2_FRAMES below.
   apparition: { n: 36, bust: "" },
   jacare: { n: 36, bust: "" },
@@ -567,6 +583,9 @@ const DEATH_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
   undeadOx: { n: 36, bust: "?v=ox-36" },
   "plague-bearing-cattle": { n: 36, bust: "?v=plague-cattle-001" },
   "militia-v2": { n: 36, bust: "" },
+  BasePikeman: { n: 36, bust: "" },
+  BaseCrossbowman: { n: 36, bust: "" },
+  BrigandCrossbowman: { n: 36, bust: "" },
   apparition: { n: 36, bust: "" },
   jacare: { n: 36, bust: "" },
 };
@@ -580,6 +599,7 @@ const DEATH2_FRAMES: Partial<Record<SpriteId, { n: number; bust: string }>> = {
 // GameArt.walksUp/walksDown. A sprite with only one of the two keeps its left/right walk
 // for the other direction.
 const WALK_UP_DOWN_FRAMES: Partial<Record<SpriteId, { up?: number; down?: number; bust: string }>> = {
+  BasePikeman: { down: 36, bust: "" },
   BirolhoLegs: { up: 36, down: 36, bust: "" },
   "mordavian-wolf-final": { up: 36, down: 36, bust: "" },
   troll2: { up: 36, down: 36, bust: "" },
@@ -605,7 +625,7 @@ async function loadSpritePools(id: SpriteId): Promise<Partial<Record<SpritePoolK
       pools[key] = value;
     }));
   };
-  const n = id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "apparition" || id === "jacare" || id === "malrec" || id === "salazar" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
+  const n = id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? 36 : id === "undeadOx" || id === "plague-bearing-cattle" ? 36 : id === "minor-horror-001" ? 36 : id === "big-blue-ox-002" ? 36 : id === "carnivorous-plant-001" ? 36 : id === "sapling-001" ? 36 : id === "zombie2" ? 11 : id === "neera" || id === "conjurer" || id === "kaelFinal" || id === "aldric" || id === "cultist-v2" || id === "militia-v2" || id === "BasePikeman" || id === "BaseCrossbowman" || id === "BrigandCrossbowman" || id === "apparition" || id === "jacare" || id === "malrec" || id === "salazar" || id === "familiar3" || id === "familiar2" ? 36 : id === "sandoval" || id === "mordavian-wolf" ? 8 : id === "birolho2" ? 18 : id === "birolho3" ? 12 : id === "zombie" ? 32 : id === "BirolhoLegs" || id === "BirolhoLegs2" || id === "troll2" || id === "ancient-golem" || id === "familiar4" || id === "mordavian-wolf-final" ? 36 : HERO_IDLE.has(id) ? 12 : 4;
   const cacheBust = id === "neera" ? "?v=neera-idle-001" : id === "RoccoTheBird" || id === "wardog2" || id === "EmberedWraith" || id === "zombieDog" ? "?v=f36" : id === "undeadOx" ? "?v=ox-36-tail2" : id === "plague-bearing-cattle" ? "?v=plague-cattle-001" : id === "minor-horror-001" ? "?v=minor-horror-003" : id === "big-blue-ox-002" ? "?v=big-blue-ox-ai-006" : id === "troll" ? "?v=11" : id === "Asherah" ? "?v=3" : id === "familiar" ? "?v=6" : id === "aldric" ? "?v=aldric-final-001" : id === "defaultLancer" ? "?v=sheet2" : id === "lancer" ? "?v=3" : id === "sandoval" ? "?v=sandoval-complete-001" : id === "kaelFinal" ? "?v=kael-final-002" : id === "kaelEarly" ? "?v=kael-early" : id === "defaultWarrior" ? "?v=kael-v2" : id === "conjurer" ? "?v=conjurer-complete-003" : id === "familiar2" ? "?v=familiar2-36" : "";
   put("sprites", cut(n, (i) => (id === "conjurer" ? `talk-${i}` : `${i}`), cacheBust));
   const atk = ATTACK_FRAMES[id];
@@ -646,7 +666,7 @@ async function loadSpritePools(id: SpriteId): Promise<Partial<Record<SpritePoolK
   // The Butcher, Cultist V2, Milícia V2, Familiar 2, Familiar 3 and Salazar V2 each have their own authored
   // left-facing walk cut (same frame count as their right-facing one) but no dedicated
   // left-facing attack cut — their attack keeps mirroring the right-facing pool.
-  if (walk && (id === "theButcher" || id === "cultist-v2" || id === "militia-v2" || id === "familiar2" || id === "familiar3" || id === "salazar")) put("walksLeft", cut(walk.n, (i) => `move-left-${i}`, walk.bust));
+  if (walk && (id === "theButcher" || id === "cultist-v2" || id === "militia-v2" || id === "BasePikeman" || id === "BaseCrossbowman" || id === "BrigandCrossbowman" || id === "familiar2" || id === "familiar3" || id === "salazar")) put("walksLeft", cut(walk.n, (i) => `move-left-${i}`, walk.bust));
   if (id === "cobalt-blue-deer" && walk) put("walksLeft", cut(walk.n, (i) => `move-${i}`, walk.bust));
   // Mordavian Puppy's WALK LEFT row has 7 frames vs its right-facing row's 6.
   if (id === "morvenian-wolf") put("walksLeft", cut(7, (i) => `move-left-${i}`, ""));

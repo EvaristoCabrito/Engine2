@@ -1,6 +1,6 @@
 import type { ClassDef, DialogTree, Spawn } from "./types";
 
-export const ENCOUNTER_NPC_IDS = ["roadCartographer","mushroomForager","bellCollector","mothKeeper","charcoalBurner","wanderingTinker","marshTrapper","ratCatcher","maskedPhysician","shadowScholar","swampFerryman","lostCourier"] as const;
+export const ENCOUNTER_NPC_IDS = ["roadCartographer","mushroomForager","bellCollector","mothKeeper","charcoalBurner","wanderingTinker","marshTrapper","ratCatcher","shadowScholar","swampFerryman","lostCourier"] as const;
 export type EncounterNpcId = (typeof ENCOUNTER_NPC_IDS)[number];
 
 export const ENCOUNTER_NPC_CLASSES = {
@@ -12,7 +12,6 @@ export const ENCOUNTER_NPC_CLASSES = {
   wanderingTinker: { id: "wanderingTinker", name: "Ada, Funileira Ambulante", role: "Artesã de estrada", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "wanderingTinker", size: 1, init: 8 },
   marshTrapper: { id: "marshTrapper", name: "Gaspar, Caçador dos Brejos", role: "Armadilheiro de estrada", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "marshTrapper", size: 1, init: 8 },
   ratCatcher: { id: "ratCatcher", name: "Tereza, Caça-Ratos", role: "Excêntrica — exterminadora itinerante", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "ratCatcher", size: 1, init: 8 },
-  maskedPhysician: { id: "maskedPhysician", name: "Severino, Médico da Máscara", role: "Excêntrico — médico da peste", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "maskedPhysician", size: 1, init: 8 },
   shadowScholar: { id: "shadowScholar", name: "Erasmo, Estudioso da Própria Sombra", role: "Excêntrico — erudito errante", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "shadowScholar", size: 1, init: 8 },
   swampFerryman: { id: "swampFerryman", name: "Rúben, Barqueiro do Brejo", role: "Guia de travessias", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "swampFerryman", size: 1, init: 8 },
   lostCourier: { id: "lostCourier", name: "Lia, Mensageira Perdida", role: "Mensageira obstinada", hp: 12, atk: 1, mag: 0, def: 1, dex: 1, mov: 3, minRange: 1, maxRange: 1, sprite: "lostCourier", size: 1, init: 8 },
@@ -27,7 +26,6 @@ export const ENCOUNTER_NPC_GROWTH = {
   wanderingTinker: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
   marshTrapper: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
   ratCatcher: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
-  maskedPhysician: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
   shadowScholar: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
   swampFerryman: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
   lostCourier: { hp: 2, atk: 1, mag: 0, def: 1, dex: 1 },
@@ -89,13 +87,6 @@ const conversations: Record<EncounterNpcId, readonly string[]> = {
     "Onde há saco de comida, há rato. Onde há palácio, há rato com título. Eu cobro igual.",
     "Por que olha tanto a gaiola?",
     "Ontem eu a fechei vazia. Hoje alguém roeu a tranca por dentro. Vai dizer que também não olharia?"
-  ],
-  "maskedPhysician": [
-    "Respire devagar. A máscara assusta, mas a febre costuma ser menos educada.",
-    "Há doença por aqui?",
-    "Há água parada e gente cansada. Ferva a água. Limpe os cortes. Não espere a coragem curar uma infecção.",
-    "O que há no frasco?",
-    "Algo que cheira pior do que funciona. Se eu dissesse o contrário, seria mercador."
   ],
   "shadowScholar": [
     "Minha sombra está atrasada outra vez. Veja: eu já terminei este capítulo e ela ainda está na margem.",

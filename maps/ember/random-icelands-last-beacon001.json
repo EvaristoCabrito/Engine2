@@ -1420,7 +1420,7 @@
       },
       {
         "name": "Lanceiro da encosta",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 20,
         "y": 13,
         "level": 8

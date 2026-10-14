@@ -1020,15 +1020,15 @@
         "level": 1
       },
       {
-        "name": "Besteiro",
-        "classId": "brigand",
+        "name": "Besteiro Salteador",
+        "classId": "brigandCrossbowman",
         "x": 8,
         "y": 2,
         "level": 1
       },
       {
-        "name": "Besteiro",
-        "classId": "brigand",
+        "name": "Besteiro Salteador",
+        "classId": "brigandCrossbowman",
         "x": 4,
         "y": 4,
         "level": 1

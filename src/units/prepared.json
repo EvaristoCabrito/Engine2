@@ -1619,15 +1619,6 @@
   "w": 512,
   "h": 768
  },
- "maskedPhysician|": {
-  "n": 4,
-  "natW": 512,
-  "natH": 768,
-  "x": 0,
-  "y": 0,
-  "w": 512,
-  "h": 768
- },
  "minor-horror-003|": {
   "n": 36,
   "natW": 600,
@@ -2464,5 +2455,176 @@
   "y": 115,
   "w": 292,
   "h": 498
+ },
+ "BasePikeman|": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 321,
+  "y": 74,
+  "w": 358,
+  "h": 715
+ },
+ "BasePikeman|atk-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 329,
+  "y": 71,
+  "w": 398,
+  "h": 729
+ },
+ "BasePikeman|death-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 313,
+  "y": 61,
+  "w": 435,
+  "h": 739
+ },
+ "BasePikeman|hit-": {
+  "n": 20,
+  "natW": 1000,
+  "natH": 800,
+  "x": 378,
+  "y": 59,
+  "w": 315,
+  "h": 741
+ },
+ "BasePikeman|move-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 291,
+  "y": 86,
+  "w": 404,
+  "h": 704
+ },
+ "BasePikeman|move-down-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 303,
+  "y": 71,
+  "w": 411,
+  "h": 729
+ },
+ "BasePikeman|move-left-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 287,
+  "y": 76,
+  "w": 422,
+  "h": 716
+ },
+ "BaseCrossbowman|": {
+  "n": 36,
+  "natW": 1200,
+  "natH": 800,
+  "x": 438,
+  "y": 168,
+  "w": 363,
+  "h": 621
+ },
+ "BaseCrossbowman|atk-": {
+  "n": 36,
+  "natW": 1200,
+  "natH": 800,
+  "x": 455,
+  "y": 171,
+  "w": 635,
+  "h": 618
+ },
+ "BaseCrossbowman|death-": {
+  "n": 36,
+  "natW": 1200,
+  "natH": 800,
+  "x": 413,
+  "y": 197,
+  "w": 396,
+  "h": 603
+ },
+ "BaseCrossbowman|hit-": {
+  "n": 22,
+  "natW": 1200,
+  "natH": 800,
+  "x": 450,
+  "y": 176,
+  "w": 390,
+  "h": 607
+ },
+ "BaseCrossbowman|move-": {
+  "n": 36,
+  "natW": 1200,
+  "natH": 800,
+  "x": 412,
+  "y": 167,
+  "w": 345,
+  "h": 619
+ },
+ "BaseCrossbowman|move-left-": {
+  "n": 36,
+  "natW": 1200,
+  "natH": 800,
+  "x": 443,
+  "y": 167,
+  "w": 345,
+  "h": 619
+ },
+ "BrigandCrossbowman|": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 327,
+  "y": 169,
+  "w": 328,
+  "h": 621
+ },
+ "BrigandCrossbowman|atk-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 283,
+  "y": 168,
+  "w": 350,
+  "h": 622
+ },
+ "BrigandCrossbowman|death-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 320,
+  "y": 217,
+  "w": 378,
+  "h": 579
+ },
+ "BrigandCrossbowman|hit-": {
+  "n": 20,
+  "natW": 1000,
+  "natH": 800,
+  "x": 341,
+  "y": 170,
+  "w": 299,
+  "h": 619
+ },
+ "BrigandCrossbowman|move-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 283,
+  "y": 156,
+  "w": 380,
+  "h": 633
+ },
+ "BrigandCrossbowman|move-left-": {
+  "n": 36,
+  "natW": 1000,
+  "natH": 800,
+  "x": 337,
+  "y": 156,
+  "w": 380,
+  "h": 633
  }
 }

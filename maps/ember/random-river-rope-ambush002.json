@@ -1300,7 +1300,7 @@
       },
       {
         "name": "Lanceiro da travessia",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 13,
         "y": 5,
         "level": 8

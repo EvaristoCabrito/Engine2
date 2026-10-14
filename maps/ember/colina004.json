@@ -1331,14 +1331,14 @@
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 8,
         "y": 10,
         "level": 3
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 12,
         "y": 10,
         "level": 3

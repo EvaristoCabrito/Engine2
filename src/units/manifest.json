@@ -29,6 +29,23 @@
  "Asherah": {
   "": 12
  },
+ "BaseCrossbowman": {
+  "": 36,
+  "atk-": 36,
+  "death-": 36,
+  "hit-": 22,
+  "move-": 36,
+  "move-left-": 36
+ },
+ "BasePikeman": {
+  "": 36,
+  "atk-": 36,
+  "death-": 36,
+  "hit-": 20,
+  "move-": 36,
+  "move-down-": 36,
+  "move-left-": 36
+ },
  "beberrao": {
   "": 4
  },
@@ -107,6 +124,14 @@
  },
  "brigand": {
   "": 4
+ },
+ "BrigandCrossbowman": {
+  "": 36,
+  "atk-": 36,
+  "death-": 36,
+  "hit-": 20,
+  "move-": 36,
+  "move-left-": 36
  },
  "brue": {
   "": 4
@@ -275,9 +300,6 @@
   "move-left-": 36
  },
  "marshTrapper": {
-  "": 4
- },
- "maskedPhysician": {
   "": 4
  },
  "militia-v2": {

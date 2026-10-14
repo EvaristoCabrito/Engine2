@@ -1081,7 +1081,7 @@
       },
       {
         "name": "Sentinela da geada",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 15,
         "y": 11,
         "level": 8

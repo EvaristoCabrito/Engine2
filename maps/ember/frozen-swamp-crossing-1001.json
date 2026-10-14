@@ -6142,7 +6142,7 @@
       },
       {
         "name": "Frozen sentinel",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 43,
         "y": 8,
         "level": 9

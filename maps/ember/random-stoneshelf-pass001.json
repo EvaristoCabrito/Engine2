@@ -2971,7 +2971,7 @@
       {
         "x": 14,
         "y": 11,
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "name": "Pass Guard",
         "level": 8
       },

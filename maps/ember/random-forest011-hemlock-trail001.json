@@ -2146,7 +2146,7 @@
       },
       {
         "name": "Saqueador da trilha",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 19,
         "y": 13,
         "level": 7

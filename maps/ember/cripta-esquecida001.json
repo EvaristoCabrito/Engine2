@@ -632,14 +632,14 @@
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 14,
         "y": 5,
         "level": 10
       },
       {
         "name": "Piqueiro",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 14,
         "y": 9,
         "level": 10

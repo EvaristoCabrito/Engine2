@@ -6031,7 +6031,7 @@
     "enemySpawns": [
       {
         "name": "Sentinela das profundezas",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 26,
         "y": 18,
         "level": 16

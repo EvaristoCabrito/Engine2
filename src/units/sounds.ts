@@ -9,6 +9,8 @@ const MONSTER_SFX: Record<string, Partial<Record<Kind, string>>> = {
   apparition: { cast: 'ApparitionCast001.mp3', hit: 'ApparitionHit001.mp3' },
   jacare: { attack: 'JacareATT001.mp3', attack2: 'JacareSpecial001.mp3', walk: 'JacareWalk001.mp3', hit: 'JacareHit001.mp3', death: 'JacareDeath001.mp3' },
   'militia-v2': { attack: 'FootmanLameSword.mp3', walk: 'FootSteps1.mp3', hit: 'HitreactArmor.mp3', death: 'DeadArmor.mp3' },
+  // hit: the impact from its own Veo video (CrossbowmanHitReactDeath.mp4, 0.53–1.2 s)
+  BaseCrossbowman: { hit: 'BaseCrossbowmanHit001.mp3' },
   'carnivorous-plant-001': { attack: 'CarnivorousPlantATT001.mp3', cast: 'CarnivorousPlantCast001.mp3', hit: 'CarnivorousPlantHit001.mp3', death: 'CarnivorousPlantDeath001.mp3' },
   'sapling-001': { attack: 'SaplingATT001.mp3', cast: 'SaplingCast001.mp3', walk: 'SaplingWalk001.mp3', hit: 'SaplingHit001.mp3', death: 'SaplingDeath001.mp3' },
   // the rest of Ember's MONSTER_SFX and its per-monster cues (audio.ts), for the units imported later

@@ -1631,21 +1631,21 @@
     "enemySpawns": [
       {
         "name": "Lanceiro do vau",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 10,
         "y": 6,
         "level": 6
       },
       {
         "name": "Lanceiro do vau",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 17,
         "y": 9,
         "level": 6
       },
       {
         "name": "Lanceiro do vau",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 20,
         "y": 16,
         "level": 6

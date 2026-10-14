@@ -2850,7 +2850,7 @@
       {
         "x": 18,
         "y": 15,
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "name": "Ramp Guard",
         "level": 8
       }

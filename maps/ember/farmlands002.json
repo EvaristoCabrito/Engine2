@@ -7702,40 +7702,6 @@
     "enemySpawns": [],
     "neutralSpawns": [
       {
-        "name": "O Vigia",
-        "classId": "maskedPhysician",
-        "x": 18,
-        "y": 20,
-        "level": 1,
-        "dialog": {
-          "id": "farmlands-watchman",
-          "startId": "hello",
-          "lines": [
-            {
-              "id": "hello",
-              "speaker": "O Vigia",
-              "text": "As cinco portas abrem. Não garanto que todas queiram deixá-lo sair.",
-              "replies": [
-                {
-                  "text": "Que portas?",
-                  "next": "doors"
-                },
-                {
-                  "text": "Até logo.",
-                  "next": null
-                }
-              ]
-            },
-            {
-              "id": "doors",
-              "speaker": "O Vigia",
-              "text": "Ferraria, botica, armazém, pousada e a casa dos moradores. Cada uma cobra de um jeito.",
-              "next": null
-            }
-          ]
-        }
-      },
-      {
         "name": "Ana",
         "classId": "breadLady",
         "x": 33,

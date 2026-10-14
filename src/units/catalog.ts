@@ -120,7 +120,7 @@ function emberPoses(id: SpriteId): Partial<Record<Pose, PoseSrc>> {
     set('attackLeft', 'atk-left-', T.ATTACK_FRAMES[id]?.n ?? 5);
   }
   if (id === 'neera') { set('attackLeft', 'atk-left-', T.ATTACK_FRAMES[id]?.n); set('walkLeft', 'move-left-', walk?.n); }
-  if (walk && ['theButcher', 'cultist-v2', 'militia-v2', 'familiar2', 'familiar3'].includes(id)) set('walkLeft', 'move-left-', walk.n);
+  if (walk && ['theButcher', 'cultist-v2', 'militia-v2', 'BasePikeman', 'BaseCrossbowman', 'BrigandCrossbowman', 'familiar2', 'familiar3'].includes(id)) set('walkLeft', 'move-left-', walk.n);
   if (id === 'cobalt-blue-deer') set('walkLeft', 'move-', walk?.n);
   if (id === 'morvenian-wolf') set('walkLeft', 'move-left-', 7);
   return out;

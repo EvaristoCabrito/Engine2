@@ -1133,47 +1133,7 @@
       }
     ],
     "enemySpawns": [],
-    "neutralSpawns": [
-      {
-        "name": "Lia",
-        "classId": "maskedPhysician",
-        "x": 8,
-        "y": 5,
-        "level": 1,
-        "dialog": {
-          "id": "farmlands-apothecary-npc",
-          "startId": "hello",
-          "lines": [
-            {
-              "id": "hello",
-              "speaker": "Lia",
-              "text": "Tenho poções para curar feridas, tratar doença e recuperar energia mágica.",
-              "replies": [
-                {
-                  "text": "Como estão os campos?",
-                  "next": "news"
-                },
-                {
-                  "text": "Ver poções",
-                  "action": "merchant",
-                  "next": null
-                },
-                {
-                  "text": "Até logo.",
-                  "next": null
-                }
-              ]
-            },
-            {
-              "id": "news",
-              "speaker": "Lia",
-              "text": "Colho ervas nas bordas dos campos. O remédio certo poupa uma viagem de volta.",
-              "next": "hello"
-            }
-          ]
-        }
-      }
-    ],
+    "neutralSpawns": [],
     "introDialogEnabled": false,
     "outroDialogEnabled": false,
     "squareTiles": true,

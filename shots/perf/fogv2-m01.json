@@ -1,0 +1,143 @@
+{
+ "mission": "01",
+ "label": "fogv2",
+ "spell": "castFireball",
+ "rows": [
+  {
+   "name": "default",
+   "idle": {
+    "n": 150,
+    "p50": 16.7,
+    "p90": 16.7,
+    "over50": 0
+   },
+   "cast": {
+    "n": 113,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 4
+   }
+  },
+  {
+   "name": "noRealShadows",
+   "idle": {
+    "n": 110,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 7
+   },
+   "cast": {
+    "n": 106,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 8
+   }
+  },
+  {
+   "name": "shadow1024",
+   "idle": {
+    "n": 110,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 7
+   },
+   "cast": {
+    "n": 114,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 3
+   }
+  },
+  {
+   "name": "noContactShadows",
+   "idle": {
+    "n": 114,
+    "p50": 16.7,
+    "p90": 49.9,
+    "over50": 6
+   },
+   "cast": {
+    "n": 115,
+    "p50": 16.7,
+    "p90": 49.9,
+    "over50": 1
+   }
+  },
+  {
+   "name": "noAO",
+   "idle": {
+    "n": 116,
+    "p50": 16.7,
+    "p90": 33.4,
+    "over50": 2
+   },
+   "cast": {
+    "n": 115,
+    "p50": 16.7,
+    "p90": 49.9,
+    "over50": 5
+   }
+  },
+  {
+   "name": "noLocalLights",
+   "idle": {
+    "n": 113,
+    "p50": 16.7,
+    "p90": 33.4,
+    "over50": 5
+   },
+   "cast": {
+    "n": 114,
+    "p50": 16.7,
+    "p90": 49.9,
+    "over50": 8
+   }
+  },
+  {
+   "name": "noAtmosphere",
+   "idle": {
+    "n": 120,
+    "p50": 16.7,
+    "p90": 49.9,
+    "over50": 5
+   },
+   "cast": {
+    "n": 124,
+    "p50": 16.7,
+    "p90": 33.3,
+    "over50": 1
+   }
+  },
+  {
+   "name": "default-again",
+   "idle": {
+    "n": 120,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 7
+   },
+   "cast": {
+    "n": 112,
+    "p50": 16.7,
+    "p90": 50,
+    "over50": 5
+   }
+  }
+ ],
+ "base": {
+  "realShadows": true,
+  "shadowResolution": 4096,
+  "softShadows": false,
+  "contactShadows": true,
+  "ambientOcclusion": true,
+  "fogOfWar": true,
+  "fogDebug": false,
+  "localLights": true,
+  "atmosphericFx": true,
+  "sunAzimuth": 53.13,
+  "sunElevation": 45,
+  "moonAzimuth": 140,
+  "moonElevation": 35
+ },
+ "errors": []
+}

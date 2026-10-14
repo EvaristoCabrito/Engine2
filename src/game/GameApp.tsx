@@ -6176,10 +6176,9 @@ export function MapEditorScreen({
    * replacement file: activation is a local campaign pointer to this exact draft. */
   const doActivateFile = (f: { serial: number; draft: MapDraft; file?: string }) => {
     const next = { ...activeVersions, [draft.id]: f.serial };
-    if (!saveActiveDrafts({ ...loadActiveDrafts(), [draft.id]: f.draft })) {
-      setNote(`NÃO ATIVOU ${f.file ?? mapFileName(draft.id, f.serial)}: o navegador recusou salvar a cópia da campanha.`);
-      return;
-    }
+    // The file is on disk and the campaign plays files from disk (mapstore missionById ignores
+    // browser copies for any map with a file), so no browser copy is stored: maps of any size
+    // activate, instead of failing when a big map overflows browser storage.
     setActiveVersions(next);
     saveActiveVersions(next);
     setDraft(f.draft);

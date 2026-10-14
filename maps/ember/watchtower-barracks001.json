@@ -3113,7 +3113,7 @@
       },
       {
         "name": "Guarda da Torre",
-        "classId": "pikeman",
+        "classId": "basePikeman",
         "x": 16,
         "y": 14,
         "level": 10
